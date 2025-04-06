@@ -17,7 +17,7 @@ type ProfileHandler struct {
 
 // NewProfileHandler creates a new ProfileHandler
 func NewProfileHandler(db *gorm.DB) *ProfileHandler {
-	return &ProfileHandler{DB: db}
+	return &ProfileHandler{}
 }
 
 // RetrieveProfile retrieves the profile of the authenticated user

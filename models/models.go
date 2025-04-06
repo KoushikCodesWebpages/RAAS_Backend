@@ -36,6 +36,16 @@ type Admin struct {
     AuthUser   AuthUser `gorm:"constraint:OnDelete:CASCADE"`
     // Any other fields specific to Admins
 }
+// PREFERENCE MODELS
+
+type PreferredJobTitle struct {
+	gorm.Model
+	PrimaryTitle   string    `gorm:"type:varchar(255);not null" json:"primaryTitle"`   // Primary job title (cannot be NULL)
+	SecondaryTitle *string   `gorm:"type:varchar(255);" json:"secondaryTitle"`         // Secondary job title (nullable)
+	TertiaryTitle  *string   `gorm:"type:varchar(255);" json:"tertiaryTitle"`          // Tertiary job title (nullable)
+	AuthUserID     uuid.UUID `gorm:"type:uuid;not null" json:"authUserId"`             // Foreign Key to AuthUser
+}
+
 
 // FEATURE MODELS
 type LinkedinJobMetadata struct {

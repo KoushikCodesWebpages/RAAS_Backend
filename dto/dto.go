@@ -50,3 +50,8 @@ func NewSeekerResponse(seeker models.Seeker) SeekerResponse {
 		Location:  seeker.Location,
 	}
 }
+type JobTitleInput struct {
+	PrimaryTitle   string  `json:"primaryTitle"`
+	SecondaryTitle *string `json:"secondaryTitle,omitempty"`
+	TertiaryTitle  *string `json:"tertiaryTitle,omitempty"`
+}
