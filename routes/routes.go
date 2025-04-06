@@ -3,45 +3,46 @@ package routes
 import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
-	"RAAS/controllers"
-	"RAAS/repositories"
+	"RAAS/handlers"
 	"RAAS/models"
 )
 
 // SetupRoutes - Registers all routes
 func SetupRoutes(r *gin.Engine, db *gorm.DB) {
-	// Home Route
+	// Health check route
 	r.GET("/", func(c *gin.Context) {
 		c.JSON(200, gin.H{"message": "Server is running"})
 	})
 
-	// Authentication Route
+	// Auth routes
 	r.POST("/signup", func(c *gin.Context) {
-		controllers.SeekerSignUp(c, db)
+		handlers.SeekerSignUp(c, db)
 	})
 
 	r.POST("/login", func(c *gin.Context) {
-        c.Set("db", db) // Pass DB instance to the controller
-        controllers.Login(c)
-    })
-
-	// Register CRUD routes for LinkedinJobMetadata
+		handlers.Login(c)
+	})
+	
+	r.GET("/verify-email", func(c *gin.Context) {
+		c.Set("db", db)
+		handlers.VerifyEmailHandler(c)
+	})
+	
+	// CRUD for LinkedinJobMetadata
 	SetupGenericRoutes[models.LinkedinJobMetadata](r, db, "/linkedin-job-metadata")
 }
 
-// SetupGenericRoutes - Registers generic CRUD routes for any model
 func SetupGenericRoutes[T any](r *gin.Engine, db *gorm.DB, baseRoute string) {
-	repo := repositories.NewGeneralRepository[T](db)
-	controller := controllers.NewGeneralController[T](repo)
+	handler := handlers.NewGenericHandler[T](db)
 
 	group := r.Group(baseRoute)
 	{
-		group.POST("/", controller.Create)
-		group.POST("/bulk", controller.BulkCreate)
-		group.POST("/upload-csv", controller.UploadCSV)
-		group.GET("/:id", controller.GetByID)
-		group.GET("/", controller.GetAll)
-		group.PUT("/:id", controller.Update)
-		group.DELETE("/:id", controller.Delete)
+		group.POST("/", handler.Create)
+		group.POST("/bulk", handler.BulkCreate)
+		group.POST("/upload-csv", handler.UploadCSV)
+		group.GET("/:id", handler.GetByID)
+		group.GET("/", handler.GetAll)
+		group.PUT("/:id", handler.Update)
+		group.DELETE("/:id", handler.Delete)
 	}
 }

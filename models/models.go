@@ -3,24 +3,15 @@ package models
 import (
 	"gorm.io/gorm"
 )
-
-// DB is the global database variable
-
-// InitDB initializes the database connection and sets up the models
-
-// AutoMigrate will automatically migrate all models to the database
-
-// ResetDB will truncate tables, reset auto increment, and delete data, but keep table structure
-
 // AUTH MODELS 
-
-
 
 type AuthUser struct {
     gorm.Model
     Email    string `gorm:"unique"`
     Password string
     Role     string
+    VerificationToken string
+    EmailVerified     bool
 }
 
 type Seeker struct {

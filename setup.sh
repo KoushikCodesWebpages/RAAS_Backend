@@ -21,7 +21,7 @@ echo -e "${BLUE}📂 Creating project directories and files...${RESET}"
 mkdir -p $PROJECT_NAME && cd $PROJECT_NAME
 go mod init $PROJECT_NAME
 
-mkdir -p config controllers data models repositories routes public security 
+mkdir -p config controllers data middlewares models public repositories responses routes security 
 
 touch go.mod go.sum README.md air.toml
 echo "# $PROJECT_NAME" > README.md
