@@ -9,10 +9,13 @@ import (
     "gorm.io/gorm"
     "net/http"
     "RAAS/config"
+    // "context"
+    // "encoding/json"
+    // "io"
     
 )
 
-func SeekerSignUp(c *gin.Context, db *gorm.DB) {
+func SeekerSignUp(c *gin.Context) {
     var input dto.SeekerSignUpInput
 
     if err := c.ShouldBindJSON(&input); err != nil {
@@ -24,6 +27,9 @@ func SeekerSignUp(c *gin.Context, db *gorm.DB) {
         c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
         return
     }
+
+    // ✅ Get DB from Gin context
+    db := c.MustGet("db").(*gorm.DB)
 
     emailTaken, err := isEmailTaken(db, input.Email)
     if err != nil {
@@ -47,7 +53,6 @@ func SeekerSignUp(c *gin.Context, db *gorm.DB) {
         return
     }
 
-    // ✅ Now pass cfg to createSeeker
     if err := createSeeker(db, input, string(hashedPassword), cfg); err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not create Seeker", "details": err.Error()})
         return
@@ -60,6 +65,7 @@ func SeekerSignUp(c *gin.Context, db *gorm.DB) {
 
 func Login(c *gin.Context) {
     var input dto.LoginInput
+    cfg, _ := config.InitConfig()
     db := c.MustGet("db").(*gorm.DB)
 
     if err := c.ShouldBindJSON(&input); err != nil {
@@ -73,13 +79,51 @@ func Login(c *gin.Context) {
         return
     }
 
-    token, err := security.GenerateJWT(user.Email, user.Role)
+    token, err := security.GenerateJWT(user.ID, user.Email, user.Role, cfg)
     if err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not generate token"})
         return
     }
 
-    c.JSON(http.StatusOK, gin.H{"token": token, "role": user.Role})
+    c.JSON(http.StatusOK, gin.H{"token": token})
 }
+
+
+// func GoogleLoginHandler(c *gin.Context) {
+// 	url := security.GoogleOAuthConfig.AuthCodeURL("random-state-string") // you can use a CSRF-safe state later
+// 	c.Redirect(http.StatusTemporaryRedirect, url)
+// }
+
+// func GoogleCallbackHandler(c *gin.Context) {
+//     code := c.Query("code")
+
+//     token, err := security.GoogleOAuthConfig.Exchange(context.Background(), code)
+//     if err != nil {
+//         c.JSON(http.StatusInternalServerError, gin.H{"error": "Token exchange failed"})
+//         return
+//     }
+
+//     client := security.GoogleOAuthConfig.Client(context.Background(), token)
+//     resp, _ := client.Get("https://www.googleapis.com/oauth2/v2/userinfo")
+//     defer resp.Body.Close()
+
+//     body, _ := io.ReadAll(resp.Body)
+//     var userInfo security.UserInfo
+//     json.Unmarshal(body, &userInfo)
+
+//     user, err := createSeekerFromGoogleOAuth(db, userInfo)
+//     if err != nil {
+//         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
+//         return
+//     }
+
+//     tokenString := security.GenerateJWT(user.ID)
+
+//     // You could redirect to frontend with token
+//     c.JSON(http.StatusOK, gin.H{
+//         "token": tokenString,
+//         "user":  userInfo,
+//     })
+// }
 
 

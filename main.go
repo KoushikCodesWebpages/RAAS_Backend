@@ -14,7 +14,7 @@ func main() {
 	gin.SetMode(gin.ReleaseMode) 
 
 	// Initialize the configuration
-	cfg, err := config.InitConfig()
+	cfg, err := config.InitConfig()	
 	if err != nil {
 		log.Fatalf("Error initializing config: %v", err)
 	}

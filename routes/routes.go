@@ -4,11 +4,14 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 	"RAAS/handlers"
-	"RAAS/models"
+	//"RAAS/models"
+	"RAAS/config"
+	"RAAS/middlewares"
 )
 
 // SetupRoutes - Registers all routes
 func SetupRoutes(r *gin.Engine, db *gorm.DB) {
+	r.Use(middleware.InjectDB(db))
 	// Health check route
 	r.GET("/", func(c *gin.Context) {
 		c.JSON(200, gin.H{"message": "Server is running"})
@@ -16,33 +19,40 @@ func SetupRoutes(r *gin.Engine, db *gorm.DB) {
 
 	// Auth routes
 	r.POST("/signup", func(c *gin.Context) {
-		handlers.SeekerSignUp(c, db)
+		handlers.SeekerSignUp(c)
+	})
+
+	// r.GET("/auth/google", handlers.GoogleLoginHandler)
+	// r.GET("/auth/google/callback", handlers.GoogleCallbackHandler)
+	r.GET("/verify-email", func(c *gin.Context) {
+		c.Set("db", db)
+		handlers.VerifyEmailHandler(c)
 	})
 
 	r.POST("/login", func(c *gin.Context) {
 		handlers.Login(c)
 	})
 	
-	r.GET("/verify-email", func(c *gin.Context) {
-		c.Set("db", db)
-		handlers.VerifyEmailHandler(c)
-	})
+	//SetupProtectedRoutes[models.Product](router, db, "/products")
+
 	
 	// CRUD for LinkedinJobMetadata
-	SetupGenericRoutes[models.LinkedinJobMetadata](r, db, "/linkedin-job-metadata")
 }
 
-func SetupGenericRoutes[T any](r *gin.Engine, db *gorm.DB, baseRoute string) {
-	handler := handlers.NewGenericHandler[T](db)
+// routes/protected_routes.go
 
-	group := r.Group(baseRoute)
+
+func SetupProtectedRoutes[T any](r *gin.Engine, db *gorm.DB, baseRoute string, cfg *config.Config) {
+	handler := handlers.NewProtectedHandler[T](db)
+
+	group := r.Group(baseRoute, middleware.AuthMiddleware(cfg)) // middleware uses cfg now
 	{
-		group.POST("/", handler.Create)
-		group.POST("/bulk", handler.BulkCreate)
-		group.POST("/upload-csv", handler.UploadCSV)
-		group.GET("/:id", handler.GetByID)
-		group.GET("/", handler.GetAll)
-		group.PUT("/:id", handler.Update)
-		group.DELETE("/:id", handler.Delete)
+		group.POST("/", handler.CreateProtected)
+		group.POST("/bulk", handler.BulkCreateProtected)
+		group.GET("/:id", handler.GetByIDProtected)
+		group.GET("/", handler.GetAllProtected)
+		group.PUT("/:id", handler.UpdateProtected)
+		group.DELETE("/:id", handler.DeleteProtected)
 	}
 }
+

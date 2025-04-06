@@ -12,6 +12,8 @@ type Config struct {
 	SecretKey              string
 	AuthUserModel          string
 	CORSAllowedOrigins     string
+	ClientId			   string
+	ClientSecret		   string
 	AccessTokenLifetime    int
 	RefreshTokenLifetime   int
 	RotateRefreshTokens    bool
@@ -63,12 +65,14 @@ func InitConfig() (*Config, error) {
 	// Initialize viper
 	viper.SetConfigFile(".env")
 	viper.AutomaticEnv()
-
+	
 	// Create and populate the Config struct
 	config := &Config{
 		SecretKey:              viper.GetString("SECRET_KEY"),
 		AuthUserModel:          viper.GetString("AUTH_USER_MODEL"),
 		CORSAllowedOrigins:     viper.GetString("CORS_ALLOWED_ORIGINS"),
+		ClientId:				viper.GetString("CLIENT_ID"),
+		ClientSecret:				viper.GetString("CLIENT_SECRET"),
 		AccessTokenLifetime:    viper.GetInt("ACCESS_TOKEN_LIFETIME"),
 		RefreshTokenLifetime:   viper.GetInt("REFRESH_TOKEN_LIFETIME"),
 		RotateRefreshTokens:    viper.GetBool("ROTATE_REFRESH_TOKENS"),

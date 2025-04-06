@@ -7,11 +7,12 @@ import (
 
 type AuthUser struct {
     gorm.Model
-    Email    string `gorm:"unique"`
-    Password string
-    Role     string
-    VerificationToken string
-    EmailVerified     bool
+    Email              string `gorm:"unique"`
+    Password           string // optional for OAuth (can be empty)
+    Role               string
+    VerificationToken  string
+    EmailVerified      bool
+    Provider           string `gorm:"default:'local'"` // 'google' or 'local'
 }
 
 type Seeker struct {
