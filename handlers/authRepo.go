@@ -33,64 +33,66 @@ func isEmailTaken(db *gorm.DB, email string) (bool, error) {
 }
 
 func createSeeker(db *gorm.DB, input dto.SeekerSignUpInput, hashedPassword string, config *config.Config) error {
-    // Generate a verification token
-    token := uuid.New().String()
+	// Generate a verification token (UUID)
+	token := uuid.New().String()
 
-    // Create AuthUser with verification fields
-    authUser := models.AuthUser{
-        Email:             input.Email,
-        Password:          hashedPassword,
-        Role:              "seeker",
-        VerificationToken: token,
-        //for now true
-        EmailVerified:     true,
-    }
+	// Create AuthUser with verification fields
+	authUser := models.AuthUser{
+		ID:                uuid.New(), // Generate UUID for AuthUser
+		Email:             input.Email,
+		Password:          hashedPassword,
+		Role:              "seeker",
+		VerificationToken: token,
+		EmailVerified:     true, // Assume false until verified
+	}
 
-    // Save AuthUser to the database
-    if err := db.Create(&authUser).Error; err != nil {
-        return err
-    }
+	// Save AuthUser to the database
+	if err := db.Create(&authUser).Error; err != nil {
+		return fmt.Errorf("failed to create auth user: %v", err)
+	}
 
-    // Create associated Seeker profile
-    seeker := models.Seeker{
-        AuthUserID: authUser.ID,
-        AuthUser:   authUser,
-        FirstName:  input.FirstName,
-        LastName:   input.LastName,
-        Location:   input.Location,
-    }
+	// Create associated Seeker profile, using the correct AuthUserID
+	seeker := models.Seeker{
+		AuthUserID: authUser.ID,     // Link Seeker to AuthUser by ID
+		FirstName:  input.FirstName,  // Assign FirstName
+		LastName:   input.LastName,   // Assign LastName
+		Location:   input.Location,   // Assign Location
+	}
 
-    if err := db.Create(&seeker).Error; err != nil {
-        return err
-    }
+	// Save Seeker to the database
+	if err := db.Create(&seeker).Error; err != nil {
+		return fmt.Errorf("failed to create seeker profile: %v", err)
+	}
 
-    // Construct email verification link
-    /*verificationLink := fmt.Sprintf("https://your-frontend.com/verify-email?token=%s", token)
-    emailBody := fmt.Sprintf(`
-        <p>Hello %s,</p>
-        <p>Thanks for signing up! Please verify your email by clicking the link below:</p>
-        <p><a href="%s">Verify Email</a></p>
-        <p>If you did not sign up, you can ignore this email.</p>
-    `, input.FirstName, verificationLink)
+	// Construct email verification link (optional)
+	/*
+	verificationLink := fmt.Sprintf("https://your-frontend.com/verify-email?token=%s", token)
+	emailBody := fmt.Sprintf(`
+		<p>Hello %s,</p>
+		<p>Thanks for signing up! Please verify your email by clicking the link below:</p>
+		<p><a href="%s">Verify Email</a></p>
+		<p>If you did not sign up, you can ignore this email.</p>
+	`, input.FirstName, verificationLink)
 
-    // Prepare email config from loaded app config
-    emailCfg := utils.EmailConfig{
-        Host:     config.EmailHost,
-        Port:     config.EmailPort,
-        Username: config.EmailHostUser,
-        Password: config.EmailHostPassword,
-        From:     config.DefaultFromEmail,
-        UseTLS:   config.EmailUseTLS,
-    }
+	// Prepare email config from loaded app config
+	emailCfg := utils.EmailConfig{
+		Host:     config.EmailHost,
+		Port:     config.EmailPort,
+		Username: config.EmailHostUser,
+		Password: config.EmailHostPassword,
+		From:     config.DefaultFromEmail,
+		UseTLS:   config.EmailUseTLS,
+	}
 
-    // Send the verification email
-    if err := utils.SendEmail(emailCfg, input.Email, "Verify your email", emailBody); err != nil {
-        return fmt.Errorf("user created but failed to send verification email: %v", err)
-    }
-        */
+	// Send the verification email
+	if err := utils.SendEmail(emailCfg, input.Email, "Verify your email", emailBody); err != nil {
+		return fmt.Errorf("user created but failed to send verification email: %v", err)
+	}
+	*/
 
-    return nil
+	return nil
 }
+
 
 // func createSeekerFromGoogleOAuth(db *gorm.DB, info security.UserInfo) (*models.AuthUser, error) {
 //     var user models.AuthUser
@@ -133,6 +135,7 @@ func createSeeker(db *gorm.DB, input dto.SeekerSignUpInput, hashedPassword strin
 func authenticateUser(db *gorm.DB, email, password string) (*models.AuthUser, error) {
     var user models.AuthUser
 
+    // Find the user by email
     if err := db.Where("email = ?", email).First(&user).Error; err != nil {
         if errors.Is(err, gorm.ErrRecordNotFound) {
             return nil, errors.New("invalid email or password")
@@ -140,9 +143,16 @@ func authenticateUser(db *gorm.DB, email, password string) (*models.AuthUser, er
         return nil, err
     }
 
+    // Check if the email is verified
+    if !user.EmailVerified {
+        return nil, errors.New("email is not verified")
+    }
+
+    // Compare the provided password with the stored hashed password
     if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
         return nil, errors.New("invalid email or password")
     }
 
     return &user, nil
 }
+

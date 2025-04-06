@@ -58,7 +58,6 @@ func AutoMigrate() {
 		&AuthUser{},
 		&Seeker{},
 		&Admin{},
-		&LinkedinJobMetadata{}, // Example model
 		// Add more models as needed
 	)
 	if err != nil {

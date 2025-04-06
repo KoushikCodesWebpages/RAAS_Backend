@@ -40,7 +40,7 @@ func main() {
 	r := gin.Default()
 
 	// Register all routes
-	routes.SetupRoutes(r, db)
+	routes.SetupRoutes(r, db, cfg)
 
 	// Start the server
 	err = r.Run(fmt.Sprintf("%s:%d", cfg.ServerHost, cfg.ServerPort))

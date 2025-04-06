@@ -2,27 +2,31 @@ package models
 
 import (
 	"gorm.io/gorm"
+    "github.com/google/uuid"
 )
 // AUTH MODELS 
 
 type AuthUser struct {
-    gorm.Model
-    Email              string `gorm:"unique"`
-    Password           string // optional for OAuth (can be empty)
-    Role               string
-    VerificationToken  string
-    EmailVerified      bool
-    Provider           string `gorm:"default:'local'"` // 'google' or 'local'
+	gorm.Model
+    ID                uuid.UUID `gorm:"type:uuid;primaryKey" json:"id"`
+	Email             string    `gorm:"unique"`
+	Password          string    // optional for OAuth (can be empty)
+	Role              string
+	VerificationToken string
+	EmailVerified     bool
+	Provider          string `gorm:"default:'local'"` // 'google' or 'local'
 }
 
+// Seeker struct that references AuthUser by UUID
 type Seeker struct {
-    gorm.Model
-    AuthUserID uint
-    AuthUser   AuthUser `gorm:"constraint:OnDelete:CASCADE"`
-    FirstName  string
-    LastName   string
-    Location   string
-    // Any other fields specific to Seekers
+	gorm.Model
+	ID         uint      `gorm:"primaryKey"`
+	AuthUserID uuid.UUID  `gorm:"type:uuid"`
+	AuthUser   AuthUser   `gorm:"foreignKey:AuthUserID;constraint:OnDelete:CASCADE"`
+	FirstName  string
+	LastName   string
+	Location   string
+	// Any other fields specific to Seekers
 }
 
 

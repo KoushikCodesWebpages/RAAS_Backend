@@ -2,10 +2,11 @@ package security
 
 import (
 	"RAAS/config"
-	"github.com/golang-jwt/jwt/v4"
-	"time"
 	"errors"
+	"github.com/golang-jwt/jwt/v4"
+	"github.com/google/uuid"
 	"strings"
+	"time"
 )
 
 var appConfig *config.Config
@@ -20,58 +21,66 @@ func init() {
 	jwtSecret = []byte(appConfig.JWTSecretKey)
 }
 
+// CustomClaims struct for JWT claims with uuid.UUID for UserID
 type CustomClaims struct {
-    UserID uint   `json:"user_id"`
-    Email  string `json:"email"`
-    Role   string `json:"role"`
-    jwt.RegisteredClaims
+	UserID uuid.UUID `json:"user_id"`
+	Email  string    `json:"email"`
+	Role   string    `json:"role"`
+	jwt.RegisteredClaims
 }
 
+// GenerateJWT creates an access token for the user
+func GenerateJWT(userID uuid.UUID, email, role string, cfg *config.Config) (string, error) {
+	claims := CustomClaims{
+		UserID: userID,
+		Email:  email,
+		Role:   role,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute * time.Duration(cfg.AccessTokenLifetime))),
+		},
+	}
 
-// GenerateJWT creates an access token with configured expiry
-func GenerateJWT(userID uint, email, role string, cfg *config.Config) (string, error) {
-    claims := CustomClaims{
-        UserID: userID,
-        Email:  email,
-        Role:   role,
-        RegisteredClaims: jwt.RegisteredClaims{
-            ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute * time.Duration(cfg.AccessTokenLifetime))),
-        },
-    }
-
-    token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-    return token.SignedString([]byte(cfg.JWTSecretKey))
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString([]byte(cfg.JWTSecretKey))
 }
 
-
-// ValidateJWT verifies the token and returns claims if valid
+// ValidateJWT checks the token string and returns custom claims
 func ValidateJWT(tokenString string) (*CustomClaims, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &CustomClaims{}, func(token *jwt.Token) (interface{}, error) {
 		return jwtSecret, nil
 	})
-	if err != nil {
-		return nil, err
+
+	if err != nil || !token.Valid {
+		return nil, errors.New("invalid or expired token")
 	}
 
 	claims, ok := token.Claims.(*CustomClaims)
-	if !ok || !token.Valid {
-		return nil, errors.New("invalid token")
+	if !ok {
+		return nil, errors.New("could not parse JWT claims")
 	}
 
 	return claims, nil
 }
 
+// ParseJWTFromHeader extracts the token from Authorization header and validates it
 func ParseJWTFromHeader(authHeader string) (*CustomClaims, error) {
+	if !strings.HasPrefix(authHeader, "Bearer ") {
+		return nil, errors.New("missing Bearer token")
+	}
+
 	tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
-	token, err := jwt.ParseWithClaims(tokenStr, &CustomClaims{}, func(token *jwt.Token) (interface{}, error) {
-		return jwtSecret, nil
-	})
-	if err != nil || !token.Valid {
-		return nil, err
-	}
-	claims, ok := token.Claims.(*CustomClaims)
-	if !ok {
-		return nil, errors.New("could not parse claims")
-	}
-	return claims, nil
+	return ValidateJWT(tokenStr)
+}
+
+// Helper functions for common checks
+func IsRole(claims *CustomClaims, role string) bool {
+	return claims.Role == role
+}
+
+func GetUserID(claims *CustomClaims) uuid.UUID {
+	return claims.UserID
+}
+
+func GetEmail(claims *CustomClaims) string {
+	return claims.Email
 }
