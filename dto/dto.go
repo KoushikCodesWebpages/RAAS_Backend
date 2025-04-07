@@ -33,6 +33,7 @@ type SeekerResponse struct {
 	FirstName  string          `json:"firstName"`
 	LastName   string          `json:"lastName"`
 	Location   string          `json:"location"`
+	//SubscriptionTier string
 }
 
 // NewSeekerResponse creates a new SeekerResponse from a Seeker model

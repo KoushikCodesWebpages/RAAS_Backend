@@ -26,6 +26,8 @@ type Seeker struct {
 	FirstName  string
 	LastName   string
 	Location   string
+	SubscriptionTier string `gorm:"default:'free'" json:"subscriptionTier"` // 'free', 'premium'
+
 	// Any other fields specific to Seekers
 }
 
@@ -36,7 +38,12 @@ type Admin struct {
     AuthUser   AuthUser `gorm:"constraint:OnDelete:CASCADE"`
     // Any other fields specific to Admins
 }
+
 // PREFERENCE MODELS
+
+
+
+
 
 type PreferredJobTitle struct {
 	gorm.Model
