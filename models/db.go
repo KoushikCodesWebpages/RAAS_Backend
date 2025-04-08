@@ -144,14 +144,14 @@ func contains(list []string, val string) bool {
 	
 		// Dummy LinkedIn jobs
 		linkedinJobs := []LinkedInJobMetaData{
-			{ID: "lnk1", JobID: "L001", Title: "Software Engineer", Company: "LinkedIn", Location: "Berlin", PostedDate: "2024-04-01", Link: "https://linkedin.com/jobs/1", Processed: false},
-			{ID: "lnk2", JobID: "L002", Title: "Backend Developer", Company: "Google", Location: "Munich", PostedDate: "2024-04-02", Link: "https://linkedin.com/jobs/2", Processed: false},
+			{ID: "lnk1", JobID: "L001", Title: "Software Engineer", Company: "LinkedIn", Location: "Berlin", PostedDate: "2024-04-01", Link: "https://linkedin.com/jobs/1", Processed: true},
+			{ID: "lnk2", JobID: "L002", Title: "Backend Developer", Company: "Google", Location: "Munich", PostedDate: "2024-04-02", Link: "https://linkedin.com/jobs/2", Processed: true},
 			// Add 3-4 more...
 		}
 	
 		xingJobs := []XingJobMetaData{
-			{ID: "xg1", JobID: "X001", Title: "Data Engineer", Company: "Xing", Location: "Hamburg", PostedDate: "2024-04-01", Link: "https://xing.com/jobs/1", Processed: false},
-			{ID: "xg2", JobID: "X002", Title: "DevOps Engineer", Company: "SAP", Location: "Berlin", PostedDate: "2024-04-02", Link: "https://xing.com/jobs/2", Processed: false},
+			{ID: "xg1", JobID: "X001", Title: "Data Engineer", Company: "Xing", Location: "Hamburg", PostedDate: "2024-04-01", Link: "https://xing.com/jobs/1", Processed: true},
+			{ID: "xg2", JobID: "X002", Title: "DevOps Engineer", Company: "SAP", Location: "Berlin", PostedDate: "2024-04-02", Link: "https://xing.com/jobs/2", Processed: true},
 			// Add 3-4 more...
 		}
 	
