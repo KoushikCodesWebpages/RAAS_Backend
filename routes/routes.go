@@ -18,11 +18,11 @@ func SetupRoutes(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
 		c.JSON(200, gin.H{"status": "up"})
 	})
 
-	// Auth routes
+	// AUTH ROUTES
 	r.POST("/signup", handlers.SeekerSignUp)
 	r.POST("/login", handlers.Login)
 
-	// Profile routes
+	// PROFILE routes
 	profileHandler := handlers.NewProfileHandler(db)
 	// Protect profile routes with AuthMiddleware
 	profileRoutes := r.Group("/profile")
@@ -34,7 +34,7 @@ func SetupRoutes(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
 		profileRoutes.DELETE("", profileHandler.DeleteProfile)  // Delete Profile
 	}
 
-	// Job titles routes
+	// JOB TITLES routes
 	jobTitlesRoutes := r.Group("/jobtitles")
 	jobTitlesRoutes.Use(middleware.AuthMiddleware(cfg))
 	{
@@ -43,4 +43,9 @@ func SetupRoutes(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
 		jobTitlesRoutes.PUT("", handlers.UpdateJobTitle)
 		jobTitlesRoutes.PATCH("", handlers.PatchJobTitle)
 	}
+
+
+	//JOB DATA ROUTES
+
+	r.GET("/api/jobs", handlers.JobRetrievalHandler)
 }
