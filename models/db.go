@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"gorm.io/driver/sqlite"
+	_ "modernc.org/sqlite"
 	//"gorm.io/driver/sqlserver"
 	"gorm.io/gorm"
 	"RAAS/config"
@@ -22,7 +23,7 @@ func InitDB(cfg *config.Config) *gorm.DB {
 
 	dbPath := cfg.DBName
 	if dbPath == "" {
-		dbPath = "app.db" // fallback to file-based DB
+		dbPath = "RAASDATABASE" // fallback to file-based DB
 	}
 	log.Printf("SQLite DB Path: %s", dbPath)
 
