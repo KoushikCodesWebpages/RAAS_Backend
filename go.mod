@@ -25,6 +25,8 @@ require (
 	github.com/gabriel-vasile/mimetype v1.4.8 // indirect
 	github.com/gin-contrib/cors v1.7.5 // indirect
 	github.com/gin-contrib/sse v1.0.0 // indirect
+	github.com/glebarez/go-sqlite v1.21.2 // indirect
+	github.com/glebarez/sqlite v1.11.0 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-playground/validator/v10 v10.26.0 // indirect

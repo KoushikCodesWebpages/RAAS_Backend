@@ -3,9 +3,7 @@ package models
 import (
 	"fmt"
 	"log"
-
-	"gorm.io/driver/sqlite"
-	_ "modernc.org/sqlite"
+	"github.com/glebarez/sqlite"
 	//"gorm.io/driver/sqlserver"
 	"gorm.io/gorm"
 	"RAAS/config"
