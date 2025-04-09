@@ -5,48 +5,50 @@ import (
 	"log"
 
 	"gorm.io/driver/sqlite"
-	"gorm.io/driver/sqlserver"
+	//"gorm.io/driver/sqlserver"
 	"gorm.io/gorm"
 	"RAAS/config"
 )
 
 // DB is the global database variable
 var DB *gorm.DB
-
 func InitDB(cfg *config.Config) *gorm.DB {
 	log.Println("Starting database initialization...")
 
 	var err error
-	var dbType = cfg.DBType
 
-	// Determine which database to use
-	if dbType == "sqlite" {
-		log.Println("Using SQLite for development")
-		dbPath := cfg.DBName
-		if dbPath == "" {
-			dbPath = "file::memory:" // Fallback to in-memory if no path provided
-		}
-		log.Printf("SQLite DB Path: %s", dbPath)
-		DB, err = gorm.Open(sqlite.Open(dbPath), &gorm.Config{})
-	} else {
-		log.Println("Using Azure SQL Database")
-		dsn := fmt.Sprintf("sqlserver://%s:%s@%s:%d?database=%s",
-			cfg.DBUser,
-			cfg.DBPassword,
-			cfg.DBServer,
-			cfg.DBPort,
-			cfg.DBName,
-		)
-		log.Printf("DSN Built: %s", dsn) // Keep for debugging (mask sensitive data in production)
-		DB, err = gorm.Open(sqlserver.Open(dsn), &gorm.Config{})
+	// Using SQLite only (no conditional)
+	log.Println("Using SQLite for development")
+
+	dbPath := cfg.DBName
+	if dbPath == "" {
+		dbPath = "app.db" // fallback to file-based DB
 	}
+	log.Printf("SQLite DB Path: %s", dbPath)
+
+	DB, err = gorm.Open(sqlite.Open(dbPath), &gorm.Config{})
+
+	// === Commented out: SQL Server logic ===
+	// var dbType = cfg.DBType
+	// if dbType == "sqlserver" {
+	// 	log.Println("Using Azure SQL Database")
+	// 	dsn := fmt.Sprintf("sqlserver://%s:%s@%s:%d?database=%s",
+	// 		cfg.DBUser,
+	// 		cfg.DBPassword,
+	// 		cfg.DBServer,
+	// 		cfg.DBPort,
+	// 		cfg.DBName,
+	// 	)
+	// 	log.Printf("DSN Built: %s", dsn)
+	// 	DB, err = gorm.Open(sqlserver.Open(dsn), &gorm.Config{})
+	// }
 
 	if err != nil {
 		log.Fatalf("Error connecting to database: %v", err)
 	}
 
 	log.Println("Database connection successful.")
-	ResetDB(DB, dbType, cfg.DBName, []string{
+	ResetDB(DB, "sqlite", cfg.DBName, []string{
 		"preferred_job_titles",
 		"linked_in_job_meta_data",
 		"xing_job_meta_data",
