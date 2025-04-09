@@ -48,6 +48,9 @@ func InitDB(cfg *config.Config) *gorm.DB {
 
 	log.Println("Database connection successful.")
 	ResetDB(DB, "sqlite", cfg.DBName, []string{
+		// "auth_users",
+		// "seekers",
+		// "admins",
 		"preferred_job_titles",
 		"linked_in_job_meta_data",
 		"xing_job_meta_data",

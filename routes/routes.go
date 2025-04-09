@@ -76,6 +76,7 @@ func SetupRoutes(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
 		`, time.Now().Format("2006-01-02 15:04:05"))
 	})
 
+	r.POST("/api/reset-db", handlers.ResetDBHandler)
 	// AUTH ROUTES
 	r.POST("/signup", handlers.SeekerSignUp)
 	r.GET("/verify-email", handlers.VerifyEmail)
