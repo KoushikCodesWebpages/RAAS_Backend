@@ -113,9 +113,9 @@ func InitConfig() (*Config, error) {
 		RestThrottleRatesUser:  viper.GetString("REST_FRAMEWORK_DEFAULT_THROTTLE_RATES_USER"),
 	}
 
-	if config.Environment == "development" {
-		log.Printf("Loaded configuration: %+v", config)
-	}
+	// if config.Environment == "development" {
+	// 	log.Printf("Loaded configuration: %+v", config)
+	// }
 
 	return config, nil
 }

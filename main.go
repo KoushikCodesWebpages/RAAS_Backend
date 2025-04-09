@@ -6,6 +6,7 @@ import (
 	"RAAS/config"
 	"RAAS/models"
 	"RAAS/routes"
+	"os"
 	"github.com/gin-gonic/gin"
 
 )
@@ -30,8 +31,17 @@ func main() {
 	routes.SetupRoutes(r, db, cfg)
 
 	// Start the server
-	err = r.Run(fmt.Sprintf("%s:%d", cfg.ServerHost, cfg.ServerPort))
-	if err != nil {
-		log.Fatalf("Error starting server: %v", err)
+	port := os.Getenv("PORT")
+	log.Printf("Starting server on port: %s", port)
+
+	if port == "" {
+		port = fmt.Sprintf("%d", cfg.ServerPort) // fallback for local dev
 	}
+
+	err = r.Run(":" + port)
+	if err != nil {
+		log.Fatalf("Failed to start server: %v", err)
+	}
+
+
 }
