@@ -10,30 +10,70 @@ import (
 	"time"
 )
 
-// Main entry point to register routes
 func SetupRoutes(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
 
+	// Middleware: IP Whitelisting
 	r.Use(middleware.IPWhitelistMiddleware([]string{
-		//run thus ( curl ifconfig.me )
-
 		"136.232.10.146", // Koushik IP
-		"5.6.7.8", // Frontend dev's IP
+		"5.6.7.8",        // Frontend dev's IP
 	}))
-	
+
+	// Middleware: CORS Configuration
 	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:3000"}, // update as needed
+		AllowOrigins:     []string{"http://localhost:3000"}, // Update as needed
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
 	}))
 
-	// Use InjectDB middleware to make the database instance available in the context
+	// Middleware: Inject DB into context
 	r.Use(middleware.InjectDB(db))
 
-	// Health check route
+	// Health check route (now serving an HTML page)
 	r.GET("/", func(c *gin.Context) {
-		c.JSON(200, gin.H{"status": "up"})
+		c.Header("Content-Type", "text/html; charset=utf-8")
+		c.String(200, `
+			<!DOCTYPE html>
+			<html lang="en">
+			<head>
+				<meta charset="UTF-8">
+				<meta name="viewport" content="width=device-width, initial-scale=1.0">
+				<title>RAAS Backend</title>
+				<style>
+					body {
+						font-family: Arial, sans-serif;
+						text-align: center;
+						margin-top: 50px;
+						background-color: #f0f0f0;
+					}
+					h1 {
+						color: #333;
+					}
+					p {
+						color: #666;
+					}
+					.container {
+						max-width: 600px;
+						margin: 0 auto;
+						padding: 20px;
+						background-color: white;
+						border-radius: 8px;
+						box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+					}
+				</style>
+			</head>
+			<body>
+				<div class="container">
+					<h1>Welcome to RAAS Backend</h1>
+					<p>This is the backend server for the RAAS application, built with Gin.</p>
+					<p><strong>Status:</strong> Up and Running</p>
+					<p><strong>Current Time:</strong> %s</p>
+					<p>Explore our API endpoints for authentication, profiles, and job data!</p>
+				</div>
+			</body>
+			</html>
+		`, time.Now().Format("2006-01-02 15:04:05"))
 	})
 
 	// AUTH ROUTES
@@ -43,7 +83,6 @@ func SetupRoutes(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
 
 	// PROFILE routes
 	profileHandler := handlers.NewProfileHandler(db)
-	// Protect profile routes with AuthMiddleware
 	profileRoutes := r.Group("/profile")
 	profileRoutes.Use(middleware.AuthMiddleware(cfg))
 	{
@@ -63,8 +102,6 @@ func SetupRoutes(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
 		jobTitlesRoutes.PATCH("", handlers.PatchJobTitle)
 	}
 
-
-	//JOB DATA ROUTES
-
+	// JOB DATA ROUTES
 	r.GET("/api/jobs", handlers.JobRetrievalHandler)
 }
