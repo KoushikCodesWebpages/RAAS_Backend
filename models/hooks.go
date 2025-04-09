@@ -18,3 +18,10 @@ func (u *AuthUser) BeforeCreate(tx *gorm.DB) (err error) {
     }
     return nil
 }
+
+func (s *Seeker) BeforeSave(tx *gorm.DB) (err error) {
+	if s.SubscriptionTier != "free" && s.SubscriptionTier != "premium" {
+		return fmt.Errorf("invalid subscription tier: %s", s.SubscriptionTier)
+	}
+	return nil
+}

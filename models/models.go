@@ -8,8 +8,9 @@ import (
 
 type AuthUser struct {
 	gorm.Model
-    ID                uuid.UUID `gorm:"type:uuid;primaryKey" json:"id"`
-	Email             string    `gorm:"unique"`
+	ID                uuid.UUID `gorm:"type:uuid;primaryKey" json:"id"`
+	Email             string    `gorm:"unique;not null"`
+	Phone             string    `gorm:"not null"` // Add this line
 	Password          string    // optional for OAuth (can be empty)
 	Role              string
 	VerificationToken string
@@ -17,15 +18,13 @@ type AuthUser struct {
 	Provider          string `gorm:"default:'local'"` // 'google' or 'local'
 }
 
+
 // Seeker struct that references AuthUser by UUID
 type Seeker struct {
 	gorm.Model
 	ID         uint      `gorm:"primaryKey"`
 	AuthUserID uuid.UUID  `gorm:"type:uuid"`
 	AuthUser   AuthUser   `gorm:"foreignKey:AuthUserID;constraint:OnDelete:CASCADE"`
-	FirstName  string
-	LastName   string
-	Location   string
 	SubscriptionTier string `gorm:"default:'free'" json:"subscriptionTier"` // 'free', 'premium'
 
 	// Any other fields specific to Seekers

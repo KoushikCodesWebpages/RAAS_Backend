@@ -14,6 +14,7 @@ type Config struct {
 	CORSAllowedOrigins     string
 	ClientId			   string
 	ClientSecret		   string
+	FrontendBaseUrl        string
 	AccessTokenLifetime    int
 	RefreshTokenLifetime   int
 	RotateRefreshTokens    bool
@@ -72,7 +73,8 @@ func InitConfig() (*Config, error) {
 		AuthUserModel:          viper.GetString("AUTH_USER_MODEL"),
 		CORSAllowedOrigins:     viper.GetString("CORS_ALLOWED_ORIGINS"),
 		ClientId:				viper.GetString("CLIENT_ID"),
-		ClientSecret:				viper.GetString("CLIENT_SECRET"),
+		ClientSecret:			viper.GetString("CLIENT_SECRET"),
+		FrontendBaseUrl:        viper.GetString("FRONTEND_BASE_URL"),
 		AccessTokenLifetime:    viper.GetInt("ACCESS_TOKEN_LIFETIME"),
 		RefreshTokenLifetime:   viper.GetInt("REFRESH_TOKEN_LIFETIME"),
 		RotateRefreshTokens:    viper.GetBool("ROTATE_REFRESH_TOKENS"),

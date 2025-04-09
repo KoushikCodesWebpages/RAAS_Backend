@@ -20,6 +20,7 @@ func SetupRoutes(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
 
 	// AUTH ROUTES
 	r.POST("/signup", handlers.SeekerSignUp)
+	r.GET("/verify-email", handlers.VerifyEmail)
 	r.POST("/login", handlers.Login)
 
 	// PROFILE routes

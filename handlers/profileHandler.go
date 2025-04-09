@@ -51,11 +51,6 @@ func (h *ProfileHandler) UpdateProfile(c *gin.Context) {
 		return
 	}
 
-	// Update the seeker fields
-	seeker.FirstName = updateData.FirstName
-	seeker.LastName = updateData.LastName
-	seeker.Location = updateData.Location
-
 	// Save updated profile
 	if err := h.DB.Save(&seeker).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not update profile"})
@@ -81,18 +76,6 @@ func (h *ProfileHandler) PatchProfile(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Profile not found"})
 		return
 	}
-
-	// Update only non-empty fields
-	if updateData.FirstName != "" {
-		seeker.FirstName = updateData.FirstName
-	}
-	if updateData.LastName != "" {
-		seeker.LastName = updateData.LastName
-	}
-	if updateData.Location != "" {
-		seeker.Location = updateData.Location
-	}
-
 	// Save updated profile
 	if err := h.DB.Save(&seeker).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not patch profile"})

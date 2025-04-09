@@ -8,7 +8,7 @@ import (
 
 	"gorm.io/gorm"
 
-	//"RAAS/utils"
+	"RAAS/utils"
 	"errors"
 
 	"github.com/google/uuid"
@@ -16,8 +16,20 @@ import (
 
 	"RAAS/config"
 )
+
+var appConfig *config.Config
+
+func init() {
+	var err error
+	appConfig, err = config.InitConfig()
+	if err != nil {
+		panic("Failed to load config: " + err.Error())
+	}
+}
+
+
 func validateSeekerSignUpInput(input dto.SeekerSignUpInput) error {
-    if input.Email == "" || input.Password == "" || input.FirstName == "" || input.LastName == "" || input.Location == "" {
+    if input.Email == "" || input.Password == "" || input.Number == "" {
         return fmt.Errorf("all fields are required")
     }
     return nil
@@ -41,9 +53,10 @@ func createSeeker(db *gorm.DB, input dto.SeekerSignUpInput, hashedPassword strin
 		ID:                uuid.New(), // Generate UUID for AuthUser
 		Email:             input.Email,
 		Password:          hashedPassword,
+		Phone:			   input.Number,
 		Role:              "seeker",
 		VerificationToken: token,
-		EmailVerified:     true, // Assume false until verified
+		EmailVerified:     false, // Assume false until verified
 	}
 
 	// Save AuthUser to the database
@@ -53,10 +66,10 @@ func createSeeker(db *gorm.DB, input dto.SeekerSignUpInput, hashedPassword strin
 
 	// Create associated Seeker profile, using the correct AuthUserID
 	seeker := models.Seeker{
-		AuthUserID: authUser.ID,     // Link Seeker to AuthUser by ID
-		FirstName:  input.FirstName,  // Assign FirstName
-		LastName:   input.LastName,   // Assign LastName
-		Location:   input.Location,   // Assign Location
+		AuthUserID: authUser.ID,
+		SubscriptionTier: "free",
+	    // Link Seeker to AuthUser by ID
+		   // Assign Location
 	}
 
 	// Save Seeker to the database
@@ -65,14 +78,16 @@ func createSeeker(db *gorm.DB, input dto.SeekerSignUpInput, hashedPassword strin
 	}
 
 	// Construct email verification link (optional)
-	/*
-	verificationLink := fmt.Sprintf("https://your-frontend.com/verify-email?token=%s", token)
+	fmt.Println("Loaded frontend base URL:", appConfig.FrontendBaseUrl)
+	verificationLink := fmt.Sprintf("%s/verify-email?token=%s", config.FrontendBaseUrl, token)
+
 	emailBody := fmt.Sprintf(`
 		<p>Hello %s,</p>
 		<p>Thanks for signing up! Please verify your email by clicking the link below:</p>
 		<p><a href="%s">Verify Email</a></p>
 		<p>If you did not sign up, you can ignore this email.</p>
-	`, input.FirstName, verificationLink)
+	`, input.Email, verificationLink)
+	
 
 	// Prepare email config from loaded app config
 	emailCfg := utils.EmailConfig{
@@ -88,7 +103,7 @@ func createSeeker(db *gorm.DB, input dto.SeekerSignUpInput, hashedPassword strin
 	if err := utils.SendEmail(emailCfg, input.Email, "Verify your email", emailBody); err != nil {
 		return fmt.Errorf("user created but failed to send verification email: %v", err)
 	}
-	*/
+	
 
 	return nil
 }
