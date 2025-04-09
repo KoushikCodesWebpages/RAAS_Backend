@@ -21,6 +21,7 @@ type AuthUserMinimal struct {
 	Email         string `json:"email"`
 	EmailVerified bool   `json:"emailVerified"`
 	Provider      string `json:"provider"`
+	Number string `json:"number" binding:"required,len=10"`
 }
 
 // SeekerResponse represents the response structure for Seeker details
@@ -28,11 +29,13 @@ type SeekerResponse struct {
 	ID         uint            `json:"id"`       // Use uuid.UUID for Seeker ID
 	AuthUserID uuid.UUID       `json:"authUserId"`  // Use uuid.UUID for AuthUserID
 	AuthUser   AuthUserMinimal `json:"authUser"`
+	SubscriptionTier string    `json:"subscriptionTier"`
+	
 	//SubscriptionTier string
 }
 
 // NewSeekerResponse creates a new SeekerResponse from a Seeker model
-func NewSeekerResponse(seeker models.Seeker) SeekerResponse {
+func SeekerProfileResponse(seeker models.Seeker) SeekerResponse {
 	return SeekerResponse{
 		ID:         seeker.ID,  // ID as uuid.UUID
 		AuthUserID: seeker.AuthUserID,  // AuthUserID as uuid.UUID
@@ -40,6 +43,9 @@ func NewSeekerResponse(seeker models.Seeker) SeekerResponse {
 			Email:         seeker.AuthUser.Email,
 			EmailVerified: seeker.AuthUser.EmailVerified,
 			Provider:      seeker.AuthUser.Provider,
+			Number: seeker.AuthUser.Phone,
 		},
+		SubscriptionTier: seeker.SubscriptionTier,
+
 	}
 }

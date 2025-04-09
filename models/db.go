@@ -42,8 +42,19 @@ func InitDB(cfg *config.Config) *gorm.DB {
 	}
 
 	log.Println("Database connection successful.")
-	ResetDB(DB, dbType, cfg.DBName,[]string{
-	}) // Pass the dbName as parameter to ResetDB
+	ResetDB(DB, dbType, cfg.DBName, []string{
+		//"auth_users",
+		//"seekers",
+		//"admins",
+		"preferred_job_titles",
+		"linked_in_job_meta_data",
+		"xing_job_meta_data",
+		"linked_in_failed_jobs",
+		"xing_failed_jobs",
+		"linked_in_job_application_links",
+		"xing_job_application_links",
+	})
+	
 
 	log.Println("Starting AutoMigrate...")
 	AutoMigrate()
@@ -76,19 +87,32 @@ func AutoMigrate() {
 	}
 }
 
-// ResetDB drops the entire database and recreates it for SQL Server
+// ResetDB drops selected tables for SQL Server and SQLite
 func ResetDB(DB *gorm.DB, dbType string, dbName string, tablesToDrop []string) {
-	if dbType == "sqlserver" {
+	log.Println("ResetDB started...")
+
+	switch dbType {
+	case "sqlserver":
 		log.Println("Detected SQL Server, proceeding with selective reset...")
 
-		// Step 1: Drop foreign key constraints only for specified tables
-		log.Println("Dropping foreign key constraints...")
+		// Print all existing tables before reset
+		log.Println("Listing all tables before reset...")
+		var tableNames []string
+		DB.Raw(`
+			SELECT TABLE_NAME 
+			FROM INFORMATION_SCHEMA.TABLES 
+			WHERE TABLE_TYPE = 'BASE TABLE'
+		`).Scan(&tableNames)
+		for _, table := range tableNames {
+			log.Println("Existing table:", table)
+		}
 
+		// Drop foreign key constraints
+		log.Println("Dropping foreign key constraints...")
 		var constraints []struct {
 			TableName      string
 			ConstraintName string
 		}
-
 		DB.Raw(`
 			SELECT TABLE_NAME, CONSTRAINT_NAME 
 			FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS 
@@ -96,7 +120,6 @@ func ResetDB(DB *gorm.DB, dbType string, dbName string, tablesToDrop []string) {
 		`).Scan(&constraints)
 
 		for _, c := range constraints {
-			// Only drop constraints from tables we want to reset
 			if contains(tablesToDrop, c.TableName) {
 				dropFKQuery := fmt.Sprintf("ALTER TABLE [%s] DROP CONSTRAINT [%s];", c.TableName, c.ConstraintName)
 				if err := DB.Exec(dropFKQuery).Error; err != nil {
@@ -107,7 +130,7 @@ func ResetDB(DB *gorm.DB, dbType string, dbName string, tablesToDrop []string) {
 			}
 		}
 
-		// Step 2: Drop only selected tables
+		// Drop selected tables
 		log.Println("Dropping selected tables...")
 		for _, table := range tablesToDrop {
 			dropTableQuery := fmt.Sprintf("DROP TABLE IF EXISTS [%s];", table)
@@ -118,9 +141,35 @@ func ResetDB(DB *gorm.DB, dbType string, dbName string, tablesToDrop []string) {
 			}
 		}
 
-		log.Println("Selected table reset completed.")
+	case "sqlite":
+		log.Println("Detected SQLite, proceeding with selective reset...")
+
+		// Print all existing tables before reset
+		log.Println("Listing all tables before reset...")
+		var tableNames []string
+		DB.Raw(`SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'`).Scan(&tableNames)
+		for _, table := range tableNames {
+			log.Println("Existing table:", table)
+		}
+
+		// Drop selected tables
+		for _, table := range tablesToDrop {
+			dropTableQuery := fmt.Sprintf("DROP TABLE IF EXISTS `%s`;", table)
+			if err := DB.Exec(dropTableQuery).Error; err != nil {
+				log.Printf("Error dropping table %s: %v", table, err)
+			} else {
+				log.Printf("Dropped table %s successfully", table)
+			}
+		}
+
+	default:
+		log.Printf("ResetDB not supported for dbType: %s", dbType)
 	}
+
+	log.Println("ResetDB completed.")
 }
+
+
 
 // Helper to check if a string exists in a list
 func contains(list []string, val string) bool {

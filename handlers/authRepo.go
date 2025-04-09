@@ -109,44 +109,6 @@ func createSeeker(db *gorm.DB, input dto.SeekerSignUpInput, hashedPassword strin
 }
 
 
-// func createSeekerFromGoogleOAuth(db *gorm.DB, info security.UserInfo) (*models.AuthUser, error) {
-//     var user models.AuthUser
-
-//     // Check if user exists already via Google
-//     result := db.Where("email = ? AND provider = ?", info.Email, "google").First(&user)
-//     if result.Error == nil {
-//         return &user, nil
-//     }
-
-//     // Create AuthUser
-//     authUser := models.AuthUser{
-//         Email:         info.Email,
-//         Role:          "seeker",
-//         Provider:      "google",
-//         EmailVerified: true,
-//     }
-
-//     if err := db.Create(&authUser).Error; err != nil {
-//         return nil, err
-//     }
-
-//     // Create Seeker profile (you can refine name splitting later)
-//     seeker := models.Seeker{
-//         AuthUserID: authUser.ID,
-//         AuthUser:   authUser,
-//         FirstName:  info.Name,
-//         LastName:   "",
-//         Location:   "",
-//     }
-
-//     if err := db.Create(&seeker).Error; err != nil {
-//         return nil, err
-//     }
-
-//     return &authUser, nil
-// }
-
-
 func authenticateUser(db *gorm.DB, email, password string) (*models.AuthUser, error) {
     var user models.AuthUser
 

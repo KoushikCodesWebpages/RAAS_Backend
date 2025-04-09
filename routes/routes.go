@@ -40,7 +40,7 @@ func SetupRoutes(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
 	jobTitlesRoutes.Use(middleware.AuthMiddleware(cfg))
 	{
 		jobTitlesRoutes.POST("", handlers.CreateJobTitle)
-		jobTitlesRoutes.GET("", handlers.GetJobTitles)
+		jobTitlesRoutes.GET("", handlers.GetJobTitle)
 		jobTitlesRoutes.PUT("", handlers.UpdateJobTitle)
 		jobTitlesRoutes.PATCH("", handlers.PatchJobTitle)
 	}

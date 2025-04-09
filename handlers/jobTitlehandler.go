@@ -36,21 +36,22 @@ func CreateJobTitle(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Job title created successfully", "jobTitle": jobTitle})
+	c.JSON(http.StatusOK, jobTitle)
+
 }
 
 // GetJobTitles retrieves the preferred job titles for the authenticated user
-func GetJobTitles(c *gin.Context) {
+func GetJobTitle(c *gin.Context) {
 	db := c.MustGet("db").(*gorm.DB)
-	userID := c.MustGet("userID").(uuid.UUID) // From JWT claims
+	userID := c.MustGet("userID").(uuid.UUID) // From JWT
 
-	var jobTitles []models.PreferredJobTitle
-	if err := db.Where("auth_user_id = ?", userID).Find(&jobTitles).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve job titles", "details": err.Error()})
+	var jobTitle models.PreferredJobTitle
+	if err := db.Where("auth_user_id = ?", userID).First(&jobTitle).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "No job title found. Please set your preferred job titles first."})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"jobTitles": jobTitles})
+	c.JSON(http.StatusOK, jobTitle)
 }
 
 // UpdateJobTitle updates the job titles for the authenticated user

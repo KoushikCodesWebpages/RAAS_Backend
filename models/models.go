@@ -23,7 +23,7 @@ type AuthUser struct {
 type Seeker struct {
 	gorm.Model
 	ID         uint      `gorm:"primaryKey"`
-	AuthUserID uuid.UUID  `gorm:"type:uuid"`
+	AuthUserID uuid.UUID  `gorm:"type:uuid;not null"`
 	AuthUser   AuthUser   `gorm:"foreignKey:AuthUserID;constraint:OnDelete:CASCADE"`
 	SubscriptionTier string `gorm:"default:'free'" json:"subscriptionTier"` // 'free', 'premium'
 
@@ -49,7 +49,7 @@ type PreferredJobTitle struct {
 	PrimaryTitle   string    `gorm:"type:varchar(255);not null" json:"primaryTitle"`   // Primary job title (cannot be NULL)
 	SecondaryTitle *string   `gorm:"type:varchar(255);" json:"secondaryTitle"`         // Secondary job title (nullable)
 	TertiaryTitle  *string   `gorm:"type:varchar(255);" json:"tertiaryTitle"`          // Tertiary job title (nullable)
-	AuthUserID     uuid.UUID `gorm:"type:uuid;not null" json:"authUserId"`             // Foreign Key to AuthUser
+	AuthUserID     uuid.UUID `gorm:"type:uuid;unique;not null" json:"authUserId"`             // Foreign Key to AuthUser
 }
 
 

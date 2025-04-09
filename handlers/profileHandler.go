@@ -30,7 +30,7 @@ func (h *ProfileHandler) RetrieveProfile(c *gin.Context) {
 		return
 	}
 
-	profileResponse := dto.NewSeekerResponse(seeker)
+	profileResponse := dto.SeekerProfileResponse(seeker)
 	c.JSON(http.StatusOK, profileResponse)
 }
 
@@ -57,7 +57,7 @@ func (h *ProfileHandler) UpdateProfile(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, dto.NewSeekerResponse(seeker))
+	c.JSON(http.StatusOK, dto.SeekerProfileResponse(seeker))
 }
 
 // PatchProfile partially updates the profile of the authenticated user
@@ -82,7 +82,7 @@ func (h *ProfileHandler) PatchProfile(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, dto.NewSeekerResponse(seeker))
+	c.JSON(http.StatusOK, dto.SeekerProfileResponse(seeker))
 }
 
 // DeleteProfile deletes the profile of the authenticated user
