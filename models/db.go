@@ -13,17 +13,21 @@ import (
 // DB is the global database variable
 var DB *gorm.DB
 
-// InitDB initializes the database connection and sets up the models
 func InitDB(cfg *config.Config) *gorm.DB {
 	log.Println("Starting database initialization...")
 
 	var err error
-	var dbType = cfg.DBType // Get the DB type from the config
+	var dbType = cfg.DBType
 
 	// Determine which database to use
 	if dbType == "sqlite" {
 		log.Println("Using SQLite for development")
-		DB, err = gorm.Open(sqlite.Open(cfg.DBName), &gorm.Config{})
+		dbPath := cfg.DBName
+		if dbPath == "" {
+			dbPath = "file::memory:" // Fallback to in-memory if no path provided
+		}
+		log.Printf("SQLite DB Path: %s", dbPath)
+		DB, err = gorm.Open(sqlite.Open(dbPath), &gorm.Config{})
 	} else {
 		log.Println("Using Azure SQL Database")
 		dsn := fmt.Sprintf("sqlserver://%s:%s@%s:%d?database=%s",
@@ -33,7 +37,7 @@ func InitDB(cfg *config.Config) *gorm.DB {
 			cfg.DBPort,
 			cfg.DBName,
 		)
-		log.Println("DSN Built:", dsn)
+		log.Printf("DSN Built: %s", dsn) // Keep for debugging (mask sensitive data in production)
 		DB, err = gorm.Open(sqlserver.Open(dsn), &gorm.Config{})
 	}
 
@@ -43,9 +47,6 @@ func InitDB(cfg *config.Config) *gorm.DB {
 
 	log.Println("Database connection successful.")
 	ResetDB(DB, dbType, cfg.DBName, []string{
-		//"auth_users",
-		//"seekers",
-		//"admins",
 		"preferred_job_titles",
 		"linked_in_job_meta_data",
 		"xing_job_meta_data",
@@ -54,14 +55,12 @@ func InitDB(cfg *config.Config) *gorm.DB {
 		"linked_in_job_application_links",
 		"xing_job_application_links",
 	})
-	
 
 	log.Println("Starting AutoMigrate...")
 	AutoMigrate()
 	log.Println("AutoMigrate completed.")
 
 	SeedJobs(DB)
-	
 
 	return DB
 }
