@@ -6,10 +6,28 @@ import (
 	"RAAS/middlewares"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
+	"github.com/gin-contrib/cors"
+	"time"
 )
 
 // Main entry point to register routes
 func SetupRoutes(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
+
+	r.Use(middleware.IPWhitelistMiddleware([]string{
+		//run thus ( curl ifconfig.me )
+
+		"136.232.10.146", // Koushik IP
+		"5.6.7.8", // Frontend dev's IP
+	}))
+	
+	r.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"http://localhost:3000"}, // update as needed
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}))
+
 	// Use InjectDB middleware to make the database instance available in the context
 	r.Use(middleware.InjectDB(db))
 
