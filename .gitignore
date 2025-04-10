@@ -2,5 +2,5 @@
 .air.toml
 tmp/*
 !tmp/.gitkeep
-
+setup.sh
 
