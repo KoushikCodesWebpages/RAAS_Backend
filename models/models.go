@@ -40,20 +40,18 @@ type Admin struct {
 
 // PREFERENCE MODELS
 
-
-
-
-
 type PreferredJobTitle struct {
 	gorm.Model
 	PrimaryTitle   string    `gorm:"type:varchar(255);not null" json:"primaryTitle"`   // Primary job title (cannot be NULL)
 	SecondaryTitle *string   `gorm:"type:varchar(255);" json:"secondaryTitle"`         // Secondary job title (nullable)
 	TertiaryTitle  *string   `gorm:"type:varchar(255);" json:"tertiaryTitle"`          // Tertiary job title (nullable)
-	AuthUserID     uuid.UUID `gorm:"type:uuid;unique;not null" json:"authUserId"`             // Foreign Key to AuthUser
+	AuthUserID     uuid.UUID `gorm:"type:uuid;unique;not null" json:"authUserId"`      // Foreign Key to AuthUser
 }
 
 
 // JOB DATA MODELS
+
+
 
 type LinkedInJobMetaData struct {
 	ID         string `gorm:"primaryKey"`  // ID is the main identifier
@@ -65,24 +63,6 @@ type LinkedInJobMetaData struct {
 	Link       string `gorm:"unique"`      // Each job has a unique link
 	Processed  bool                        // Whether this job has been processed or not
 }
-
-type LinkedInFailedJob struct {
-	ID      uint   `gorm:"primaryKey;autoIncrement"` // Auto-increment primary key
-	JobID   string                                   // Foreign key to LinkedInJob.ID
-	JobLink string `gorm:"unique"`                   // Unique link for tracking
-
-	// Define relationship for foreign key with cascading delete
-	LinkedInJob LinkedInJobMetaData `gorm:"foreignKey:JobID;references:ID;constraint:OnDelete:CASCADE"`
-}
-
-type LinkedInJobApplicationLink struct {
-	ID      uint   `gorm:"primaryKey;autoIncrement"`
-	JobID   string
-	JobLink string `gorm:"unique"`
-
-	LinkedInJob LinkedInJobMetaData `gorm:"foreignKey:JobID;references:ID;constraint:OnDelete:CASCADE"`
-}
-
 type XingJobMetaData struct {
 	ID         string `gorm:"primaryKey"`
 	JobID      string `gorm:"unique"`
@@ -94,6 +74,18 @@ type XingJobMetaData struct {
 	Processed  bool
 }
 
+
+
+
+
+type LinkedInFailedJob struct {
+	ID      uint   `gorm:"primaryKey;autoIncrement"` // Auto-increment primary key
+	JobID   string                                   // Foreign key to LinkedInJob.ID
+	JobLink string `gorm:"unique"`                   // Unique link for tracking
+
+	// Define relationship for foreign key with cascading delete
+	LinkedInJob LinkedInJobMetaData `gorm:"foreignKey:JobID;references:ID;constraint:OnDelete:CASCADE"`
+}
 type XingFailedJob struct {
 	ID      uint   `gorm:"primaryKey;autoIncrement"`
 	JobID   string
@@ -102,6 +94,15 @@ type XingFailedJob struct {
 	XingJob XingJobMetaData `gorm:"foreignKey:JobID;references:ID;constraint:OnDelete:CASCADE"`
 }
 
+
+
+type LinkedInJobApplicationLink struct {
+	ID      uint   `gorm:"primaryKey;autoIncrement"`
+	JobID   string
+	JobLink string `gorm:"unique"`
+
+	LinkedInJob LinkedInJobMetaData `gorm:"foreignKey:JobID;references:ID;constraint:OnDelete:CASCADE"`
+}
 type XingJobApplicationLink struct {
 	ID      uint   `gorm:"primaryKey;autoIncrement"`
 	JobID   string `gorm:"uniqueIndex:idx_xing_job_app"` // part of composite unique key
@@ -109,3 +110,23 @@ type XingJobApplicationLink struct {
 
 	XingJob XingJobMetaData `gorm:"foreignKey:JobID;references:ID;constraint:OnDelete:CASCADE"`
 }
+
+
+
+type LinkedInJobDescription struct {
+	ID             uint   `gorm:"primaryKey;autoIncrement"`
+	JobID          string
+	JobLink        string `gorm:"unique"`
+	JobDescription string
+
+	LinkedInJob LinkedInJobMetaData `gorm:"foreignKey:JobID;references:ID;constraint:OnDelete:CASCADE"`
+}
+type XingJobDescription struct {
+	ID             uint   `gorm:"primaryKey;autoIncrement"`
+	JobID          string
+	JobLink        string `gorm:"unique"`
+	JobDescription string
+
+	XingJob XingJobMetaData `gorm:"foreignKey:JobID;references:ID;constraint:OnDelete:CASCADE"`
+}
+

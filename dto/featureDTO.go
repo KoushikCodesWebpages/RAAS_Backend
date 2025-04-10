@@ -20,7 +20,6 @@ type JobDTO struct {
 	Company    string `json:"company"`
 	Location   string `json:"location"`
 	PostedDate string `json:"posted_date"`
-	Link       string `json:"link"`
 	Processed  bool   `json:"processed"`
 }
 

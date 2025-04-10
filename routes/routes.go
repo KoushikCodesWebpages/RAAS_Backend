@@ -104,5 +104,9 @@ func SetupRoutes(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
 	}
 
 	// JOB DATA ROUTES
-	r.GET("/api/jobs", handlers.JobRetrievalHandler)
+	jobRetrievalRoutes := r.Group("/api/jobs")
+	jobRetrievalRoutes.Use(middleware.AuthMiddleware(cfg))
+	{
+		jobRetrievalRoutes.GET("", handlers.JobRetrievalHandler)
+	}
 }

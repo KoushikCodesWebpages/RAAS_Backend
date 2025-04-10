@@ -7,28 +7,57 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 	"net/http"
+	"github.com/google/uuid"
 )
-
-// JobRetrievalHandler handles GET /api/jobs — returns all Xing and LinkedIn jobs, optionally filtered by title
 func JobRetrievalHandler(c *gin.Context) {
 	db := c.MustGet("db").(*gorm.DB)
-	titleFilter := strings.ToLower(c.Query("title"))
+	userID := c.MustGet("userID").(uuid.UUID)
 
+	var jobs []dto.JobDTO
+
+	// Fetch user's preferred job titles
+	var preferred models.PreferredJobTitle
+	if err := db.Where("auth_user_id = ?", userID).First(&preferred).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Set Your Job Title First",
+		})
+		return
+	}
+
+	// Collect preferred titles (non-nil, non-empty)
+	var preferredTitles []string
+	if preferred.PrimaryTitle != "" {
+		preferredTitles = append(preferredTitles, preferred.PrimaryTitle)
+	}
+	if preferred.SecondaryTitle != nil && *preferred.SecondaryTitle != "" {
+		preferredTitles = append(preferredTitles, *preferred.SecondaryTitle)
+	}
+	if preferred.TertiaryTitle != nil && *preferred.TertiaryTitle != "" {
+		preferredTitles = append(preferredTitles, *preferred.TertiaryTitle)
+	}
+
+	if len(preferredTitles) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "No preferred job titles set for user."})
+		return
+	}
+
+	// Build WHERE clause for case-insensitive title matches
+	var conditions []string
+	var values []interface{}
+	for _, title := range preferredTitles {
+		conditions = append(conditions, "LOWER(title) LIKE ?")
+		values = append(values, "%"+strings.ToLower(title)+"%")
+	}
+	whereClause := strings.Join(conditions, " OR ")
+
+	// Query jobs from both sources
 	var linkedinJobs []models.LinkedInJobMetaData
 	var xingJobs []models.XingJobMetaData
 
-	// Apply filter if provided
-	if titleFilter != "" {
-		db.Where("LOWER(title) LIKE ?", "%"+titleFilter+"%").Find(&linkedinJobs)
-		db.Where("LOWER(title) LIKE ?", "%"+titleFilter+"%").Find(&xingJobs)
-	} else {
-		db.Find(&linkedinJobs)
-		db.Find(&xingJobs)
-	}
+	db.Where(whereClause, values...).Find(&linkedinJobs)
+	db.Where(whereClause, values...).Find(&xingJobs)
 
-	// Merge into DTOs
-	var jobs []dto.JobDTO
-
+	// Merge to DTO
 	for _, job := range linkedinJobs {
 		jobs = append(jobs, dto.JobDTO{
 			Source:     "linkedin",
@@ -38,7 +67,6 @@ func JobRetrievalHandler(c *gin.Context) {
 			Company:    job.Company,
 			Location:   job.Location,
 			PostedDate: job.PostedDate,
-			Link:       job.Link,
 			Processed:  job.Processed,
 		})
 	}
@@ -52,15 +80,16 @@ func JobRetrievalHandler(c *gin.Context) {
 			Company:    job.Company,
 			Location:   job.Location,
 			PostedDate: job.PostedDate,
-			Link:       job.Link,
 			Processed:  job.Processed,
 		})
 	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"jobs": jobs,
-		"pagination": gin.H{ // Placeholder for future pagination support
+		"pagination": gin.H{
 			"total": len(jobs),
 		},
 	})
 }
+
+

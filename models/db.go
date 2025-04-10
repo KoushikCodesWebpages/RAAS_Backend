@@ -58,11 +58,13 @@ func InitDB(cfg *config.Config) *gorm.DB {
 		"xing_failed_jobs",
 		"linked_in_job_application_links",
 		"xing_job_application_links",
+		"linked_in_job_descriptions",
+		"xing_job_descriptions",
 	})
 
 	log.Println("Starting AutoMigrate...")
 	AutoMigrate()
-	log.Println("AutoMigrate completed.")
+	log.Println("AutoMigrate completed seeding starts.")
 
 	SeedJobs(DB)
 
@@ -83,6 +85,8 @@ func AutoMigrate() {
 		&XingFailedJob{},
 		&LinkedInJobApplicationLink{},
 		&XingJobApplicationLink{},
+		&LinkedInJobDescription{},
+		&XingJobDescription{},
 		// Add more models as needed
 	)
 	if err != nil {
@@ -184,30 +188,3 @@ func contains(list []string, val string) bool {
 	return false
 }
 
-
-	//DEVELOPMENT
-	func SeedJobs(db *gorm.DB) {
-		// Check if jobs already seeded
-		var count int64
-		db.Model(&LinkedInJobMetaData{}).Count(&count)
-		if count > 0 {
-			return // Already seeded
-		}
-	
-		// Dummy LinkedIn jobs
-		linkedinJobs := []LinkedInJobMetaData{
-			{ID: "lnk1", JobID: "L001", Title: "Software Engineer", Company: "LinkedIn", Location: "Berlin", PostedDate: "2024-04-01", Link: "https://linkedin.com/jobs/1", Processed: true},
-			{ID: "lnk2", JobID: "L002", Title: "Backend Developer", Company: "Google", Location: "Munich", PostedDate: "2024-04-02", Link: "https://linkedin.com/jobs/2", Processed: true},
-			// Add 3-4 more...
-		}
-	
-		xingJobs := []XingJobMetaData{
-			{ID: "xg1", JobID: "X001", Title: "Data Engineer", Company: "Xing", Location: "Hamburg", PostedDate: "2024-04-01", Link: "https://xing.com/jobs/1", Processed: true},
-			{ID: "xg2", JobID: "X002", Title: "DevOps Engineer", Company: "SAP", Location: "Berlin", PostedDate: "2024-04-02", Link: "https://xing.com/jobs/2", Processed: true},
-			// Add 3-4 more...
-		}
-	
-		// Insert into DB
-		db.Create(&linkedinJobs)
-		db.Create(&xingJobs)
-	}
