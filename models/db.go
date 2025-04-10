@@ -51,7 +51,7 @@ func InitDB(cfg *config.Config) *gorm.DB {
 		// "auth_users",
 		// "seekers",
 		// "admins",
-		"preferred_job_titles",
+		//"preferred_job_titles",
 		"linked_in_job_meta_data",
 		"xing_job_meta_data",
 		"linked_in_failed_jobs",
@@ -60,6 +60,7 @@ func InitDB(cfg *config.Config) *gorm.DB {
 		"xing_job_application_links",
 		"linked_in_job_descriptions",
 		"xing_job_descriptions",
+		"job_match_scores",
 	})
 
 	log.Println("Starting AutoMigrate...")
@@ -87,6 +88,7 @@ func AutoMigrate() {
 		&XingJobApplicationLink{},
 		&LinkedInJobDescription{},
 		&XingJobDescription{},
+		&JobMatchScore{},
 		// Add more models as needed
 	)
 	if err != nil {

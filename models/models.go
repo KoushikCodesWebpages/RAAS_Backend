@@ -3,6 +3,7 @@ package models
 import (
 	"gorm.io/gorm"
     "github.com/google/uuid"
+	"time"
 )
 // AUTH MODELS 
 
@@ -46,6 +47,18 @@ type PreferredJobTitle struct {
 	SecondaryTitle *string   `gorm:"type:varchar(255);" json:"secondaryTitle"`         // Secondary job title (nullable)
 	TertiaryTitle  *string   `gorm:"type:varchar(255);" json:"tertiaryTitle"`          // Tertiary job title (nullable)
 	AuthUserID     uuid.UUID `gorm:"type:uuid;unique;not null" json:"authUserId"`      // Foreign Key to AuthUser
+}
+
+
+//FEATURE MODELS
+
+type JobMatchScore struct {
+	ID         uint      `gorm:"primaryKey;autoIncrement"`
+	AuthUserID uuid.UUID `gorm:"type:uuid;not null;uniqueIndex:idx_user_job" json:"authUserId"`
+	JobID      string    `gorm:"not null;uniqueIndex:idx_user_job"` // composite with AuthUserID
+	Platform   string    `gorm:"not null"`                           // "linkedin" or "xing"
+	Score      float64   `gorm:"not null"`
+	MatchedAt  time.Time `gorm:"autoCreateTime"`
 }
 
 

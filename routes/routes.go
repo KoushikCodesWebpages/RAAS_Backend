@@ -109,4 +109,14 @@ func SetupRoutes(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
 	{
 		jobRetrievalRoutes.GET("", handlers.JobRetrievalHandler)
 	}
+
+	// MATCH SCORE ROUTES
+	matchScoreRoutes := r.Group("/matchscore")
+	matchScoreRoutes.Use(middleware.AuthMiddleware(cfg))
+	{
+		matchScoreRoutes.POST("", handlers.MatchScorePOST)
+		matchScoreRoutes.GET("", handlers.MatchScoreGET)
+	}
+	
+
 }
