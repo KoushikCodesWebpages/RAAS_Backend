@@ -32,13 +32,18 @@ func main() {
 
 	// Start the server
 	port := os.Getenv("PORT")
-	log.Printf("Starting server on port: %s", port)
+	
 
 	if port == "" {
-		port = fmt.Sprintf("%d", cfg.ServerPort) // fallback for local dev
+		port = fmt.Sprintf("%d", cfg.ServerPort)
+		log.Printf("Starting server on dev port: %s", port)
+	} else {
+		log.Printf("Starting server on prod port: %s", port)
 	}
-
 	err = r.Run(":" + port)
+	
+
+
 	if err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}

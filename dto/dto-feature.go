@@ -6,13 +6,6 @@ import (
 	"time"
 )
 
-//JOB TITLE
-
-type JobTitleInput struct {
-	PrimaryTitle   string  `json:"primaryTitle"`
-	SecondaryTitle *string `json:"secondaryTitle,omitempty"`
-	TertiaryTitle  *string `json:"tertiaryTitle,omitempty"`
-}
 
 //JOB RETRIEVAL
 
