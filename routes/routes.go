@@ -125,7 +125,35 @@ func SetupRoutes(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
 		workExpRoutes.DELETE("/:id", handlers.DeleteWorkExperience)
 	}
 
+	//EDUCATION
+	educationRoutes := r.Group("/education")
+	educationRoutes.Use(middleware.AuthMiddleware(cfg))
+	{
+		educationRoutes.POST("", handlers.CreateEducation)
+		educationRoutes.GET("", handlers.GetEducation)
+		educationRoutes.PUT("/:id", handlers.PutEducation)
+		educationRoutes.DELETE("/:id", handlers.DeleteEducation)
+	}
 
+	//CERTIFICATES
+	certificateRoutes := r.Group("/certificates")
+	certificateRoutes.Use(middleware.AuthMiddleware(cfg))
+	{
+		certificateRoutes.POST("", handlers.CreateCertificate)
+		certificateRoutes.GET("", handlers.GetCertificates)
+		certificateRoutes.PUT("/:id", handlers.PutCertificate)
+		certificateRoutes.DELETE("/:id", handlers.DeleteCertificate)
+	}
+
+	//LANGUAGE
+	languageRoutes := r.Group("/languages")
+	languageRoutes.Use(middleware.AuthMiddleware(cfg))
+	{
+		languageRoutes.POST("", handlers.CreateLanguage)
+		languageRoutes.GET("", handlers.GetLanguages)
+		languageRoutes.PUT("/:id", handlers.PutLanguage)
+		languageRoutes.DELETE("/:id", handlers.DeleteLanguage)
+	}
 
 	// JOB TITLES routes
 	jobTitlesRoutes := r.Group("/jobtitles")
@@ -151,6 +179,10 @@ func SetupRoutes(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
 		matchScoreRoutes.POST("", handlers.MatchScorePOST)
 		matchScoreRoutes.GET("", handlers.MatchScoreGET)
 	}
+	
+
+
+
 
 	
 

@@ -67,3 +67,58 @@ type WorkExperienceResponse struct {
 	KeyResponsibilities string    `json:"keyResponsibilities"`
 
 }
+//EDUCATION
+type EducationRequest struct {
+	Degree       string     `json:"degree" binding:"required"`
+	Institution  string     `json:"institution" binding:"required"`
+	FieldOfStudy string     `json:"fieldOfStudy" binding:"required"`
+	StartDate    time.Time  `json:"startDate" binding:"required"`
+	EndDate      *time.Time `json:"endDate,omitempty"`
+	Achievements string     `json:"achievements,omitempty"`
+}
+
+// EducationResponse represents data sent back to client
+type EducationResponse struct {
+	ID           uint       `json:"id"`
+	AuthUserID   uuid.UUID  `json:"authUserId"`
+	Degree       string     `json:"degree"`
+	Institution  string     `json:"institution"`
+	FieldOfStudy string     `json:"fieldOfStudy"`
+	StartDate    time.Time  `json:"startDate"`
+	EndDate      *time.Time `json:"endDate,omitempty"`
+	Achievements string     `json:"achievements,omitempty"`
+}
+
+// CertificateRequest represents the input for creating or updating a certificate
+type CertificateRequest struct {
+	CertificateName   string  `json:"certificateName" binding:"required"`
+	CertificateFile   string  `json:"certificateFile" binding:"required"` // Assume this is a URL or file path
+	CertificateNumber *string `json:"certificateNumber,omitempty"`        // Optional
+}
+
+// CertificateResponse represents the response sent to the client
+type CertificateResponse struct {
+	ID                uint      `json:"id"`
+	AuthUserID        uuid.UUID `json:"authUserId"`
+	CertificateName   string    `json:"certificateName"`
+	CertificateFile   string    `json:"certificateFile"`
+	CertificateNumber *string   `json:"certificateNumber,omitempty"`
+}
+
+//LANGUAGES
+// LanguageRequest represents input for creating/updating a language entry
+type LanguageRequest struct {
+	LanguageName     string  `json:"language" binding:"required"`
+	CertificateFile  *string `json:"certificateFile,omitempty"` // Optional file path or URL
+	ProficiencyLevel string  `json:"proficiency" binding:"required"` // e.g., "Fluent", "Basic"
+}
+
+// LanguageResponse represents the output sent back to client
+type LanguageResponse struct {
+	ID               uint      `json:"id"`
+	AuthUserID       uuid.UUID `json:"authUserId"`
+	LanguageName     string    `json:"language"`
+	CertificateFile  *string   `json:"certificateFile,omitempty"`
+	ProficiencyLevel string    `json:"proficiency"`
+}
+
