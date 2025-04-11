@@ -42,6 +42,14 @@ type Admin struct {
     // Any other fields specific to Admins
 }
 
+
+
+
+
+
+
+
+
 // PREFERENCE MODELS
 
 type PersonalInfo struct {
@@ -53,7 +61,6 @@ type PersonalInfo struct {
 	Address         string    `gorm:"type:text;not null" json:"address"`
 	LinkedInProfile *string   `gorm:"type:varchar(255)" json:"linkedinProfile"`
 
-	AuthUser AuthUser `gorm:"constraint:OnDelete:CASCADE;"` // FK to AuthUser
 }
 
 type ProfessionalSummary struct {
@@ -64,12 +71,50 @@ type ProfessionalSummary struct {
 	Skills       datatypes.JSON `gorm:"type:jsonb;not null" json:"skills"`     // Store as JSON array
 	AnnualIncome float64        `gorm:"not null" json:"annualIncome"`
 
-	AuthUser AuthUser `gorm:"constraint:OnDelete:CASCADE;"` // FK to AuthUser
+}
+
+type WorkExperience struct {
+	gorm.Model
+
+	AuthUserID         uuid.UUID `gorm:"type:uuid;not null;index" json:"authUserId"` // FK to user, many-to-one
+	JobTitle           string    `gorm:"type:varchar(100);not null" json:"jobTitle"`
+	CompanyName        string    `gorm:"type:varchar(100);not null" json:"companyName"`
+	EmployerType       string    `gorm:"type:varchar(50);not null" json:"employerType"` // e.g. Full-time, Contract
+	StartDate          time.Time `gorm:"not null" json:"startDate"`
+	EndDate            *time.Time `json:"endDate,omitempty"` // nil means "currently working"
+	KeyResponsibilities string    `gorm:"type:text" json:"keyResponsibilities"`
+}
+
+type Education struct {
+	gorm.Model
+
+	AuthUserID   uuid.UUID `gorm:"type:uuid;not null;index" json:"authUserId"` // FK to user, many-to-one
+	Degree       string    `gorm:"type:varchar(100);not null" json:"degree"`
+	Institution  string    `gorm:"type:varchar(150);not null" json:"institution"`
+	FieldOfStudy string    `gorm:"type:varchar(100);not null" json:"fieldOfStudy"`
+	StartDate    time.Time `gorm:"not null" json:"startDate"`
+	EndDate      *time.Time `json:"endDate,omitempty"` // nullable for ongoing education
+	Achievements string    `gorm:"type:text" json:"achievements"` // optional field
+}
+
+type Certificate struct {
+	gorm.Model
+
+	AuthUserID       uuid.UUID `gorm:"type:uuid;not null" json:"authUserId"` // FK to User
+	CertificateName  string    `gorm:"type:varchar(255);not null" json:"certificateName"`
+	CertificateFile  string    `gorm:"type:text;not null" json:"certificateFile"` // File path or URL
+	CertificateNumber string   `gorm:"type:varchar(100)" json:"certificateNumber"`
 }
 
 
+type Language struct {
+	gorm.Model
 
-
+	AuthUserID         uuid.UUID `gorm:"type:uuid;not null" json:"authUserId"` // FK to User
+	LanguageName       string    `gorm:"type:varchar(100);not null" json:"language"` // e.g., "English", "French"
+	CertificateFile    string    `gorm:"type:text" json:"certificateFile"`          // Path or URL to file
+	ProficiencyLevel   string    `gorm:"type:varchar(20);not null" json:"proficiency"` // "Native", "Fluent", etc.
+}
 
 type PreferredJobTitle struct {
 	gorm.Model
@@ -78,8 +123,18 @@ type PreferredJobTitle struct {
 	SecondaryTitle *string   `gorm:"type:varchar(255);" json:"secondaryTitle"`         // Secondary job title (nullable)
 	TertiaryTitle  *string   `gorm:"type:varchar(255);" json:"tertiaryTitle"`          // Tertiary job title (nullable)
 	
-	AuthUser       AuthUser  `gorm:"constraint:OnDelete:CASCADE;"`       // Foreign Key to AuthUser
 }
+
+
+
+
+
+
+
+
+
+
+
 
 
 //FEATURE MODELS

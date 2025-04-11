@@ -93,6 +93,40 @@ func SetupRoutes(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
 		profileRoutes.DELETE("", profileHandler.DeleteProfile)  // Delete Profile
 	}
 
+	//PERSONAL INFO routes
+
+	personalInfoRoutes:=r.Group("/personal-info")
+	personalInfoRoutes.Use(middleware.AuthMiddleware(cfg))
+	{
+		personalInfoRoutes.POST("", handlers.CreatePersonalInfo)
+		personalInfoRoutes.GET("", handlers.GetPersonalInfo)
+		personalInfoRoutes.PUT("", handlers.UpdatePersonalInfo)
+		personalInfoRoutes.PATCH("", handlers.PatchPersonalInfo)
+	}
+
+	//PROFESSIONAL SUMMARY routes
+
+	professionalSummaryRoutes := r.Group("/professional-summary")
+	professionalSummaryRoutes.Use(middleware.AuthMiddleware(cfg))
+	{
+		professionalSummaryRoutes.POST("", handlers.CreateProfessionalSummary)
+		professionalSummaryRoutes.GET("", handlers.GetProfessionalSummary)
+		professionalSummaryRoutes.PUT("", handlers.UpdateProfessionalSummary)
+	}
+
+	//WORKEXPERIENCE routes
+
+	workExpRoutes := r.Group("/work-experience")
+	workExpRoutes.Use(middleware.AuthMiddleware(cfg))
+	{
+		workExpRoutes.POST("", handlers.CreateWorkExperience)
+		workExpRoutes.GET("", handlers.GetWorkExperience)
+		workExpRoutes.PATCH("/:id", handlers.PatchWorkExperience)
+		workExpRoutes.DELETE("/:id", handlers.DeleteWorkExperience)
+	}
+
+
+
 	// JOB TITLES routes
 	jobTitlesRoutes := r.Group("/jobtitles")
 	jobTitlesRoutes.Use(middleware.AuthMiddleware(cfg))
@@ -117,6 +151,9 @@ func SetupRoutes(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
 		matchScoreRoutes.POST("", handlers.MatchScorePOST)
 		matchScoreRoutes.GET("", handlers.MatchScoreGET)
 	}
+
+	
+
 	
 
 }
