@@ -75,34 +75,34 @@ func SeedJobs(db *gorm.DB) {
 	db.Create(&xingAppLinks)
 
 	// Seed LinkedIn job descriptions
-linkedinDescriptions := []LinkedInJobDescription{
-	{JobID: "lnk1", JobLink: "https://apply.linkedin.com/job/1", JobDescription: "We are looking for a skilled Software Engineer to build scalable systems."},
-	{JobID: "lnk2", JobLink: "https://apply.linkedin.com/job/2", JobDescription: "Join our DevOps team to manage CI/CD pipelines and cloud infrastructure."},
-	{JobID: "lnk3", JobLink: "https://apply.linkedin.com/job/3", JobDescription: "Develop backend services with Go and microservices architecture."},
-	{JobID: "lnk4", JobLink: "https://apply.linkedin.com/job/4", JobDescription: "Automate infrastructure with Terraform and Kubernetes."},
-	{JobID: "lnk5", JobLink: "https://apply.linkedin.com/job/5", JobDescription: "Contribute to the core platform used by millions of users."},
-	{JobID: "lnk6", JobLink: "https://apply.linkedin.com/job/6", JobDescription: "Maintain and scale cloud-based infrastructure for large applications."},
-	{JobID: "lnk7", JobLink: "https://apply.linkedin.com/job/7", JobDescription: "Collaborate with cross-functional teams to build software solutions."},
-	{JobID: "lnk8", JobLink: "https://apply.linkedin.com/job/8", JobDescription: "Improve system reliability and monitoring in a fast-paced DevOps team."},
-	{JobID: "lnk9", JobLink: "https://apply.linkedin.com/job/9", JobDescription: "Participate in the development of highly available distributed systems."},
-	{JobID: "lnk10", JobLink: "https://apply.linkedin.com/job/10", JobDescription: "Support infrastructure as code initiatives across all teams."},
-}
+	linkedinDescriptions := []LinkedInJobDescription{
+		{JobID: "lnk1", JobLink: "https://apply.linkedin.com/job/1", JobDescription: "We are looking for a skilled Software Engineer to build scalable systems."},
+		{JobID: "lnk2", JobLink: "https://apply.linkedin.com/job/2", JobDescription: "Join our DevOps team to manage CI/CD pipelines and cloud infrastructure."},
+		{JobID: "lnk3", JobLink: "https://apply.linkedin.com/job/3", JobDescription: "Develop backend services with Go and microservices architecture."},
+		{JobID: "lnk4", JobLink: "https://apply.linkedin.com/job/4", JobDescription: "Automate infrastructure with Terraform and Kubernetes."},
+		{JobID: "lnk5", JobLink: "https://apply.linkedin.com/job/5", JobDescription: "Contribute to the core platform used by millions of users."},
+		{JobID: "lnk6", JobLink: "https://apply.linkedin.com/job/6", JobDescription: "Maintain and scale cloud-based infrastructure for large applications."},
+		{JobID: "lnk7", JobLink: "https://apply.linkedin.com/job/7", JobDescription: "Collaborate with cross-functional teams to build software solutions."},
+		{JobID: "lnk8", JobLink: "https://apply.linkedin.com/job/8", JobDescription: "Improve system reliability and monitoring in a fast-paced DevOps team."},
+		{JobID: "lnk9", JobLink: "https://apply.linkedin.com/job/9", JobDescription: "Participate in the development of highly available distributed systems."},
+		{JobID: "lnk10", JobLink: "https://apply.linkedin.com/job/10", JobDescription: "Support infrastructure as code initiatives across all teams."},
+	}
 
-// Seed Xing job descriptions
-xingDescriptions := []XingJobDescription{
-	{JobID: "xg1", JobLink: "https://apply.xing.com/job/1", JobDescription: "Join Xing as a Software Engineer working on scalable APIs."},
-	{JobID: "xg2", JobLink: "https://apply.xing.com/job/2", JobDescription: "DevOps position focusing on automation and observability."},
-	{JobID: "xg3", JobLink: "https://apply.xing.com/job/3", JobDescription: "Help modernize our legacy systems into cloud-native services."},
-	{JobID: "xg4", JobLink: "https://apply.xing.com/job/4", JobDescription: "Implement CI/CD pipelines and improve deployment efficiency."},
-	{JobID: "xg5", JobLink: "https://apply.xing.com/job/5", JobDescription: "Work closely with data teams to deploy scalable services."},
-	{JobID: "xg6", JobLink: "https://apply.xing.com/job/6", JobDescription: "Manage cloud resources and write automation scripts for operations."},
-	{JobID: "xg7", JobLink: "https://apply.xing.com/job/7", JobDescription: "Design backend solutions to handle high-volume user traffic."},
-	{JobID: "xg8", JobLink: "https://apply.xing.com/job/8", JobDescription: "Ensure uptime and performance of mission-critical applications."},
-	{JobID: "xg9", JobLink: "https://apply.xing.com/job/9", JobDescription: "Develop high-performance APIs using Go and modern tech stack."},
-	{JobID: "xg10", JobLink: "https://apply.xing.com/job/10", JobDescription: "Drive DevOps practices across teams and improve deployment workflows."},
-}
+	// Seed Xing job descriptions
+	xingDescriptions := []XingJobDescription{
+		{JobID: "xg1", JobLink: "https://apply.xing.com/job/1", JobDescription: "Join Xing as a Software Engineer working on scalable APIs."},
+		{JobID: "xg2", JobLink: "https://apply.xing.com/job/2", JobDescription: "DevOps position focusing on automation and observability."},
+		{JobID: "xg3", JobLink: "https://apply.xing.com/job/3", JobDescription: "Help modernize our legacy systems into cloud-native services."},
+		{JobID: "xg4", JobLink: "https://apply.xing.com/job/4", JobDescription: "Implement CI/CD pipelines and improve deployment efficiency."},
+		{JobID: "xg5", JobLink: "https://apply.xing.com/job/5", JobDescription: "Work closely with data teams to deploy scalable services."},
+		{JobID: "xg6", JobLink: "https://apply.xing.com/job/6", JobDescription: "Manage cloud resources and write automation scripts for operations."},
+		{JobID: "xg7", JobLink: "https://apply.xing.com/job/7", JobDescription: "Design backend solutions to handle high-volume user traffic."},
+		{JobID: "xg8", JobLink: "https://apply.xing.com/job/8", JobDescription: "Ensure uptime and performance of mission-critical applications."},
+		{JobID: "xg9", JobLink: "https://apply.xing.com/job/9", JobDescription: "Develop high-performance APIs using Go and modern tech stack."},
+		{JobID: "xg10", JobLink: "https://apply.xing.com/job/10", JobDescription: "Drive DevOps practices across teams and improve deployment workflows."},
+	}
 
-db.Create(&linkedinDescriptions)
-db.Create(&xingDescriptions)
+	db.Create(&linkedinDescriptions)
+	db.Create(&xingDescriptions)
 
-}
+	}
