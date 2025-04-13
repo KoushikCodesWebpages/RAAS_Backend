@@ -24,9 +24,9 @@ func ResetDBHandler(c *gin.Context) {
 	log.Println("🔄 ResetDBHandler triggered with valid passkey...")
 
 	tables := []string{
-		// "auth_users",
-		// "seekers",
-		// "admins",
+		"auth_users",
+		"seekers",
+		"admins",
 
 		"personal_infos",
 		"professional_summaries",
