@@ -6,6 +6,7 @@ import (
 
 )
 // DEVELOPMENT
+
 func SeedJobs(db *gorm.DB) {
 	// Check if jobs already seeded
 	var count int64
@@ -77,31 +78,33 @@ func SeedJobs(db *gorm.DB) {
 	// Seed LinkedIn job descriptions
 // Seed LinkedIn job descriptions with additional fields
 linkedinDescriptions := []LinkedInJobDescription{
-	{JobID: "lnk1", JobLink: "https://apply.linkedin.com/job/1", JobDescription: "We are looking for a skilled Software Engineer to build scalable systems.", JobType: "Full-time", Skills: "Go, REST, Microservices, Docker"},
-	{JobID: "lnk2", JobLink: "https://apply.linkedin.com/job/2", JobDescription: "Join our DevOps team to manage CI/CD pipelines and cloud infrastructure.", JobType: "Full-time", Skills: "CI/CD, Jenkins, AWS, Docker, Kubernetes"},
-	{JobID: "lnk3", JobLink: "https://apply.linkedin.com/job/3", JobDescription: "Develop backend services with Go and microservices architecture.", JobType: "Remote", Skills: "Go, gRPC, PostgreSQL, Docker"},
-	{JobID: "lnk4", JobLink: "https://apply.linkedin.com/job/4", JobDescription: "Automate infrastructure with Terraform and Kubernetes.", JobType: "Contract", Skills: "Terraform, Kubernetes, Helm, AWS"},
-	{JobID: "lnk5", JobLink: "https://apply.linkedin.com/job/5", JobDescription: "Contribute to the core platform used by millions of users.", JobType: "Full-time", Skills: "Go, Redis, Kafka, Prometheus"},
-	{JobID: "lnk6", JobLink: "https://apply.linkedin.com/job/6", JobDescription: "Maintain and scale cloud-based infrastructure for large applications.", JobType: "Remote", Skills: "AWS, Terraform, Docker, Monitoring"},
-	{JobID: "lnk7", JobLink: "https://apply.linkedin.com/job/7", JobDescription: "Collaborate with cross-functional teams to build software solutions.", JobType: "Full-time", Skills: "Go, Teamwork, APIs, SQL"},
-	{JobID: "lnk8", JobLink: "https://apply.linkedin.com/job/8", JobDescription: "Improve system reliability and monitoring in a fast-paced DevOps team.", JobType: "Part-time", Skills: "Prometheus, Grafana, Alertmanager, On-call"},
-	{JobID: "lnk9", JobLink: "https://apply.linkedin.com/job/9", JobDescription: "Participate in the development of highly available distributed systems.", JobType: "Full-time", Skills: "Go, Load Balancing, Kafka, Redis"},
-	{JobID: "lnk10", JobLink: "https://apply.linkedin.com/job/10", JobDescription: "Support infrastructure as code initiatives across all teams.", JobType: "Contract", Skills: "Terraform, GitOps, Kubernetes, CI/CD"},
+	{JobID: "L001", JobLink: "https://apply.linkedin.com/job/1", JobDescription: "We are looking for a skilled Software Engineer to build scalable systems.", JobType: "Full-time", Skills: "Go, REST, Microservices, Docker"},
+	{JobID: "L002", JobLink: "https://apply.linkedin.com/job/2", JobDescription: "Join our DevOps team to manage CI/CD pipelines and cloud infrastructure.", JobType: "Full-time", Skills: "CI/CD, Jenkins, AWS, Docker, Kubernetes"},
+	{JobID: "L003", JobLink: "https://apply.linkedin.com/job/3", JobDescription: "Develop backend services with Go and microservices architecture.", JobType: "Remote", Skills: "Go, gRPC, PostgreSQL, Docker"},
+	{JobID: "L004", JobLink: "https://apply.linkedin.com/job/4", JobDescription: "Automate infrastructure with Terraform and Kubernetes.", JobType: "Contract", Skills: "Terraform, Kubernetes, Helm, AWS"},
+	{JobID: "L005", JobLink: "https://apply.linkedin.com/job/5", JobDescription: "Contribute to the core platform used by millions of users.", JobType: "Full-time", Skills: "Go, Redis, Kafka, Prometheus"},
+	{JobID: "L006", JobLink: "https://apply.linkedin.com/job/6", JobDescription: "Maintain and scale cloud-based infrastructure for large applications.", JobType: "Remote", Skills: "AWS, Terraform, Docker, Monitoring"},
+	{JobID: "L007", JobLink: "https://apply.linkedin.com/job/7", JobDescription: "Collaborate with cross-functional teams to build software solutions.", JobType: "Full-time", Skills: "Go, Teamwork, APIs, SQL"},
+	{JobID: "L008", JobLink: "https://apply.linkedin.com/job/8", JobDescription: "Improve system reliability and monitoring in a fast-paced DevOps team.", JobType: "Part-time", Skills: "Prometheus, Grafana, Alertmanager, On-call"},
+	{JobID: "L009", JobLink: "https://apply.linkedin.com/job/9", JobDescription: "Participate in the development of highly available distributed systems.", JobType: "Full-time", Skills: "Go, Load Balancing, Kafka, Redis"},
+	{JobID: "L010", JobLink: "https://apply.linkedin.com/job/10", JobDescription: "Support infrastructure as code initiatives across all teams.", JobType: "Contract", Skills: "Terraform, GitOps, Kubernetes, CI/CD"},
 }
+
 
 // Seed Xing job descriptions with additional fields
 xingDescriptions := []XingJobDescription{
-	{JobID: "xg1", JobLink: "https://apply.xing.com/job/1", JobDescription: "Join Xing as a Software Engineer working on scalable APIs.", JobType: "Full-time", Skills: "Go, REST APIs, MySQL, Docker"},
-	{JobID: "xg2", JobLink: "https://apply.xing.com/job/2", JobDescription: "DevOps position focusing on automation and observability.", JobType: "Remote", Skills: "CI/CD, Grafana, Prometheus, Bash, Terraform"},
-	{JobID: "xg3", JobLink: "https://apply.xing.com/job/3", JobDescription: "Help modernize our legacy systems into cloud-native services.", JobType: "Full-time", Skills: "AWS, Kubernetes, Go, Monolith Refactoring"},
-	{JobID: "xg4", JobLink: "https://apply.xing.com/job/4", JobDescription: "Implement CI/CD pipelines and improve deployment efficiency.", JobType: "Part-time", Skills: "GitLab CI, Docker, Helm, Kubernetes"},
-	{JobID: "xg5", JobLink: "https://apply.xing.com/job/5", JobDescription: "Work closely with data teams to deploy scalable services.", JobType: "Full-time", Skills: "Go, Kafka, PostgreSQL, BigQuery"},
-	{JobID: "xg6", JobLink: "https://apply.xing.com/job/6", JobDescription: "Manage cloud resources and write automation scripts for operations.", JobType: "Full-time", Skills: "Terraform, AWS, Bash, Scripting"},
-	{JobID: "xg7", JobLink: "https://apply.xing.com/job/7", JobDescription: "Design backend solutions to handle high-volume user traffic.", JobType: "Remote", Skills: "Go, NATS, MongoDB, Scalability"},
-	{JobID: "xg8", JobLink: "https://apply.xing.com/job/8", JobDescription: "Ensure uptime and performance of mission-critical applications.", JobType: "Full-time", Skills: "Kubernetes, On-call, SRE, Logging"},
-	{JobID: "xg9", JobLink: "https://apply.xing.com/job/9", JobDescription: "Develop high-performance APIs using Go and modern tech stack.", JobType: "Contract", Skills: "Go, Echo, GORM, Redis"},
-	{JobID: "xg10", JobLink: "https://apply.xing.com/job/10", JobDescription: "Drive DevOps practices across teams and improve deployment workflows.", JobType: "Full-time", Skills: "DevOps, CI/CD, Kubernetes, Culture"},
+	{JobID: "X001", JobLink: "https://apply.xing.com/job/1", JobDescription: "Join Xing as a Software Engineer working on scalable APIs.", JobType: "Full-time", Skills: "Go, REST APIs, MySQL, Docker"},
+	{JobID: "X002", JobLink: "https://apply.xing.com/job/2", JobDescription: "DevOps position focusing on automation and observability.", JobType: "Remote", Skills: "CI/CD, Grafana, Prometheus, Bash, Terraform"},
+	{JobID: "X003", JobLink: "https://apply.xing.com/job/3", JobDescription: "Help modernize our legacy systems into cloud-native services.", JobType: "Full-time", Skills: "AWS, Kubernetes, Go, Monolith Refactoring"},
+	{JobID: "X004", JobLink: "https://apply.xing.com/job/4", JobDescription: "Implement CI/CD pipelines and improve deployment efficiency.", JobType: "Part-time", Skills: "GitLab CI, Docker, Helm, Kubernetes"},
+	{JobID: "X005", JobLink: "https://apply.xing.com/job/5", JobDescription: "Work closely with data teams to deploy scalable services.", JobType: "Full-time", Skills: "Go, Kafka, PostgreSQL, BigQuery"},
+	{JobID: "X006", JobLink: "https://apply.xing.com/job/6", JobDescription: "Manage cloud resources and write automation scripts for operations.", JobType: "Full-time", Skills: "Terraform, AWS, Bash, Scripting"},
+	{JobID: "X007", JobLink: "https://apply.xing.com/job/7", JobDescription: "Design backend solutions to handle high-volume user traffic.", JobType: "Remote", Skills: "Go, NATS, MongoDB, Scalability"},
+	{JobID: "X008", JobLink: "https://apply.xing.com/job/8", JobDescription: "Ensure uptime and performance of mission-critical applications.", JobType: "Full-time", Skills: "Kubernetes, On-call, SRE, Logging"},
+	{JobID: "X009", JobLink: "https://apply.xing.com/job/9", JobDescription: "Develop high-performance APIs using Go and modern tech stack.", JobType: "Contract", Skills: "Go, Echo, GORM, Redis"},
+	{JobID: "X010", JobLink: "https://apply.xing.com/job/10", JobDescription: "Drive DevOps practices across teams and improve deployment workflows.", JobType: "Full-time", Skills: "DevOps, CI/CD, Kubernetes, Culture"},
 }
+
 
 db.Create(&linkedinDescriptions)
 db.Create(&xingDescriptions)

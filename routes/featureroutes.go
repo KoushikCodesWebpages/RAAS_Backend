@@ -26,4 +26,19 @@ func SetupFeatureRoutes(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
 	{
 		jobRetrievalRoutes.GET("", features.JobRetrievalHandler)
 	}
+
+	// JOB METADATA routes
+	jobDataHandler := features.NewJobDataHandler(db)
+	jobMetaRoutes := r.Group("/api/job-data")
+	jobMetaRoutes.Use(middleware.AuthMiddleware(cfg))
+	{
+		jobMetaRoutes.GET("/linkedin", jobDataHandler.GetLinkedInJobs)
+		jobMetaRoutes.GET("/xing", jobDataHandler.GetXingJobs)
+		jobMetaRoutes.GET("/linkedin/links", jobDataHandler.GetLinkedInLinks)
+		jobMetaRoutes.GET("/xing/links", jobDataHandler.GetXingLinks)
+		jobMetaRoutes.GET("/linkedin/descriptions", jobDataHandler.GetLinkedInDescriptions)
+		jobMetaRoutes.GET("/xing/descriptions", jobDataHandler.GetXingDescriptions)
+	}
+
 }
+
