@@ -1,4 +1,4 @@
-package handlers
+package dataentry
 
 import (
 	"RAAS/dto"
@@ -10,8 +10,18 @@ import (
 	"gorm.io/gorm"
 )
 
-func CreateLanguage(c *gin.Context) {
-	db := c.MustGet("db").(*gorm.DB)
+// LanguageHandler struct
+type LanguageHandler struct {
+	DB *gorm.DB
+}
+
+// NewLanguageHandler creates a new LanguageHandler
+func NewLanguageHandler(db *gorm.DB) *LanguageHandler {
+	return &LanguageHandler{DB: db}
+}
+
+// CreateLanguage creates a new language entry for the authenticated user
+func (h *LanguageHandler) CreateLanguage(c *gin.Context) {
 	userID := c.MustGet("userID").(uuid.UUID)
 
 	var input dto.LanguageRequest
@@ -30,7 +40,7 @@ func CreateLanguage(c *gin.Context) {
 		lang.CertificateFile = *input.CertificateFile
 	}
 
-	if err := db.Create(&lang).Error; err != nil {
+	if err := h.DB.Create(&lang).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create language entry", "details": err.Error()})
 		return
 	}
@@ -44,12 +54,12 @@ func CreateLanguage(c *gin.Context) {
 	})
 }
 
-func GetLanguages(c *gin.Context) {
-	db := c.MustGet("db").(*gorm.DB)
+// GetLanguages retrieves all language entries for the authenticated user
+func (h *LanguageHandler) GetLanguages(c *gin.Context) {
 	userID := c.MustGet("userID").(uuid.UUID)
 
 	var langs []models.Language
-	if err := db.Where("auth_user_id = ?", userID).Find(&langs).Error; err != nil {
+	if err := h.DB.Where("auth_user_id = ?", userID).Find(&langs).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch language entries", "details": err.Error()})
 		return
 	}
@@ -69,13 +79,13 @@ func GetLanguages(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
-func PutLanguage(c *gin.Context) {
-	db := c.MustGet("db").(*gorm.DB)
+// PutLanguage updates an existing language entry for the authenticated user
+func (h *LanguageHandler) PutLanguage(c *gin.Context) {
 	userID := c.MustGet("userID").(uuid.UUID)
 	id := c.Param("id")
 
 	var existing models.Language
-	if err := db.Where("id = ? AND auth_user_id = ?", id, userID).First(&existing).Error; err != nil {
+	if err := h.DB.Where("id = ? AND auth_user_id = ?", id, userID).First(&existing).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Language entry not found"})
 		return
 	}
@@ -91,7 +101,7 @@ func PutLanguage(c *gin.Context) {
 	updated.AuthUserID = userID
 	updated.CreatedAt = existing.CreatedAt
 
-	if err := db.Save(&updated).Error; err != nil {
+	if err := h.DB.Save(&updated).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update language", "details": err.Error()})
 		return
 	}
@@ -99,13 +109,12 @@ func PutLanguage(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Language updated successfully"})
 }
 
-
-func DeleteLanguage(c *gin.Context) {
-	db := c.MustGet("db").(*gorm.DB)
+// DeleteLanguage deletes an existing language entry for the authenticated user
+func (h *LanguageHandler) DeleteLanguage(c *gin.Context) {
 	userID := c.MustGet("userID").(uuid.UUID)
 	id := c.Param("id")
 
-	if err := db.Where("id = ? AND auth_user_id = ?", id, userID).Delete(&models.Language{}).Error; err != nil {
+	if err := h.DB.Where("id = ? AND auth_user_id = ?", id, userID).Delete(&models.Language{}).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete language", "details": err.Error()})
 		return
 	}

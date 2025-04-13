@@ -1,24 +1,31 @@
-package handlers
+package dataentry
 
 import (
 	"RAAS/models"
 	"RAAS/dto"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
-	"net/http"
 	"github.com/google/uuid"
+	"net/http"
 )
 
-func CreatePersonalInfo(c *gin.Context) {
-	db := c.MustGet("db").(*gorm.DB)
+// PersonalInfoHandler struct
+type PersonalInfoHandler struct {
+	DB *gorm.DB
+}
+
+// NewPersonalInfoHandler creates a new handler instance
+func NewPersonalInfoHandler(db *gorm.DB) *PersonalInfoHandler {
+	return &PersonalInfoHandler{DB: db}
+}
+
+// CreatePersonalInfo handles creation of personal info
+func (h *PersonalInfoHandler) CreatePersonalInfo(c *gin.Context) {
 	userID := c.MustGet("userID").(uuid.UUID)
 
 	var input dto.PersonalInfoRequest
 	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error":   "Invalid input",
-			"details": err.Error(),
-		})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
 		return
 	}
 
@@ -31,23 +38,20 @@ func CreatePersonalInfo(c *gin.Context) {
 		LinkedInProfile: input.LinkedInProfile,
 	}
 
-	if err := db.Create(&personalInfo).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":   "Failed to create personal info",
-			"details": err.Error(),
-		})
+	if err := h.DB.Create(&personalInfo).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create personal info", "details": err.Error()})
 		return
 	}
 
 	c.JSON(http.StatusCreated, personalInfo)
 }
 
-func GetPersonalInfo(c *gin.Context) {
-	db := c.MustGet("db").(*gorm.DB)
+// GetPersonalInfo retrieves personal info of the authenticated user
+func (h *PersonalInfoHandler) GetPersonalInfo(c *gin.Context) {
 	userID := c.MustGet("userID").(uuid.UUID)
 
 	var personalInfo models.PersonalInfo
-	if err := db.Where("auth_user_id = ?", userID).First(&personalInfo).Error; err != nil {
+	if err := h.DB.First(&personalInfo, "auth_user_id = ?", userID).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Personal info not found"})
 		return
 	}
@@ -55,8 +59,8 @@ func GetPersonalInfo(c *gin.Context) {
 	c.JSON(http.StatusOK, personalInfo)
 }
 
-func UpdatePersonalInfo(c *gin.Context) {
-	db := c.MustGet("db").(*gorm.DB)
+// UpdatePersonalInfo performs full update on personal info
+func (h *PersonalInfoHandler) UpdatePersonalInfo(c *gin.Context) {
 	userID := c.MustGet("userID").(uuid.UUID)
 
 	var input dto.PersonalInfoRequest
@@ -66,7 +70,7 @@ func UpdatePersonalInfo(c *gin.Context) {
 	}
 
 	var personalInfo models.PersonalInfo
-	if err := db.Where("auth_user_id = ?", userID).First(&personalInfo).Error; err != nil {
+	if err := h.DB.First(&personalInfo, "auth_user_id = ?", userID).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Personal info not found"})
 		return
 	}
@@ -77,7 +81,7 @@ func UpdatePersonalInfo(c *gin.Context) {
 	personalInfo.Address = input.Address
 	personalInfo.LinkedInProfile = input.LinkedInProfile
 
-	if err := db.Save(&personalInfo).Error; err != nil {
+	if err := h.DB.Save(&personalInfo).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update personal info", "details": err.Error()})
 		return
 	}
@@ -85,8 +89,8 @@ func UpdatePersonalInfo(c *gin.Context) {
 	c.JSON(http.StatusOK, personalInfo)
 }
 
-func PatchPersonalInfo(c *gin.Context) {
-	db := c.MustGet("db").(*gorm.DB)
+// PatchPersonalInfo handles partial updates to personal info
+func (h *PersonalInfoHandler) PatchPersonalInfo(c *gin.Context) {
 	userID := c.MustGet("userID").(uuid.UUID)
 
 	var updates map[string]interface{}
@@ -96,28 +100,29 @@ func PatchPersonalInfo(c *gin.Context) {
 	}
 
 	// Only allow specific fields
-	allowedFields := map[string]bool{
-		"firstName":       true,
-		"secondName":      true,
-		"dob":             true,
-		"address":         true,
-		"linkedinProfile": true,
+	allowedFields := map[string]string{
+		"firstName":       "first_name",
+		"secondName":      "second_name",
+		"dob":             "date_of_birth",
+		"address":         "address",
+		"linkedinProfile": "linked_in_profile",
 	}
 
-	for k := range updates {
-		if !allowedFields[k] {
-			delete(updates, k)
+	validUpdates := make(map[string]interface{})
+	for k, v := range updates {
+		if dbField, ok := allowedFields[k]; ok {
+			validUpdates[dbField] = v
 		}
 	}
 
-	if len(updates) == 0 {
+	if len(validUpdates) == 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "No valid fields to update"})
 		return
 	}
 
-	if err := db.Model(&models.PersonalInfo{}).
+	if err := h.DB.Model(&models.PersonalInfo{}).
 		Where("auth_user_id = ?", userID).
-		Updates(updates).Error; err != nil {
+		Updates(validUpdates).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to patch personal info", "details": err.Error()})
 		return
 	}

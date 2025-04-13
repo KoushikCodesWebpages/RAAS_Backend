@@ -1,4 +1,4 @@
-package handlers
+package dataentry
 
 import (
 	"RAAS/dto"
@@ -10,8 +10,18 @@ import (
 	"gorm.io/gorm"
 )
 
-func CreateWorkExperience(c *gin.Context) {
-	db := c.MustGet("db").(*gorm.DB)
+// WorkExperienceHandler struct
+type WorkExperienceHandler struct {
+	DB *gorm.DB
+}
+
+// NewWorkExperienceHandler creates a new WorkExperienceHandler
+func NewWorkExperienceHandler(db *gorm.DB) *WorkExperienceHandler {
+	return &WorkExperienceHandler{DB: db}
+}
+
+// CreateWorkExperience creates a work experience for the authenticated user
+func (h *WorkExperienceHandler) CreateWorkExperience(c *gin.Context) {
 	userID := c.MustGet("userID").(uuid.UUID)
 
 	var input dto.WorkExperienceRequest
@@ -30,7 +40,7 @@ func CreateWorkExperience(c *gin.Context) {
 		KeyResponsibilities: input.KeyResponsibilities,
 	}
 
-	if err := db.Create(&workExp).Error; err != nil {
+	if err := h.DB.Create(&workExp).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create work experience", "details": err.Error()})
 		return
 	}
@@ -49,12 +59,12 @@ func CreateWorkExperience(c *gin.Context) {
 	c.JSON(http.StatusCreated, response)
 }
 
-func GetWorkExperience(c *gin.Context) {
-	db := c.MustGet("db").(*gorm.DB)
+// GetWorkExperience retrieves the work experiences of the authenticated user
+func (h *WorkExperienceHandler) GetWorkExperience(c *gin.Context) {
 	userID := c.MustGet("userID").(uuid.UUID)
 
 	var workExps []models.WorkExperience
-	if err := db.Where("auth_user_id = ?", userID).Find(&workExps).Error; err != nil {
+	if err := h.DB.Where("auth_user_id = ?", userID).Find(&workExps).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch work experiences", "details": err.Error()})
 		return
 	}
@@ -76,13 +86,13 @@ func GetWorkExperience(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
-func PatchWorkExperience(c *gin.Context) {
-	db := c.MustGet("db").(*gorm.DB)
+// PatchWorkExperience partially updates the work experience of the authenticated user
+func (h *WorkExperienceHandler) PatchWorkExperience(c *gin.Context) {
 	userID := c.MustGet("userID").(uuid.UUID)
 	id := c.Param("id")
 
 	var workExp models.WorkExperience
-	if err := db.Where("id = ? AND auth_user_id = ?", id, userID).First(&workExp).Error; err != nil {
+	if err := h.DB.Where("id = ? AND auth_user_id = ?", id, userID).First(&workExp).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Work experience not found"})
 		return
 	}
@@ -93,7 +103,7 @@ func PatchWorkExperience(c *gin.Context) {
 		return
 	}
 
-	if err := db.Model(&workExp).Updates(updates).Error; err != nil {
+	if err := h.DB.Model(&workExp).Updates(updates).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update work experience", "details": err.Error()})
 		return
 	}
@@ -101,12 +111,12 @@ func PatchWorkExperience(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Work experience updated"})
 }
 
-func DeleteWorkExperience(c *gin.Context) {
-	db := c.MustGet("db").(*gorm.DB)
+// DeleteWorkExperience deletes the work experience of the authenticated user
+func (h *WorkExperienceHandler) DeleteWorkExperience(c *gin.Context) {
 	userID := c.MustGet("userID").(uuid.UUID)
 	id := c.Param("id")
 
-	if err := db.Where("id = ? AND auth_user_id = ?", id, userID).Delete(&models.WorkExperience{}).Error; err != nil {
+	if err := h.DB.Where("id = ? AND auth_user_id = ?", id, userID).Delete(&models.WorkExperience{}).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete work experience", "details": err.Error()})
 		return
 	}

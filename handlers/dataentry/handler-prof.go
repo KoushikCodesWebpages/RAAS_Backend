@@ -1,4 +1,4 @@
-package handlers
+package dataentry
 
 import (
 	"RAAS/dto"
@@ -12,8 +12,18 @@ import (
 	"gorm.io/gorm"
 )
 
-func CreateProfessionalSummary(c *gin.Context) {
-	db := c.MustGet("db").(*gorm.DB)
+// ProfessionalSummaryHandler struct
+type ProfessionalSummaryHandler struct {
+	DB *gorm.DB
+}
+
+// NewProfessionalSummaryHandler creates a new ProfessionalSummaryHandler
+func NewProfessionalSummaryHandler(db *gorm.DB) *ProfessionalSummaryHandler {
+	return &ProfessionalSummaryHandler{DB: db}
+}
+
+// CreateProfessionalSummary creates a professional summary for the authenticated user
+func (h *ProfessionalSummaryHandler) CreateProfessionalSummary(c *gin.Context) {
 	userID := c.MustGet("userID").(uuid.UUID)
 
 	var input dto.ProfessionalSummaryRequest
@@ -41,7 +51,7 @@ func CreateProfessionalSummary(c *gin.Context) {
 		AnnualIncome: input.AnnualIncome,
 	}
 
-	if err := db.Create(&proSummary).Error; err != nil {
+	if err := h.DB.Create(&proSummary).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "Failed to create professional summary",
 			"details": err.Error(),
@@ -60,12 +70,12 @@ func CreateProfessionalSummary(c *gin.Context) {
 	c.JSON(http.StatusCreated, response)
 }
 
-func GetProfessionalSummary(c *gin.Context) {
-	db := c.MustGet("db").(*gorm.DB)
+// GetProfessionalSummary retrieves the professional summary of the authenticated user
+func (h *ProfessionalSummaryHandler) GetProfessionalSummary(c *gin.Context) {
 	userID := c.MustGet("userID").(uuid.UUID)
 
 	var proSummary models.ProfessionalSummary
-	if err := db.Where("auth_user_id = ?", userID).First(&proSummary).Error; err != nil {
+	if err := h.DB.Where("auth_user_id = ?", userID).First(&proSummary).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
 			"error": "Professional summary not found",
 		})
@@ -92,8 +102,8 @@ func GetProfessionalSummary(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
-func UpdateProfessionalSummary(c *gin.Context) {
-	db := c.MustGet("db").(*gorm.DB)
+// UpdateProfessionalSummary updates the professional summary of the authenticated user
+func (h *ProfessionalSummaryHandler) UpdateProfessionalSummary(c *gin.Context) {
 	userID := c.MustGet("userID").(uuid.UUID)
 
 	var input dto.ProfessionalSummaryRequest
@@ -106,7 +116,7 @@ func UpdateProfessionalSummary(c *gin.Context) {
 	}
 
 	var proSummary models.ProfessionalSummary
-	if err := db.Where("auth_user_id = ?", userID).First(&proSummary).Error; err != nil {
+	if err := h.DB.Where("auth_user_id = ?", userID).First(&proSummary).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
 			"error": "Professional summary not found",
 		})
@@ -126,7 +136,7 @@ func UpdateProfessionalSummary(c *gin.Context) {
 	proSummary.Skills = datatypes.JSON(skillsJSON)
 	proSummary.AnnualIncome = input.AnnualIncome
 
-	if err := db.Save(&proSummary).Error; err != nil {
+	if err := h.DB.Save(&proSummary).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "Failed to update professional summary",
 			"details": err.Error(),

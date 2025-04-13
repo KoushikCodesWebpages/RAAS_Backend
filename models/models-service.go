@@ -37,7 +37,6 @@ type LinkedInFailedJob struct {
 	JobID   string `gorm:"type:varchar(191);not null"`     // Fixed length for job ID
 	JobLink string `gorm:"unique;type:varchar(191)"`      // Unique job link
 
-	LinkedInJob LinkedInJobMetaData `gorm:"foreignKey:JobID;references:ID;constraint:OnDelete:CASCADE"`
 }
 
 // Failed job records for Xing
@@ -46,7 +45,6 @@ type XingFailedJob struct {
 	JobID   string `gorm:"type:varchar(191);not null"`
 	JobLink string `gorm:"unique;type:varchar(191)"`
 
-	XingJob XingJobMetaData `gorm:"foreignKey:JobID;references:ID;constraint:OnDelete:CASCADE"`
 }
 
 // Application links for LinkedIn jobs
@@ -64,25 +62,22 @@ type XingJobApplicationLink struct {
 	JobID   string `gorm:"uniqueIndex:idx_xing_job_app;type:varchar(191)"`
 	JobLink string `gorm:"uniqueIndex:idx_xing_job_app;type:varchar(191)"`
 
-	XingJob XingJobMetaData `gorm:"foreignKey:JobID;references:ID;constraint:OnDelete:CASCADE"`
 }
 
-// Job description content for LinkedIn jobs
 type LinkedInJobDescription struct {
 	ID             uint   `gorm:"primaryKey;autoIncrement"`
-	JobID          string `gorm:"type:varchar(191);not null"`
-	JobLink        string `gorm:"unique;type:varchar(191)"`
+	JobID          string `gorm:"type:varchar(191);not null;uniqueIndex:idx_linkedin_job"`
+	JobLink        string `gorm:"type:varchar(191);not null;uniqueIndex:idx_linkedin_job"`
 	JobDescription string
-
-	LinkedInJob LinkedInJobMetaData `gorm:"foreignKey:JobID;references:ID;constraint:OnDelete:CASCADE"`
+	JobType        string
+	Skills         string
 }
 
-// Job description content for Xing jobs
 type XingJobDescription struct {
 	ID             uint   `gorm:"primaryKey;autoIncrement"`
-	JobID          string `gorm:"type:varchar(191);not null"`
-	JobLink        string `gorm:"unique;type:varchar(191)"`
+	JobID          string `gorm:"type:varchar(191);not null;uniqueIndex:idx_xing_job"`
+	JobLink        string `gorm:"type:varchar(191);not null;uniqueIndex:idx_xing_job"`
 	JobDescription string
-
-	XingJob XingJobMetaData `gorm:"foreignKey:JobID;references:ID;constraint:OnDelete:CASCADE"`
+	JobType        string
+	Skills         string
 }

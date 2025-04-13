@@ -1,14 +1,18 @@
-package handlers
+package features
 
 import (
-	"RAAS/models"
 	"RAAS/dto"
-	"strings"
-	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
+	"RAAS/models"
 	"net/http"
+	"strings"
+	//"time"
+
+	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
+
+// JobRetrievalHandler retrieves jobs based on the user's preferred job titles
 func JobRetrievalHandler(c *gin.Context) {
 	db := c.MustGet("db").(*gorm.DB)
 	userID := c.MustGet("userID").(uuid.UUID)
@@ -57,8 +61,15 @@ func JobRetrievalHandler(c *gin.Context) {
 	db.Where(whereClause, values...).Find(&linkedinJobs)
 	db.Where(whereClause, values...).Find(&xingJobs)
 
-	// Merge to DTO
+	// LinkedIn Jobs
 	for _, job := range linkedinJobs {
+		var jobDesc models.LinkedInJobDescription
+		if err := db.Where("job_id = ?", job.JobID).First(&jobDesc).Error; err != nil {
+			continue
+		}
+
+		matchScore := 75.0
+
 		jobs = append(jobs, dto.JobDTO{
 			Source:     "linkedin",
 			ID:         job.ID,
@@ -68,10 +79,21 @@ func JobRetrievalHandler(c *gin.Context) {
 			Location:   job.Location,
 			PostedDate: job.PostedDate,
 			Processed:  job.Processed,
+			JobType:    jobDesc.JobType,
+			Skills:     jobDesc.Skills,
+			MatchScore: matchScore,
 		})
 	}
 
+	// Xing Jobs
 	for _, job := range xingJobs {
+		var jobDesc models.XingJobDescription
+		if err := db.Where("job_id = ?", job.JobID).First(&jobDesc).Error; err != nil {
+			continue
+		}
+
+		matchScore := 75.0
+
 		jobs = append(jobs, dto.JobDTO{
 			Source:     "xing",
 			ID:         job.ID,
@@ -81,9 +103,13 @@ func JobRetrievalHandler(c *gin.Context) {
 			Location:   job.Location,
 			PostedDate: job.PostedDate,
 			Processed:  job.Processed,
+			JobType:    jobDesc.JobType,
+			Skills:     jobDesc.Skills,
+			MatchScore: matchScore,
 		})
 	}
 
+	// Send back jobs and their match score
 	c.JSON(http.StatusOK, gin.H{
 		"jobs": jobs,
 		"pagination": gin.H{
@@ -91,5 +117,3 @@ func JobRetrievalHandler(c *gin.Context) {
 		},
 	})
 }
-
-

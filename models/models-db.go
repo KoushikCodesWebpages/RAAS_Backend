@@ -52,6 +52,7 @@ func InitDB(cfg *config.Config) *gorm.DB {
 		// "auth_users",
 		// "seekers",
 		// "admins",
+		"preferred_job_titles",
 		"personal_infos",
 		"professional_summaries",
 		"work_experiences",
@@ -71,7 +72,7 @@ func InitDB(cfg *config.Config) *gorm.DB {
 
 	AutoMigrate()
 	SeedJobs(DB)
-
+	PrintAllTables(DB, cfg.DBName)
 	return DB
 }
 
@@ -196,4 +197,16 @@ func contains(list []string, val string) bool {
 		}
 	}
 	return false
+}
+
+func PrintAllTables(db *gorm.DB, dbName string) {
+	var tables []string
+	err := db.Raw("SELECT table_name FROM information_schema.tables WHERE table_schema = ?", dbName).Scan(&tables).Error
+	if err != nil {
+		log.Fatalf("❌ Error fetching table names: %v", err)
+	}
+	log.Println("📦 Tables in the database:")
+	for _, table := range tables {
+		log.Println(" -", table)
+	}
 }

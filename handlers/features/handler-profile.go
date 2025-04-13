@@ -1,4 +1,4 @@
-package handlers
+package features
 
 import (
 	"RAAS/models"

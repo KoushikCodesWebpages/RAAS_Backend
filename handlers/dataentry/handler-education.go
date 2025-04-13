@@ -1,4 +1,4 @@
-package handlers
+package dataentry
 
 import (
 	"RAAS/dto"
@@ -10,8 +10,18 @@ import (
 	"gorm.io/gorm"
 )
 
-func CreateEducation(c *gin.Context) {
-	db := c.MustGet("db").(*gorm.DB)
+// EducationHandler struct
+type EducationHandler struct {
+	DB *gorm.DB
+}
+
+// NewEducationHandler creates a new EducationHandler
+func NewEducationHandler(db *gorm.DB) *EducationHandler {
+	return &EducationHandler{DB: db}
+}
+
+// CreateEducation creates a new education record for the authenticated user
+func (h *EducationHandler) CreateEducation(c *gin.Context) {
 	userID := c.MustGet("userID").(uuid.UUID)
 
 	var input dto.EducationRequest
@@ -30,7 +40,7 @@ func CreateEducation(c *gin.Context) {
 		Achievements: input.Achievements,
 	}
 
-	if err := db.Create(&education).Error; err != nil {
+	if err := h.DB.Create(&education).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create education", "details": err.Error()})
 		return
 	}
@@ -47,12 +57,12 @@ func CreateEducation(c *gin.Context) {
 	})
 }
 
-func GetEducation(c *gin.Context) {
-	db := c.MustGet("db").(*gorm.DB)
+// GetEducation retrieves all education records for the authenticated user
+func (h *EducationHandler) GetEducation(c *gin.Context) {
 	userID := c.MustGet("userID").(uuid.UUID)
 
 	var records []models.Education
-	if err := db.Where("auth_user_id = ?", userID).Find(&records).Error; err != nil {
+	if err := h.DB.Where("auth_user_id = ?", userID).Find(&records).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch education records", "details": err.Error()})
 		return
 	}
@@ -74,13 +84,13 @@ func GetEducation(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
-func PutEducation(c *gin.Context) {
-	db := c.MustGet("db").(*gorm.DB)
+// PutEducation updates an existing education record for the authenticated user
+func (h *EducationHandler) PutEducation(c *gin.Context) {
 	userID := c.MustGet("userID").(uuid.UUID)
 	id := c.Param("id")
 
 	var existing models.Education
-	if err := db.Where("id = ? AND auth_user_id = ?", id, userID).First(&existing).Error; err != nil {
+	if err := h.DB.Where("id = ? AND auth_user_id = ?", id, userID).First(&existing).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Education record not found"})
 		return
 	}
@@ -96,7 +106,7 @@ func PutEducation(c *gin.Context) {
 	updated.AuthUserID = userID
 	updated.CreatedAt = existing.CreatedAt
 
-	if err := db.Save(&updated).Error; err != nil {
+	if err := h.DB.Save(&updated).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update education", "details": err.Error()})
 		return
 	}
@@ -104,14 +114,12 @@ func PutEducation(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Education updated"})
 }
 
-
-
-func DeleteEducation(c *gin.Context) {
-	db := c.MustGet("db").(*gorm.DB)
+// DeleteEducation deletes an existing education record for the authenticated user
+func (h *EducationHandler) DeleteEducation(c *gin.Context) {
 	userID := c.MustGet("userID").(uuid.UUID)
 	id := c.Param("id")
 
-	if err := db.Where("id = ? AND auth_user_id = ?", id, userID).Delete(&models.Education{}).Error; err != nil {
+	if err := h.DB.Where("id = ? AND auth_user_id = ?", id, userID).Delete(&models.Education{}).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete education", "details": err.Error()})
 		return
 	}

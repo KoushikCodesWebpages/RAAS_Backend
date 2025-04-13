@@ -1,4 +1,4 @@
-package handlers
+package dataentry
 
 import (
 	"RAAS/dto"
@@ -10,8 +10,18 @@ import (
 	"gorm.io/gorm"
 )
 
-func CreateCertificate(c *gin.Context) {
-	db := c.MustGet("db").(*gorm.DB)
+// CertificateHandler struct
+type CertificateHandler struct {
+	DB *gorm.DB
+}
+
+// NewCertificateHandler creates a new CertificateHandler
+func NewCertificateHandler(db *gorm.DB) *CertificateHandler {
+	return &CertificateHandler{DB: db}
+}
+
+// CreateCertificate creates a new certificate record for the authenticated user
+func (h *CertificateHandler) CreateCertificate(c *gin.Context) {
 	userID := c.MustGet("userID").(uuid.UUID)
 
 	var input dto.CertificateRequest
@@ -21,16 +31,16 @@ func CreateCertificate(c *gin.Context) {
 	}
 
 	certificate := models.Certificate{
-		AuthUserID:        userID,
-		CertificateName:   input.CertificateName,
-		CertificateFile:   input.CertificateFile,
+		AuthUserID:      userID,
+		CertificateName: input.CertificateName,
+		CertificateFile: input.CertificateFile,
 	}
 
 	if input.CertificateNumber != nil {
 		certificate.CertificateNumber = *input.CertificateNumber
 	}
 
-	if err := db.Create(&certificate).Error; err != nil {
+	if err := h.DB.Create(&certificate).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create certificate", "details": err.Error()})
 		return
 	}
@@ -44,12 +54,12 @@ func CreateCertificate(c *gin.Context) {
 	})
 }
 
-func GetCertificates(c *gin.Context) {
-	db := c.MustGet("db").(*gorm.DB)
+// GetCertificates retrieves all certificate records for the authenticated user
+func (h *CertificateHandler) GetCertificates(c *gin.Context) {
 	userID := c.MustGet("userID").(uuid.UUID)
 
 	var certificates []models.Certificate
-	if err := db.Where("auth_user_id = ?", userID).Find(&certificates).Error; err != nil {
+	if err := h.DB.Where("auth_user_id = ?", userID).Find(&certificates).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch certificates", "details": err.Error()})
 		return
 	}
@@ -69,13 +79,13 @@ func GetCertificates(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
-func PutCertificate(c *gin.Context) {
-	db := c.MustGet("db").(*gorm.DB)
+// PutCertificate updates an existing certificate record for the authenticated user
+func (h *CertificateHandler) PutCertificate(c *gin.Context) {
 	userID := c.MustGet("userID").(uuid.UUID)
 	id := c.Param("id")
 
 	var existing models.Certificate
-	if err := db.Where("id = ? AND auth_user_id = ?", id, userID).First(&existing).Error; err != nil {
+	if err := h.DB.Where("id = ? AND auth_user_id = ?", id, userID).First(&existing).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Certificate not found"})
 		return
 	}
@@ -91,7 +101,7 @@ func PutCertificate(c *gin.Context) {
 	updated.AuthUserID = userID
 	updated.CreatedAt = existing.CreatedAt
 
-	if err := db.Save(&updated).Error; err != nil {
+	if err := h.DB.Save(&updated).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update certificate", "details": err.Error()})
 		return
 	}
@@ -99,13 +109,12 @@ func PutCertificate(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Certificate updated"})
 }
 
-
-func DeleteCertificate(c *gin.Context) {
-	db := c.MustGet("db").(*gorm.DB)
+// DeleteCertificate deletes an existing certificate record for the authenticated user
+func (h *CertificateHandler) DeleteCertificate(c *gin.Context) {
 	userID := c.MustGet("userID").(uuid.UUID)
 	id := c.Param("id")
 
-	if err := db.Where("id = ? AND auth_user_id = ?", id, userID).Delete(&models.Certificate{}).Error; err != nil {
+	if err := h.DB.Where("id = ? AND auth_user_id = ?", id, userID).Delete(&models.Certificate{}).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete certificate", "details": err.Error()})
 		return
 	}
