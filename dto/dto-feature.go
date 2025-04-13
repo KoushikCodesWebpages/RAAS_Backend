@@ -9,20 +9,28 @@ import (
 
 //JOB RETRIEVAL
 
-// JobDTO represents the job data to be returned in the job listing.
-type JobDTO struct {
-	Source     string  `json:"source"`      // "linkedin" or "xing"
-	ID         string  `json:"id"`
-	JobID      string  `json:"job_id"`
-	Title      string  `json:"title"`
-	Company    string  `json:"company"`
-	Location   string  `json:"location"`
-	PostedDate string  `json:"posted_date"`
-	Processed  bool    `json:"processed"`
-	JobType    string  `json:"job_type,omitempty"`  // Job type (e.g., Full-time, Part-time)
-	Skills     string  `json:"skills,omitempty"`    // Comma-separated skills required for the job
-	MatchScore float64 `json:"match_score"`         // Match score between user and job (from 0 to 100)
+
+type SalaryRange struct {
+    Min int `json:"min"`
+    Max int `json:"max"`
 }
+type JobDTO struct {
+    Source         string       `json:"source"`                   // "linkedin" or "xing"
+    ID             string       `json:"id"`                       // UUID or unique DB ID
+    JobID          string       `json:"job_id"`                   // Platform-specific Job ID
+    Title          string       `json:"title"`
+    Company        string       `json:"company"`
+    Location       string       `json:"location"`
+    PostedDate     string       `json:"posted_date"`
+    Processed      bool         `json:"processed"`
+    JobType        string       `json:"job_type"`                 // e.g., Full-time, Part-time
+    Skills         string       `json:"skills"`                   // Comma-separated required skills
+    UserSkills     []string     `json:"userSkills"`               // List of user skills used in matching
+    ExpectedSalary SalaryRange  `json:"expected_salary"`          // Expected salary range
+    MatchScore     float64      `json:"match_score"`              // Match score from 0 to 100
+    Description    string       `json:"description"`              // Job description text
+}
+
 
 // JobFilterDTO represents the filter data for job retrieval.
 type JobFilterDTO struct {

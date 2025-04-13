@@ -9,6 +9,8 @@ import (
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 	"fmt" // Add fmt package for logging
+	"math/rand"
+	"encoding/json" // For handling JSON unmarshalling
 )
 
 func JobRetrievalHandler(c *gin.Context) {
@@ -26,9 +28,6 @@ func JobRetrievalHandler(c *gin.Context) {
 		return
 	}
 
-	// Debugging: Log the preferred job titles
-	fmt.Println("Preferred Job Titles:", preferred)
-
 	// Collect preferred titles
 	var preferredTitles []string
 	if preferred.PrimaryTitle != "" {
@@ -40,9 +39,6 @@ func JobRetrievalHandler(c *gin.Context) {
 	if preferred.TertiaryTitle != nil && *preferred.TertiaryTitle != "" {
 		preferredTitles = append(preferredTitles, *preferred.TertiaryTitle)
 	}
-
-	// Debugging: Log the collected preferred titles
-	fmt.Println("Collected Preferred Titles:", preferredTitles)
 
 	if len(preferredTitles) == 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "No preferred job titles set for user."})
@@ -58,42 +54,72 @@ func JobRetrievalHandler(c *gin.Context) {
 	}
 	whereClause := strings.Join(conditions, " OR ")
 
-	// Debugging: Log the generated SQL conditions and values
-	fmt.Println("SQL WHERE Clause:", whereClause)
-	fmt.Println("SQL Values:", values)
-
 	// Query jobs from both sources
 	var linkedinJobs []models.LinkedInJobMetaData
 	var xingJobs []models.XingJobMetaData
 
-	// Log the queries being executed
-	db.Debug().Where(whereClause, values...).Find(&linkedinJobs) // Debugging SQL query
-	db.Debug().Where(whereClause, values...).Find(&xingJobs) // Debugging SQL query
+	db.Debug().Where(whereClause, values...).Find(&linkedinJobs)
+	db.Debug().Where(whereClause, values...).Find(&xingJobs)
 
-	// Log the number of jobs fetched
-	fmt.Println("Number of LinkedIn Jobs Found:", len(linkedinJobs))
-	fmt.Println("Number of Xing Jobs Found:", len(xingJobs))
+	// Fetch user's professional summary to get skills
+	var professionalSummary models.ProfessionalSummary
+	if err := db.Where("auth_user_id = ?", userID).First(&professionalSummary).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Error fetching professional summary",
+		})
+		return
+	}
+
+	// Get the user's skills from the professional summary (assuming it's a JSON array)
+	var userSkills []string
+	if professionalSummary.Skills != nil {
+		// Unmarshal the JSON array into a Go slice
+		if err := json.Unmarshal(professionalSummary.Skills, &userSkills); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "Error unmarshalling user skills",
+			})
+			return
+		}
+	}
+
+	// Helper function to generate a random salary range (between 25k and 50k)
+	randomSalary := func() dto.SalaryRange {
+		minSalary := (rand.Intn(25) + 25) * 1000 // Random min salary between 25k and 50k
+		maxSalary := (rand.Intn(25) + 25) * 1000 // Random max salary between 25k and 50k
+		if minSalary > maxSalary {
+			minSalary, maxSalary = maxSalary, minSalary // Ensure min is always less than max
+		}
+		return dto.SalaryRange{Min: minSalary, Max: maxSalary}
+	}
 
 	// LinkedIn Jobs
 	for _, job := range linkedinJobs {
 		var jobDesc models.LinkedInJobDescription
 		if err := db.Where("job_id = ?", job.JobID).First(&jobDesc).Error; err != nil {
-			// Debugging: Log the error when fetching job descriptions
+			// Log the error when fetching job descriptions
 			fmt.Println("Error fetching LinkedIn job description for job_id:", job.JobID, "Error:", err)
 			continue
 		}
 
+		// Generate random salary range
+		salaryRange := randomSalary()
+
+		// Add job to jobs list
 		jobs = append(jobs, dto.JobDTO{
-			Source:     "linkedin",
-			ID:         job.ID,
-			JobID:      job.JobID,
-			Title:      job.Title,
-			Company:    job.Company,
-			Location:   job.Location,
-			PostedDate: job.PostedDate,
-			Processed:  job.Processed,
-			JobType:    jobDesc.JobType,
-			Skills:     jobDesc.Skills,
+			Source:         "xing",
+			ID:             job.ID,
+			JobID:          job.JobID,
+			Title:          job.Title,
+			Company:        job.Company,
+			Location:       job.Location,
+			PostedDate:     job.PostedDate,
+			Processed:      job.Processed,
+			JobType:        jobDesc.JobType,
+			Skills:         jobDesc.Skills,
+			UserSkills:     userSkills,
+			ExpectedSalary: salaryRange,
+			MatchScore:     0,
+			Description:    jobDesc.JobDescription, // <- Added line
 		})
 	}
 
@@ -101,27 +127,32 @@ func JobRetrievalHandler(c *gin.Context) {
 	for _, job := range xingJobs {
 		var jobDesc models.XingJobDescription
 		if err := db.Where("job_id = ?", job.JobID).First(&jobDesc).Error; err != nil {
-			// Debugging: Log the error when fetching job descriptions
+			// Log the error when fetching job descriptions
 			fmt.Println("Error fetching Xing job description for job_id:", job.JobID, "Error:", err)
 			continue
 		}
 
+		// Generate random salary range
+		salaryRange := randomSalary()
+
+		// Add job to jobs list
 		jobs = append(jobs, dto.JobDTO{
-			Source:     "xing",
-			ID:         job.ID,
-			JobID:      job.JobID,
-			Title:      job.Title,
-			Company:    job.Company,
-			Location:   job.Location,
-			PostedDate: job.PostedDate,
-			Processed:  job.Processed,
-			JobType:    jobDesc.JobType,
-			Skills:     jobDesc.Skills,
+			Source:         "xing",
+			ID:             job.ID,
+			JobID:          job.JobID,
+			Title:          job.Title,
+			Company:        job.Company,
+			Location:       job.Location,
+			PostedDate:     job.PostedDate,
+			Processed:      job.Processed,
+			JobType:        jobDesc.JobType,
+			Skills:         jobDesc.Skills,
+			UserSkills:     userSkills,
+			ExpectedSalary: salaryRange,
+			MatchScore:     0,
+			Description:    jobDesc.JobDescription, // <- Added line
 		})
 	}
-
-	// Debugging: Log the total number of jobs collected
-	fmt.Println("Total Jobs Retrieved:", len(jobs))
 
 	// Respond with the jobs
 	c.JSON(http.StatusOK, gin.H{
