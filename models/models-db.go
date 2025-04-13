@@ -5,16 +5,14 @@ import (
 	"log"
 	"RAAS/config"
 	"gorm.io/driver/mysql"
-
-
-	//"gorm.io/gorm/schema"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 	"os"
-	//"time"
 )
+
 // DB is the global database variable
 var DB *gorm.DB
+
 func InitDB(cfg *config.Config) *gorm.DB {
 	var err error
 
@@ -49,9 +47,9 @@ func InitDB(cfg *config.Config) *gorm.DB {
 	log.Println("✅ MySQL connection established")
 
 	// ResetDB(DB, []string{
-	// 	// "auth_users",
-	// 	// "seekers",
-	// 	// "admins",
+	// 	"auth_users",
+	// 	"seekers",
+	// 	"admins",
 	// 	"preferred_job_titles",
 	// 	"personal_infos",
 	// 	"professional_summaries",
@@ -61,8 +59,6 @@ func InitDB(cfg *config.Config) *gorm.DB {
 	// 	"certificates",
 	// 	"linked_in_job_meta_data",
 	// 	"xing_job_meta_data",
-	// 	"linked_in_failed_jobs",
-	// 	"xing_failed_jobs",
 	// 	"linked_in_job_application_links",
 	// 	"xing_job_application_links",
 	// 	"linked_in_job_descriptions",
@@ -84,7 +80,6 @@ func AutoMigrate() {
 		&AuthUser{},
 		&Seeker{},
 		&Admin{},
-
 		&PersonalInfo{},
 		&ProfessionalSummary{},
 		&WorkExperience{},
@@ -92,11 +87,6 @@ func AutoMigrate() {
 		&Certificate{},
 		&Language{},
 		&PreferredJobTitle{},
-
-
-		// Job-related Tables without Foreign Keys
-		&LinkedInJobMetaData{},
-		&XingJobMetaData{},
 	)
 
 	if err != nil {
@@ -106,16 +96,16 @@ func AutoMigrate() {
 
 	// Phase 2: Create Foreign Key Related Tables
 	err = DB.AutoMigrate(
+		// Job-related tables
+		&LinkedInJobMetaData{},
+		&XingJobMetaData{},
 		&JobMatchScore{},
+
 		// Foreign Key Dependent Tables
-		&LinkedInFailedJob{},
-		&XingFailedJob{},
 		&LinkedInJobApplicationLink{},
 		&XingJobApplicationLink{},
 		&LinkedInJobDescription{},
 		&XingJobDescription{},
-
-		// Add more foreign key dependent models here if needed
 	)
 
 	if err != nil {
@@ -123,7 +113,6 @@ func AutoMigrate() {
 	}
 	log.Println("Foreign key related tables migration completed successfully")
 }
-
 
 func ResetDB(DB *gorm.DB, tablesToDrop []string) {
 	log.Println("Resetting selected tables...")
