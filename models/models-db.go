@@ -3,64 +3,61 @@ package models
 import (
 	"fmt"
 	"log"
-	"github.com/glebarez/sqlite"
-	//"gorm.io/driver/sqlserver"
-	"gorm.io/gorm"
 	"RAAS/config"
-)
+	"gorm.io/driver/mysql"
 
+
+	//"gorm.io/gorm/schema"
+	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
+	"os"
+	//"time"
+)
 // DB is the global database variable
 var DB *gorm.DB
 func InitDB(cfg *config.Config) *gorm.DB {
-	//log.Println("Starting database initialization...")
-
 	var err error
 
-	// Using SQLite only (no conditional)
-	log.Println("Using SQLite for development")
+	log.Println("Using MySQL database")
 
-	dbPath := cfg.DBName
-	if dbPath == "" {
-		dbPath = "RAASDATABASE" // fallback to file-based DB
-	}
-	//log.Printf("SQLite DB Path: %s", dbPath)
+	// Set the GORM logger to silent or info level as needed
+	gormLogger := logger.New(
+		log.New(os.Stdout, "", log.LstdFlags), // Output, Prefix, and Flags
+		logger.Config{
+			LogLevel: logger.Silent, // Change to logger.Info to show logs, logger.Silent to hide
+			Colorful: true,
+		},
+	)
 
-	DB, err = gorm.Open(sqlite.Open(dbPath), &gorm.Config{})
+	dsn := fmt.Sprintf(
+		"%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local",
+		cfg.DBUser,
+		cfg.DBPassword,
+		cfg.DBServer,
+		cfg.DBPort,
+		cfg.DBName,
+	)
 
-	// === Commented out: SQL Server logic ===
-	// var dbType = cfg.DBType
-	// if dbType == "sqlserver" {
-	// 	log.Println("Using Azure SQL Database")
-	// 	dsn := fmt.Sprintf("sqlserver://%s:%s@%s:%d?database=%s",
-	// 		cfg.DBUser,
-	// 		cfg.DBPassword,
-	// 		cfg.DBServer,
-	// 		cfg.DBPort,
-	// 		cfg.DBName,
-	// 	)
-	// 	log.Printf("DSN Built: %s", dsn)
-	// 	DB, err = gorm.Open(sqlserver.Open(dsn), &gorm.Config{})
-	// }
-
+	// Open the DB with the custom logger
+	DB, err = gorm.Open(mysql.Open(dsn), &gorm.Config{
+		Logger: gormLogger,
+	})
 	if err != nil {
-		log.Fatalf("Error connecting to database: %v", err)
+		log.Fatalf("❌ Error connecting to MySQL: %v", err)
 	}
 
-	//log.Println("Database connection successful.")
-	ResetDB(DB, "sqlite", cfg.DBName, []string{
+	log.Println("✅ MySQL connection established")
+
+	ResetDB(DB, []string{
 		// "auth_users",
 		// "seekers",
 		// "admins",
-
 		"personal_infos",
 		"professional_summaries",
 		"work_experiences",
 		"educations",
 		"languages",
 		"certificates",
-		//"preferred_job_titles",
-		
-
 		"linked_in_job_meta_data",
 		"xing_job_meta_data",
 		"linked_in_failed_jobs",
@@ -69,16 +66,10 @@ func InitDB(cfg *config.Config) *gorm.DB {
 		"xing_job_application_links",
 		"linked_in_job_descriptions",
 		"xing_job_descriptions",
-
-		
 		"job_match_scores",
-
 	})
 
-	//log.Println("Starting AutoMigrate...")
 	AutoMigrate()
-	//log.Println("AutoMigrate completed seeding starts.")
-
 	SeedJobs(DB)
 
 	return DB
@@ -86,127 +77,118 @@ func InitDB(cfg *config.Config) *gorm.DB {
 
 // AutoMigrate will automatically migrate all models to the database
 func AutoMigrate() {
+	// Phase 1: Create Major Tables
 	err := DB.AutoMigrate(
-		// Add all your model structs here
+		// Major Tables (without foreign key dependencies)
 		&AuthUser{},
 		&Seeker{},
 		&Admin{},
 
 		&PersonalInfo{},
 		&ProfessionalSummary{},
-		& WorkExperience{},
-		&Education{},
 		&WorkExperience{},
 		&Education{},
 		&Certificate{},
 		&Language{},
 		&PreferredJobTitle{},
 
-		&JobMatchScore{},
 
-
+		// Job-related Tables without Foreign Keys
 		&LinkedInJobMetaData{},
 		&XingJobMetaData{},
+	)
+
+	if err != nil {
+		log.Fatalf("Error creating major tables: %v", err)
+	}
+	log.Println("Major tables migration completed successfully")
+
+	// Phase 2: Create Foreign Key Related Tables
+	err = DB.AutoMigrate(
+		&JobMatchScore{},
+		// Foreign Key Dependent Tables
 		&LinkedInFailedJob{},
 		&XingFailedJob{},
 		&LinkedInJobApplicationLink{},
 		&XingJobApplicationLink{},
 		&LinkedInJobDescription{},
 		&XingJobDescription{},
-		
-		// Add more models as needed
+
+		// Add more foreign key dependent models here if needed
 	)
+
 	if err != nil {
-		log.Fatalf("Error automigrating models: %v", err)
+		log.Fatalf("Error creating foreign key related tables: %v", err)
 	}
-}
-
-// ResetDB drops selected tables for SQL Server and SQLite
-func ResetDB(DB *gorm.DB, dbType string, dbName string, tablesToDrop []string) {
-	//log.Println("ResetDB started...")
-
-	switch dbType {
-	case "sqlserver":
-		//log.Println("Detected SQL Server, proceeding with selective reset...")
-
-		// Print all existing tables before reset
-		//log.Println("Listing all tables before reset...")
-
-		var tableNames []string
-		DB.Raw(`
-			SELECT TABLE_NAME 
-			FROM INFORMATION_SCHEMA.TABLES 
-			WHERE TABLE_TYPE = 'BASE TABLE'
-		`).Scan(&tableNames)
-		// for _, table := range tableNames {
-		// 	log.Println("Existing table:", table)
-		// }
-
-		// Drop foreign key constraints
-		//log.Println("Dropping foreign key constraints...")
-		var constraints []struct {
-			TableName      string
-			ConstraintName string
-		}
-		DB.Raw(`
-			SELECT TABLE_NAME, CONSTRAINT_NAME 
-			FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS 
-			WHERE CONSTRAINT_TYPE = 'FOREIGN KEY'
-		`).Scan(&constraints)
-
-		for _, c := range constraints {
-			if contains(tablesToDrop, c.TableName) {
-				dropFKQuery := fmt.Sprintf("ALTER TABLE [%s] DROP CONSTRAINT [%s];", c.TableName, c.ConstraintName)
-				if err := DB.Exec(dropFKQuery).Error; err != nil {
-					log.Printf("Error dropping foreign key %s on table %s: %v", c.ConstraintName, c.TableName, err)
-				} else {
-					//log.Printf("Dropped foreign key %s on table %s", c.ConstraintName, c.TableName)
-				}
-			}
-		}
-
-		// Drop selected tables
-		//log.Println("Dropping selected tables...")
-		for _, table := range tablesToDrop {
-			dropTableQuery := fmt.Sprintf("DROP TABLE IF EXISTS [%s];", table)
-			if err := DB.Exec(dropTableQuery).Error; err != nil {
-				log.Printf("Error dropping table %s: %v", table, err)
-			} else {
-				log.Printf("Dropped table %s successfully", table)
-			}
-		}
-
-	case "sqlite":
-		//log.Println("Detected SQLite, proceeding with selective reset...")
-
-		// Print all existing tables before reset
-		//log.Println("Listing all tables before reset...")
-		var tableNames []string
-		DB.Raw(`SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'`).Scan(&tableNames)
-		for _, table := range tableNames {
-			log.Println("Existing table:", table)
-		}
-
-		// Drop selected tables
-		for _, table := range tablesToDrop {
-			dropTableQuery := fmt.Sprintf("DROP TABLE IF EXISTS `%s`;", table)
-			if err := DB.Exec(dropTableQuery).Error; err != nil {
-				log.Printf("Error dropping table %s: %v", table, err)
-			} else {
-				//log.Printf("Dropped table %s successfully", table)
-			}
-		}
-
-	default:
-		log.Printf("ResetDB not supported for dbType: %s", dbType)
-	}
-
-	//log.Println("ResetDB completed.")
+	log.Println("Foreign key related tables migration completed successfully")
 }
 
 
+func ResetDB(DB *gorm.DB, tablesToDrop []string) {
+	log.Println("Resetting selected tables...")
 
-// Helper to check if a string exists in a list
+	// Get the dialect (MySQL, SQLServer, SQLite)
+	dialect := DB.Dialector.Name()
+
+	// Fetch foreign key constraints for tables in the drop list
+	var constraints []struct {
+		TableName      string
+		ConstraintName string
+	}
+
+	// Get foreign key constraints from the information schema
+	DB.Raw(`
+		SELECT TABLE_NAME, CONSTRAINT_NAME
+		FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS
+		WHERE CONSTRAINT_TYPE = 'FOREIGN KEY'
+	`).Scan(&constraints)
+
+	// Drop foreign key constraints before dropping tables
+	for _, c := range constraints {
+		if contains(tablesToDrop, c.TableName) {
+			var query string
+			switch dialect {
+			case "mysql", "sqlite":
+				// MySQL/SQLite: Drop foreign key constraint
+				query = fmt.Sprintf("ALTER TABLE `%s` DROP FOREIGN KEY `%s`;", c.TableName, c.ConstraintName)
+			case "sqlserver":
+				// SQLServer: Drop foreign key constraint
+				query = fmt.Sprintf("ALTER TABLE %s DROP CONSTRAINT %s;", c.TableName, c.ConstraintName)
+			default:
+				log.Printf("⚠️ Unknown dialect: %s, skipping foreign key removal.", dialect)
+				continue
+			}
+
+			if err := DB.Exec(query).Error; err != nil {
+				log.Printf("⚠️ Error dropping FK %s on table %s: %v", c.ConstraintName, c.TableName, err)
+			}
+		}
+	}
+
+	// Now, drop the selected tables
+	for _, table := range tablesToDrop {
+		var query string
+		switch dialect {
+		case "mysql", "sqlite":
+			// MySQL/SQLite: Drop tables
+			query = fmt.Sprintf("DROP TABLE IF EXISTS `%s`;", table)
+		case "sqlserver":
+			// SQLServer: Drop tables (without IF EXISTS)
+			query = fmt.Sprintf("DROP TABLE %s;", table)
+		default:
+			log.Printf("⚠️ Unknown dialect: %s, skipping table drop.", dialect)
+			continue
+		}
+
+		if err := DB.Exec(query).Error; err != nil {
+			log.Printf("⚠️ Error dropping table %s: %v", table, err)
+		}
+	}
+
+	log.Println("✅ Tables reset")
+}
+
+// contains checks if a string exists in a slice.
 func contains(list []string, val string) bool {
 	for _, item := range list {
 		if item == val {
@@ -215,4 +197,3 @@ func contains(list []string, val string) bool {
 	}
 	return false
 }
-

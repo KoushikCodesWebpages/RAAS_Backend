@@ -31,12 +31,14 @@ type Config struct {
 	MediaURL               string
 	MediaRoot              string
 	StaticRoot             string
-	DBType                 string
-	DBServer               string
-	DBPort                 int
-	DBUser                 string
-	DBPassword             string
-	DBName                 string
+
+	DBType      		string
+	DBServer    		string
+	DBPort      		int
+	DBUser      		string
+	DBPassword  		string
+	DBName      		string
+	
 	ServerPort             int
 	ServerHost             string
 	LogLevel               string
@@ -90,12 +92,16 @@ func InitConfig() (*Config, error) {
 		MediaURL:               viper.GetString("MEDIA_URL"),
 		MediaRoot:              viper.GetString("MEDIA_ROOT"),
 		StaticRoot:             viper.GetString("STATIC_ROOT"),
+
+
 		DBType:                 viper.GetString("DB_TYPE"),
 		DBServer:               viper.GetString("DB_SERVER"),
 		DBPort:                 viper.GetInt("DB_PORT"),
 		DBUser:                 viper.GetString("DB_USER"),
 		DBPassword:             viper.GetString("DB_PASSWORD"),
 		DBName:                 viper.GetString("DB_NAME"),
+
+
 		ServerPort:             viper.GetInt("SERVER_PORT"),
 		ServerHost:             viper.GetString("SERVER_HOST"),
 		LogLevel:               viper.GetString("LOG_LEVEL"),

@@ -21,14 +21,12 @@ func ResetDBHandler(c *gin.Context) {
 		return
 	}
 
-	log.Println("ResetDBHandler triggered with valid passkey...")
+	log.Println("🔄 ResetDBHandler triggered with valid passkey...")
 
-	dbType := "sqlite"
-	dbName := "RAASDATABASE"
 	tables := []string{
-		"auth_users",
-		"seekers",
-		"admins",
+		// "auth_users",
+		// "seekers",
+		// "admins",
 
 		"personal_infos",
 		"professional_summaries",
@@ -37,7 +35,6 @@ func ResetDBHandler(c *gin.Context) {
 		"languages",
 		"certificates",
 		"preferred_job_titles",
-		
 
 		"linked_in_job_meta_data",
 		"xing_job_meta_data",
@@ -48,14 +45,12 @@ func ResetDBHandler(c *gin.Context) {
 		"linked_in_job_descriptions",
 		"xing_job_descriptions",
 
-		
 		"job_match_scores",
-
 	}
 
-	models.ResetDB(models.DB, dbType, dbName, tables)
+	models.ResetDB(models.DB, tables)
 	models.AutoMigrate()
 	models.SeedJobs(models.DB)
 
-	c.JSON(http.StatusOK, gin.H{"message": "✅ Database reset and seeded"})
+	c.JSON(http.StatusOK, gin.H{"message": "✅ MySQL DB reset and seeded"})
 }

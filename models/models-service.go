@@ -2,93 +2,87 @@ package models
 
 import (
 	// "gorm.io/gorm"
-    // "github.com/google/uuid"
 	// "time"
-	// "gorm.io/datatypes"
-
-	
 )
 
 // JOB DATA MODELS
 
-
-
+// Job metadata from LinkedIn
 type LinkedInJobMetaData struct {
-	ID         string `gorm:"primaryKey"`  // ID is the main identifier
-	JobID      string `gorm:"unique"`      // JobID is unique per job
-	Title      string                      // Title of the job
+	ID         string `gorm:"primaryKey"`  // Unique primary key
+	JobID      string `gorm:"unique;type:varchar(191)"`      // Unique job identifier from LinkedIn, with fixed length
+	Title      string                      // Job title
 	Company    string                      // Company name
-	Location   string                      // Location text
-	PostedDate string                      // String representation of the posted date
-	Link       string `gorm:"unique"`      // Each job has a unique link
-	Processed  bool                        // Whether this job has been processed or not
+	Location   string                      // Job location
+	PostedDate string                      // Posted date (string format)
+	Link       string `gorm:"unique;type:varchar(191)"`      // Unique job link, with fixed length
+	Processed  bool                        // Whether the job has been processed
 }
+
+// Job metadata from Xing
 type XingJobMetaData struct {
 	ID         string `gorm:"primaryKey"`
-	JobID      string `gorm:"unique"`
+	JobID      string `gorm:"unique;type:varchar(191)"`      // Unique job identifier from Xing, with fixed length
 	Title      string
 	Company    string
 	Location   string
 	PostedDate string
-	Link       string `gorm:"unique"`
+	Link       string `gorm:"unique;type:varchar(191)"`      // Unique job link, with fixed length
 	Processed  bool
 }
 
-
-
-
-
+// Failed job records for LinkedIn
 type LinkedInFailedJob struct {
-	ID      uint   `gorm:"primaryKey;autoIncrement"` // Auto-increment primary key
-	JobID   string                                   // Foreign key to LinkedInJob.ID
-	JobLink string `gorm:"unique"`                   // Unique link for tracking
+	ID      uint   `gorm:"primaryKey;autoIncrement"`
+	JobID   string `gorm:"type:varchar(191);not null"`     // Fixed length for job ID
+	JobLink string `gorm:"unique;type:varchar(191)"`      // Unique job link
 
-	// Define relationship for foreign key with cascading delete
 	LinkedInJob LinkedInJobMetaData `gorm:"foreignKey:JobID;references:ID;constraint:OnDelete:CASCADE"`
 }
+
+// Failed job records for Xing
 type XingFailedJob struct {
 	ID      uint   `gorm:"primaryKey;autoIncrement"`
-	JobID   string
-	JobLink string `gorm:"unique"`
+	JobID   string `gorm:"type:varchar(191);not null"`
+	JobLink string `gorm:"unique;type:varchar(191)"`
 
 	XingJob XingJobMetaData `gorm:"foreignKey:JobID;references:ID;constraint:OnDelete:CASCADE"`
 }
 
-
-
+// Application links for LinkedIn jobs
 type LinkedInJobApplicationLink struct {
 	ID      uint   `gorm:"primaryKey;autoIncrement"`
-	JobID   string
-	JobLink string `gorm:"unique"`
+	JobID   string `gorm:"type:varchar(191);not null"`
+	JobLink string `gorm:"unique;type:varchar(191)"`
 
 	LinkedInJob LinkedInJobMetaData `gorm:"foreignKey:JobID;references:ID;constraint:OnDelete:CASCADE"`
 }
+
+// Application links for Xing jobs
 type XingJobApplicationLink struct {
 	ID      uint   `gorm:"primaryKey;autoIncrement"`
-	JobID   string `gorm:"uniqueIndex:idx_xing_job_app"` // part of composite unique key
-	JobLink string `gorm:"uniqueIndex:idx_xing_job_app"`
+	JobID   string `gorm:"uniqueIndex:idx_xing_job_app;type:varchar(191)"`
+	JobLink string `gorm:"uniqueIndex:idx_xing_job_app;type:varchar(191)"`
 
 	XingJob XingJobMetaData `gorm:"foreignKey:JobID;references:ID;constraint:OnDelete:CASCADE"`
 }
 
-
-
+// Job description content for LinkedIn jobs
 type LinkedInJobDescription struct {
 	ID             uint   `gorm:"primaryKey;autoIncrement"`
-	JobID          string
-	JobLink        string `gorm:"unique"`
+	JobID          string `gorm:"type:varchar(191);not null"`
+	JobLink        string `gorm:"unique;type:varchar(191)"`
 	JobDescription string
 
 	LinkedInJob LinkedInJobMetaData `gorm:"foreignKey:JobID;references:ID;constraint:OnDelete:CASCADE"`
 }
+
+// Job description content for Xing jobs
 type XingJobDescription struct {
 	ID             uint   `gorm:"primaryKey;autoIncrement"`
-	JobID          string
-	JobLink        string `gorm:"unique"`
+	JobID          string `gorm:"type:varchar(191);not null"`
+	JobLink        string `gorm:"unique;type:varchar(191)"`
 	JobDescription string
 
 	XingJob XingJobMetaData `gorm:"foreignKey:JobID;references:ID;constraint:OnDelete:CASCADE"`
 }
-
-
-

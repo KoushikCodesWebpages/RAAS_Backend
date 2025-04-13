@@ -39,12 +39,6 @@ func SeekerProfileResponse(seeker models.Seeker) SeekerResponse {
 	return SeekerResponse{
 		ID:         seeker.ID,  // ID as uuid.UUID
 		AuthUserID: seeker.AuthUserID,  // AuthUserID as uuid.UUID
-		AuthUser: AuthUserMinimal{
-			Email:         seeker.AuthUser.Email,
-			EmailVerified: seeker.AuthUser.EmailVerified,
-			Provider:      seeker.AuthUser.Provider,
-			Number: seeker.AuthUser.Phone,
-		},
 		SubscriptionTier: seeker.SubscriptionTier,
 
 	}
