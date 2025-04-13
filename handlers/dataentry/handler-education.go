@@ -45,6 +45,20 @@ func (h *EducationHandler) CreateEducation(c *gin.Context) {
 		return
 	}
 
+	var timeline models.UserEntryTimeline
+    if err := h.DB.First(&timeline, "user_id = ?", userID).Error; err != nil {
+        c.JSON(http.StatusNotFound, gin.H{"error": "User entry timeline not found"})
+        return
+    }
+
+    timeline.EducationsCompleted = true
+
+    // Save the updated timeline
+    if err := h.DB.Save(&timeline).Error; err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update timeline", "details": err.Error()})
+        return
+    }
+
 	c.JSON(http.StatusCreated, dto.EducationResponse{
 		ID:           education.ID,
 		AuthUserID:   userID,

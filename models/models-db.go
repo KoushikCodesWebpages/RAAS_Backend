@@ -46,25 +46,27 @@ func InitDB(cfg *config.Config) *gorm.DB {
 
 	log.Println("✅ MySQL connection established")
 
-	// ResetDB(DB, []string{
-	// 	"auth_users",
-	// 	"seekers",
-	// 	"admins",
-	// 	"preferred_job_titles",
-	// 	"personal_infos",
-	// 	"professional_summaries",
-	// 	"work_experiences",
-	// 	"educations",
-	// 	"languages",
-	// 	"certificates",
-	// 	"linked_in_job_meta_data",
-	// 	"xing_job_meta_data",
-	// 	"linked_in_job_application_links",
-	// 	"xing_job_application_links",
-	// 	"linked_in_job_descriptions",
-	// 	"xing_job_descriptions",
-	// 	"job_match_scores",
-	// })
+	ResetDB(DB, []string{
+	// "auth_users",
+	// "seekers",
+	// "admins",
+	// "preferred_job_titles",
+	// "personal_infos",
+	// "professional_summaries",
+	// "work_experiences",
+	// "educations",
+	// "languages",
+	// "certificates",
+	// "user_entry_timelines",
+	// "linked_in_job_meta_data",
+	// "xing_job_meta_data",
+	// "linked_in_job_application_links",
+	// "xing_job_application_links",
+	// "linked_in_job_descriptions",
+	// "xing_job_descriptions",
+	// "job_match_scores",
+	// "selected_job_applications",
+	})
 
 	AutoMigrate()
 	SeedJobs(DB)
@@ -87,6 +89,7 @@ func AutoMigrate() {
 		&Certificate{},
 		&Language{},
 		&PreferredJobTitle{},
+
 	)
 
 	if err != nil {
@@ -97,6 +100,7 @@ func AutoMigrate() {
 	// Phase 2: Create Foreign Key Related Tables
 	err = DB.AutoMigrate(
 		// Job-related tables
+		&UserEntryTimeline{},
 		&LinkedInJobMetaData{},
 		&XingJobMetaData{},
 		&JobMatchScore{},
@@ -106,6 +110,8 @@ func AutoMigrate() {
 		&XingJobApplicationLink{},
 		&LinkedInJobDescription{},
 		&XingJobDescription{},
+
+		&SelectedJobApplication{},
 	)
 
 	if err != nil {

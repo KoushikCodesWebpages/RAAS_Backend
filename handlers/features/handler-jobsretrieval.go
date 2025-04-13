@@ -8,12 +8,14 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
-	"fmt" // Add fmt package for logging
+	"fmt" // For logging
 	"math/rand"
 	"encoding/json" // For handling JSON unmarshalling
 )
 
+// JobRetrievalHandler handles the retrieval of jobs based on user's preferences and skills
 func JobRetrievalHandler(c *gin.Context) {
+	// Retrieve database and userID from context
 	db := c.MustGet("db").(*gorm.DB)
 	userID := c.MustGet("userID").(uuid.UUID)
 
@@ -58,7 +60,9 @@ func JobRetrievalHandler(c *gin.Context) {
 	var linkedinJobs []models.LinkedInJobMetaData
 	var xingJobs []models.XingJobMetaData
 
+	// Fetch LinkedIn jobs
 	db.Debug().Where(whereClause, values...).Find(&linkedinJobs)
+	// Fetch Xing jobs
 	db.Debug().Where(whereClause, values...).Find(&xingJobs)
 
 	// Fetch user's professional summary to get skills
@@ -92,7 +96,7 @@ func JobRetrievalHandler(c *gin.Context) {
 		return dto.SalaryRange{Min: minSalary, Max: maxSalary}
 	}
 
-	// LinkedIn Jobs
+	// LinkedIn Jobs Processing
 	for _, job := range linkedinJobs {
 		var jobDesc models.LinkedInJobDescription
 		if err := db.Where("job_id = ?", job.JobID).First(&jobDesc).Error; err != nil {
@@ -106,7 +110,7 @@ func JobRetrievalHandler(c *gin.Context) {
 
 		// Add job to jobs list
 		jobs = append(jobs, dto.JobDTO{
-			Source:         "xing",
+			Source:         "linkedin", // Changed to 'linkedin' instead of 'xing' for LinkedIn jobs
 			ID:             job.ID,
 			JobID:          job.JobID,
 			Title:          job.Title,
@@ -118,12 +122,12 @@ func JobRetrievalHandler(c *gin.Context) {
 			Skills:         jobDesc.Skills,
 			UserSkills:     userSkills,
 			ExpectedSalary: salaryRange,
-			MatchScore:     0,
-			Description:    jobDesc.JobDescription, // <- Added line
+			MatchScore:     0, // Initially 0, can be calculated later
+			Description:    jobDesc.JobDescription, // Added line
 		})
 	}
 
-	// Xing Jobs
+	// Xing Jobs Processing
 	for _, job := range xingJobs {
 		var jobDesc models.XingJobDescription
 		if err := db.Where("job_id = ?", job.JobID).First(&jobDesc).Error; err != nil {
@@ -137,7 +141,7 @@ func JobRetrievalHandler(c *gin.Context) {
 
 		// Add job to jobs list
 		jobs = append(jobs, dto.JobDTO{
-			Source:         "xing",
+			Source:         "xing", // Corrected to 'xing' for Xing jobs
 			ID:             job.ID,
 			JobID:          job.JobID,
 			Title:          job.Title,
@@ -149,12 +153,12 @@ func JobRetrievalHandler(c *gin.Context) {
 			Skills:         jobDesc.Skills,
 			UserSkills:     userSkills,
 			ExpectedSalary: salaryRange,
-			MatchScore:     0,
-			Description:    jobDesc.JobDescription, // <- Added line
+			MatchScore:     0, // Initially 0, can be calculated later
+			Description:    jobDesc.JobDescription, // Added line
 		})
 	}
 
-	// Respond with the jobs
+	// Respond with the jobs and pagination
 	c.JSON(http.StatusOK, gin.H{
 		"jobs": jobs,
 		"pagination": gin.H{

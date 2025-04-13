@@ -3,6 +3,7 @@ package models
 import (
 	"gorm.io/gorm"
 	"fmt"
+	"github.com/google/uuid"
 )
 
 const (
@@ -24,4 +25,9 @@ func (s *Seeker) BeforeSave(tx *gorm.DB) (err error) {
 		return fmt.Errorf("invalid subscription tier: %s", s.SubscriptionTier)
 	}
 	return nil
+}
+
+func (timeline *UserEntryTimeline) BeforeCreate(tx *gorm.DB) (err error) {
+    timeline.ID = uuid.New()
+    return
 }

@@ -10,15 +10,14 @@ import (
 
 func SetupFeatureRoutes(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
 	// PROFILE routes
-	profileHandler := features.NewProfileHandler(db)
-	profileRoutes := r.Group("/profile")
-	profileRoutes.Use(middleware.AuthMiddleware(cfg))
-	{
-		profileRoutes.GET("", profileHandler.RetrieveProfile)   // Retrieve Profile
-		profileRoutes.PUT("", profileHandler.UpdateProfile)     // Update Profile
-		profileRoutes.PATCH("", profileHandler.PatchProfile)    // Partial Update Profile
-		profileRoutes.DELETE("", profileHandler.DeleteProfile)  // Delete Profile
-	}
+		seekerProfileHandler := features.NewSeekerProfileHandler(db)
+		seekerProfileRoutes := r.Group("/profile")
+		seekerProfileRoutes.Use(middleware.AuthMiddleware(cfg))
+		{
+			seekerProfileRoutes.GET("", seekerProfileHandler.GetSeekerProfile)
+		}
+	
+	
 
 	// JOB DATA routes
 	jobRetrievalRoutes := r.Group("/api/jobs")
@@ -39,6 +38,17 @@ func SetupFeatureRoutes(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
 		jobMetaRoutes.GET("/linkedin/descriptions", jobDataHandler.GetLinkedInDescriptions)
 		jobMetaRoutes.GET("/xing/descriptions", jobDataHandler.GetXingDescriptions)
 	}
+
+	selectedJobsHandler := features.NewSelectedJobsHandler(db)
+	selectedJobsRoutes := r.Group("/selected-jobs")
+	selectedJobsRoutes.Use(middleware.AuthMiddleware(cfg))
+	{
+		selectedJobsRoutes.POST("", selectedJobsHandler.PostSelectedJob)
+		selectedJobsRoutes.GET("", selectedJobsHandler.GetSelectedJobs)
+		selectedJobsRoutes.PUT(":id", selectedJobsHandler.UpdateSelectedJob)
+		selectedJobsRoutes.DELETE(":id", selectedJobsHandler.DeleteSelectedJob)
+	}
+
 
 }
 

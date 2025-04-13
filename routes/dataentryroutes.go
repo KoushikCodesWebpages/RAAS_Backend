@@ -1,15 +1,27 @@
 package routes
 
 import (
+	"RAAS/config"
 	"RAAS/handlers/dataentry"
+	"RAAS/handlers/features"
 	"RAAS/middlewares"
+
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
-	"RAAS/config"
 )
 
 func SetupDataEntryRoutes(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
+
+
+	//TIMELINE 
+
+	timeline := r.Group("/user/entry-progress")
+    timeline.Use(middleware.AuthMiddleware(cfg)) // Middleware to authenticate JWT
+
+    // Define the route for getting the next entry step
+    timeline.GET("", features.GetNextEntryStep(db))
 	// PERSONAL INFO routes
+
 	personalInfoHandler := dataentry.NewPersonalInfoHandler(db)
 	personalInfoRoutes := r.Group("/personal-info")
 	personalInfoRoutes.Use(middleware.AuthMiddleware(cfg))

@@ -71,6 +71,14 @@ func (r *UserRepo) CreateSeeker(input dto.SeekerSignUpInput, hashedPassword stri
 		return fmt.Errorf("failed to create seeker profile: %v", err)
 	}
 
+	// ✅ Create UserEntryTimeline for the new user
+	timeline := models.UserEntryTimeline{
+		UserID:                         authUser.ID,
+	}
+	if err := r.DB.Create(&timeline).Error; err != nil {
+		return fmt.Errorf("user created but failed to create entry timeline: %v", err)
+	}
+
 	// Construct email verification link (optional)
 	verificationLink := fmt.Sprintf("%s/verify-email?token=%s", r.Config.FrontendBaseUrl, token)
 
