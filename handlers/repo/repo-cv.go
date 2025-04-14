@@ -41,10 +41,11 @@ type CVInput struct {
 }
 
 // GenerateCVDocx generates a CV document using input data
-func GenerateCVDocx(input CVInput, config *config.Config) (string, error) {
+// GenerateCVDocx generates a CV document using input data
+func GenerateCVDocx(input CVInput) (string, error) {
 	// Get the API URL and Key from the config
-	apiURL := config.CV_Url
-	apiKey := config.GEN_API_KEY
+	apiURL := config.Cfg.CV_Url
+	apiKey := config.Cfg.GEN_API_KEY
 
 	// Check if the required fields are present
 	if apiURL == "" || apiKey == "" {
@@ -90,5 +91,3 @@ func GenerateCVDocx(input CVInput, config *config.Config) (string, error) {
 
 	return outFile, nil
 }
-
-

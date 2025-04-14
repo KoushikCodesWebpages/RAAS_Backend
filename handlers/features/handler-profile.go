@@ -1,14 +1,16 @@
 package features
 
 import (
-	"RAAS/models"
-	"RAAS/dto"
+
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 	"github.com/google/uuid"
 	"net/http"
 	"time"
 	"encoding/json"
+
+	"RAAS/models"
+	"RAAS/dto"
 )
 
 // SeekerProfileHandler struct for managing seeker profile

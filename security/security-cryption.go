@@ -6,7 +6,6 @@ import (
     "crypto/rand"
     "encoding/hex"
     "fmt"
-    "log"
     "RAAS/config" // Replace with the actual import path
 )
 
@@ -70,10 +69,7 @@ func DecryptData(encryptedData string) ([]byte, error) {
 }
 
 // getSecretKey retrieves the SecretKey from the global config.
+// getSecretKey retrieves the SecretKey from the global config.
 func getSecretKey() string {
-    config, err := config.InitConfig()
-    if err != nil {
-        log.Fatalf("Error initializing config: %v", err)
-    }
-    return config.SecretKey
+    return config.Cfg.SecretKey
 }

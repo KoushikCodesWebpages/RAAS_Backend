@@ -11,12 +11,9 @@ import (
 	"gorm.io/gorm"
 	"bytes"
 	"strings"
-	//"os"
-	"github.com/spf13/viper"
+
 	"RAAS/models"
-	//"RAAS/handlers/repo"
 	"RAAS/config"
-	//"RAAS/config" // Import the config package
 )
 
 // CoverLetterRequest struct to receive JobID
@@ -189,22 +186,31 @@ var (
 	HFBaseAPIURL         string
 )
 
-func LoadHFModels(prefix string) ([]string, error) {
-	var models []string
-	for i := 1; i <= 10; i++ {
-		key := fmt.Sprintf("%s_%d", prefix, i)
-		model := viper.GetString(key)
-		if model == "" {
-			return nil, fmt.Errorf("model %s is not defined", key)
-		}
-		models = append(models, model)
+func LoadHFModels() ([]string, error) {
+	models := []string{
+		config.Cfg.HFModelForCL1,
+		config.Cfg.HFModelForCL2,
+		config.Cfg.HFModelForCL3,
+		config.Cfg.HFModelForCL4,
+		config.Cfg.HFModelForCL5,
+		config.Cfg.HFModelForCL6,
+		config.Cfg.HFModelForCL7,
+		config.Cfg.HFModelForCL8,
+		config.Cfg.HFModelForCL9,
+		config.Cfg.HFModelForCL10,
 	}
 
-	// Optional: log loaded models for debugging
-	log.Printf("Loaded Hugging Face models with prefix %s: %+v", prefix, models)
+	for _, model := range models {
+		if model == "" {
+			return nil, fmt.Errorf("one or more models are not defined")
+		}
+	}
+
+	log.Printf("Loaded Hugging Face models: %+v", models)
 
 	return models, nil
 }
+
 
 // prepareCoverLetterPrompt prepares the input prompt and API URL for the Hugging Face API
 func prepareCoverLetterPrompt(name, education, experience, skills, company, role string) (string, string, error) {
@@ -213,18 +219,10 @@ func prepareCoverLetterPrompt(name, education, experience, skills, company, role
 		return "", "", fmt.Errorf("error: Missing required information")
 	}
 
-	var err error
-	HFModels, err = LoadHFModels("HF_MODEL_FOR_CL")
+	HFModels, err := LoadHFModels()
 	if err != nil {
 		log.Printf("Failed to load models: %v", err)
 		return "", "", fmt.Errorf("error loading Hugging Face models: %w", err)
-	}
-	
-	APIKey = viper.GetString("HF_API_KEY")
-	HFBaseAPIURL = viper.GetString("HF_BASE_API_URL")
-	if APIKey == "" || HFBaseAPIURL == "" {
-		log.Printf("API Key or Base API URL is not set in the environment.")
-		return "", "", fmt.Errorf("API Key or Base API URL is missing")
 	}
 
 	if len(HFModels) == 0 {
@@ -237,7 +235,7 @@ func prepareCoverLetterPrompt(name, education, experience, skills, company, role
 	modelToUse := HFModels[RoundRobinModelIndex]
 	log.Printf("Selected model: %s", modelToUse)
 
-	apiURL := fmt.Sprintf("%s/%s", HFBaseAPIURL, modelToUse)
+	apiURL := fmt.Sprintf("%s/%s", config.Cfg.HFBaseAPIUrl, modelToUse)
 	log.Printf("API URL: %s", apiURL)
 
 	RoundRobinModelIndex = (RoundRobinModelIndex + 1) % len(HFModels)
@@ -252,8 +250,6 @@ func prepareCoverLetterPrompt(name, education, experience, skills, company, role
 
 	return prompt, apiURL, nil
 }
-
-
 
 // callHuggingFaceAPI sends a request to the Hugging Face API and returns the generated text
 func callHuggingFaceAPI(prompt, apiURL string) (string, error) {

@@ -9,17 +9,7 @@ import (
 	"time"
 )
 
-var appConfig *config.Config
-var jwtSecret []byte
-
-func init() {
-	var err error
-	appConfig, err = config.InitConfig()
-	if err != nil {
-		panic("Failed to load config: " + err.Error())
-	}
-	jwtSecret = []byte(appConfig.JWTSecretKey)
-}
+var jwtSecret = []byte(config.Cfg.JWTSecretKey)
 
 // CustomClaims struct for JWT claims with uuid.UUID for UserID
 type CustomClaims struct {
@@ -30,18 +20,18 @@ type CustomClaims struct {
 }
 
 // GenerateJWT creates an access token for the user
-func GenerateJWT(userID uuid.UUID, email, role string, cfg *config.Config) (string, error) {
+func GenerateJWT(userID uuid.UUID, email, role string) (string, error) {
 	claims := CustomClaims{
 		UserID: userID,
 		Email:  email,
 		Role:   role,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute * time.Duration(cfg.AccessTokenLifetime))),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute * time.Duration(config.Cfg.AccessTokenLifetime))),
 		},
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString([]byte(cfg.JWTSecretKey))
+	return token.SignedString(jwtSecret)
 }
 
 // ValidateJWT checks the token string and returns custom claims

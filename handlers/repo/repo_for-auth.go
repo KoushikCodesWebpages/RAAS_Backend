@@ -14,13 +14,12 @@ import (
 
 type UserRepo struct {
 	DB     *gorm.DB
-	Config *config.Config
+
 }
 
 func NewUserRepo(db *gorm.DB, config *config.Config) *UserRepo {
 	return &UserRepo{
 		DB:     db,
-		Config: config,
 	}
 }
 
@@ -71,7 +70,7 @@ func (r *UserRepo) CreateSeeker(input dto.SeekerSignUpInput, hashedPassword stri
 		return fmt.Errorf("failed to create seeker profile: %v", err)
 	}
 
-	// ✅ Create UserEntryTimeline for the new user
+	// Create UserEntryTimeline for the new user
 	timeline := models.UserEntryTimeline{
 		UserID:                         authUser.ID,
 	}
@@ -80,7 +79,7 @@ func (r *UserRepo) CreateSeeker(input dto.SeekerSignUpInput, hashedPassword stri
 	}
 
 	// Construct email verification link (optional)
-	verificationLink := fmt.Sprintf("%s/verify-email?token=%s", r.Config.FrontendBaseUrl, token)
+	verificationLink := fmt.Sprintf("%s/verify-email?token=%s", config.Cfg.FrontendBaseUrl, token)
 
 	emailBody := fmt.Sprintf(`
 		<p>Hello %s,</p>
@@ -91,12 +90,12 @@ func (r *UserRepo) CreateSeeker(input dto.SeekerSignUpInput, hashedPassword stri
 
 	// Prepare email config from loaded app config
 	emailCfg := utils.EmailConfig{
-		Host:     r.Config.EmailHost,
-		Port:     r.Config.EmailPort,
-		Username: r.Config.EmailHostUser,
-		Password: r.Config.EmailHostPassword,
-		From:     r.Config.DefaultFromEmail,
-		UseTLS:   r.Config.EmailUseTLS,
+		Host:     config.Cfg.EmailHost,
+		Port:     config.Cfg.EmailPort,
+		Username: config.Cfg.EmailHostUser,
+		Password: config.Cfg.EmailHostPassword,
+		From:     config.Cfg.DefaultFromEmail,
+		UseTLS:   config.Cfg.EmailUseTLS,
 	}
 
 	// Send the verification email
@@ -106,7 +105,6 @@ func (r *UserRepo) CreateSeeker(input dto.SeekerSignUpInput, hashedPassword stri
 
 	return nil
 }
-
 func (r *UserRepo) AuthenticateUser(email, password string) (*models.AuthUser, error) {
     var user models.AuthUser
 

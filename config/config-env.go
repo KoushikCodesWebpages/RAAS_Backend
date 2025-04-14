@@ -7,6 +7,9 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/spf13/viper"
 )
+
+var Cfg *Config
+
 type Config struct {
     SecretKey              string
     AuthUserModel          string
@@ -30,6 +33,10 @@ type Config struct {
     MediaURL               string
     MediaRoot              string
     StaticRoot             string
+
+    AzureStorageAccount    string
+    AzureStorageKey        string
+    AzureBlobContainer     string
 
     DBType                 string
     DBServer               string
@@ -65,22 +72,22 @@ type Config struct {
     HFModelForMS8               string
     HFModelForMS9               string
     HFModelForMS10              string
-    HFAPIKey                    string
-
 
     // CV MODELS
-    HFModelForCV1               string
-    HFModelForCV2               string
-    HFModelForCV3               string
-    HFModelForCV4               string
-    HFModelForCV5               string
-    HFModelForCV6               string
-    HFModelForCV7               string
-    HFModelForCV8               string
-    HFModelForCV9               string
-    HFModelForCV10              string
+    HFModelForCL1               string
+    HFModelForCL2               string
+    HFModelForCL3               string
+    HFModelForCL4               string
+    HFModelForCL5               string
+    HFModelForCL6               string
+    HFModelForCL7               string
+    HFModelForCL8               string
+    HFModelForCL9               string
+    HFModelForCL10              string
 
+    HFBaseAPIUrl                string
 
+    HFAPIKey                    string
     
     //COVERLETTER GENERATION
     CL_Url                      string
@@ -89,7 +96,7 @@ type Config struct {
     GEN_API_KEY                 string
 }   
 
-func InitConfig() (*Config, error) {
+func InitConfig() error {
     // Load .env file only if not running on Railway (or similar env)
     if _, exists := os.LookupEnv("RAILWAY_ENVIRONMENT"); !exists {
         err := godotenv.Load()
@@ -102,7 +109,7 @@ func InitConfig() (*Config, error) {
     viper.AutomaticEnv() // Automatically bind to environment variables
 
     // Create and populate the Config struct
-    config := &Config{
+    Cfg = &Config{
         SecretKey:              viper.GetString("SECRET_KEY"),
         AuthUserModel:          viper.GetString("AUTH_USER_MODEL"),
         CORSAllowedOrigins:     viper.GetString("CORS_ALLOWED_ORIGINS"),
@@ -125,6 +132,10 @@ func InitConfig() (*Config, error) {
         MediaURL:               viper.GetString("MEDIA_URL"),
         MediaRoot:              viper.GetString("MEDIA_ROOT"),
         StaticRoot:             viper.GetString("STATIC_ROOT"),
+
+        AzureStorageAccount: viper.GetString("AZURE_STORAGE_ACCOUNT"),
+        AzureStorageKey:    viper.GetString("AZURE_STORAGE_KEY"),
+        AzureBlobContainer: viper.GetString("AZURE_BLOB_CONTAINER"),
 
         DBType:                 viper.GetString("DB_TYPE"),
         DBServer:               viper.GetString("DB_SERVER"),
@@ -160,21 +171,24 @@ func InitConfig() (*Config, error) {
         HFModelForMS8:               viper.GetString("HF_MODEL_FOR_MS_8"),
         HFModelForMS9:               viper.GetString("HF_MODEL_FOR_MS_9"),
         HFModelForMS10:              viper.GetString("HF_MODEL_FOR_MS_10"),
-        HFAPIKey:               viper.GetString("HF_API_KEY"),
-
+       
         //CV GEN
 
-        HFModelForCV1: viper.GetString("HF_MODEL_FOR_CV_1"),
-        HFModelForCV2: viper.GetString("HF_MODEL_FOR_CV_2"),
-        HFModelForCV3: viper.GetString("HF_MODEL_FOR_CV_3"),
-        HFModelForCV4: viper.GetString("HF_MODEL_FOR_CV_4"),
-        HFModelForCV5: viper.GetString("HF_MODEL_FOR_CV_5"),
-        HFModelForCV6: viper.GetString("HF_MODEL_FOR_CV_6"),
-        HFModelForCV7: viper.GetString("HF_MODEL_FOR_CV_7"),
-        HFModelForCV8: viper.GetString("HF_MODEL_FOR_CV_8"),
-        HFModelForCV9: viper.GetString("HF_MODEL_FOR_CV_9"),
-        HFModelForCV10: viper.GetString("HF_MODEL_FOR_CV_10"),
+        HFModelForCL1: viper.GetString("HF_MODEL_FOR_CL_1"),
+        HFModelForCL2: viper.GetString("HF_MODEL_FOR_CL_2"),
+        HFModelForCL3: viper.GetString("HF_MODEL_FOR_CL_3"),
+        HFModelForCL4: viper.GetString("HF_MODEL_FOR_CL_4"),
+        HFModelForCL5: viper.GetString("HF_MODEL_FOR_CL_5"),
+        HFModelForCL6: viper.GetString("HF_MODEL_FOR_CL_6"),
+        HFModelForCL7: viper.GetString("HF_MODEL_FOR_CL_7"),
+        HFModelForCL8: viper.GetString("HF_MODEL_FOR_CL_8"),
+        HFModelForCL9: viper.GetString("HF_MODEL_FOR_CL_9"),
+        HFModelForCL10: viper.GetString("HF_MODEL_FOR_CL_10"),
 
+
+        HFAPIKey:               viper.GetString("HF_API_KEY"),
+
+        HFBaseAPIUrl:     viper.GetString("HF_BASE_API_URL"),
 
         //GENERATION
 
@@ -184,7 +198,7 @@ func InitConfig() (*Config, error) {
         GEN_API_KEY: viper.GetString("COVER_CV_API_KEY"),
     }
 
-    return config, nil
+    return nil
 }
 
 

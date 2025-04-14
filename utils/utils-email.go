@@ -1,7 +1,6 @@
 package utils
 
 import (
-    "log"
 
     "gopkg.in/mail.v2"
     "github.com/google/uuid"
@@ -35,17 +34,12 @@ func GenerateVerificationToken() string {
 }
 
 func GetEmailConfig() EmailConfig {
-    cfg, err := config.InitConfig()
-    if err != nil {
-        log.Fatalf("Error initializing config: %v", err)
-    }
-
     return EmailConfig{
-        Host:     cfg.EmailHost,
-        Port:     cfg.EmailPort,
-        Username: cfg.EmailHostUser,
-        Password: cfg.EmailHostPassword,
-        From:     cfg.DefaultFromEmail,
-        UseTLS:   cfg.EmailUseTLS,
+        Host:     config.Cfg.EmailHost,
+        Port:     config.Cfg.EmailPort,
+        Username: config.Cfg.EmailHostUser,
+        Password: config.Cfg.EmailHostPassword,
+        From:     config.Cfg.DefaultFromEmail,
+        UseTLS:   config.Cfg.EmailUseTLS,
     }
 }

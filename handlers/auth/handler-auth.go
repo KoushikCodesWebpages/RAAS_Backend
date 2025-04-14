@@ -20,15 +20,9 @@ func SeekerSignUp(c *gin.Context) {
 		return
 	}
 
-	cfg, err := config.InitConfig() // Load config
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not load config", "details": err.Error()})
-		return
-	}
-
 	// Initialize userRepo with valid config
 	db := c.MustGet("db").(*gorm.DB)
-	userRepo := repo.NewUserRepo(db, cfg)
+	userRepo := repo.NewUserRepo(db, config.Cfg)
 
 	if err := userRepo.ValidateSeekerSignUpInput(input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -141,14 +135,8 @@ func VerifyEmail(c *gin.Context) {
 
 func Login(c *gin.Context) {
 	var input dto.LoginInput
-	cfg, err := config.InitConfig()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not load config", "details": err.Error()})
-		return
-	}
-
 	db := c.MustGet("db").(*gorm.DB)
-	userRepo := repo.NewUserRepo(db, cfg)
+	userRepo := repo.NewUserRepo(db, config.Cfg)
 
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
@@ -161,7 +149,7 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	token, err := security.GenerateJWT(user.ID, user.Email, user.Role, cfg)
+	token, err := security.GenerateJWT(user.ID, user.Email, user.Role)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not generate token"})
 		return

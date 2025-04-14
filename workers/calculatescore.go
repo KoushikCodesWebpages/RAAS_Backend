@@ -7,31 +7,32 @@ import (
 	// "io"
 	// "bytes"
 	// "net/http"
-	"os"
+	"log"
 	"github.com/joho/godotenv"
 	"RAAS/models"
 	//"log"
 	"math"
 	"errors"
 	"strings"
+	"github.com/spf13/viper"
 )
 
 // RoundRobinModelIndex keeps track of the current model index for round-robin
 var (
-	RoundRobinModelIndex int
+	RoundRobinModelIndex int = 0
 )
 
-// LoadHFModels loads the Hugging Face models from environment variables
-func LoadHFModels() ([]string, error) {
+// LoadHFModels loads the Hugging Face models from Viper configuration
+func LoadHFModels(prefix string) ([]string, error) {
 	var models []string
 	for i := 1; i <= 10; i++ {
-		model := os.Getenv(fmt.Sprintf("HF_MODEL_FOR_MS_%d", i))
+		model := viper.GetString(fmt.Sprintf("%s_%d", prefix, i))
 		if model == "" {
-			return nil, fmt.Errorf("model HF_MODEL_%d is not defined", i)
+			return nil, fmt.Errorf("model %s_%d is not defined", prefix, i)
 		}
 		models = append(models, model)
 	}
-	//log.Printf("Loaded Hugging Face models: %+v", models)  // Debugging log
+	//log.Printf("Loaded Hugging Face models with prefix %s: %+v", prefix, models)  // Debugging log
 	return models, nil
 }
 
@@ -42,14 +43,14 @@ func CalculateMatchScore(seeker models.Seeker, job interface{}) (float64, error)
 	}
 	//log.Println("Loaded environment variables.")
 
-	// Load Hugging Face API key
-	hfAPIKey := os.Getenv("HF_API_KEY")
+// Load Hugging Face API key
+	hfAPIKey := viper.GetString("HF_API_KEY")
 	if hfAPIKey == "" {
+		log.Printf("Hugging Face API key not found in configuration")
 		return 0, fmt.Errorf("hugging Face API key not found")
 	}
-
 	// Load Hugging Face models
-	modelsList, err := LoadHFModels()
+	modelsList, err := LoadHFModels("HF_MODEL_FOR_MS")
 	if err != nil {
 		return 0, fmt.Errorf("error loading models: %v", err)
 	}

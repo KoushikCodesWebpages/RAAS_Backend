@@ -16,7 +16,7 @@ func SetupDataEntryRoutes(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
 	//TIMELINE 
 
 	timeline := r.Group("/user/entry-progress")
-    timeline.Use(middleware.AuthMiddleware(cfg)) // Middleware to authenticate JWT
+    timeline.Use(middleware.AuthMiddleware()) // Middleware to authenticate JWT
 
     // Define the route for getting the next entry step
     timeline.GET("", features.GetNextEntryStep(db))
@@ -24,7 +24,7 @@ func SetupDataEntryRoutes(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
 
 	personalInfoHandler := dataentry.NewPersonalInfoHandler(db)
 	personalInfoRoutes := r.Group("/personal-info")
-	personalInfoRoutes.Use(middleware.AuthMiddleware(cfg))
+	personalInfoRoutes.Use(middleware.AuthMiddleware())
 	{
 		personalInfoRoutes.POST("", personalInfoHandler.CreatePersonalInfo)  // Create Personal Info
 		personalInfoRoutes.GET("", personalInfoHandler.GetPersonalInfo)      // Get Personal Info
@@ -35,7 +35,7 @@ func SetupDataEntryRoutes(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
 	// PROFESSIONAL SUMMARY routes
 	professionalSummaryHandler := dataentry.NewProfessionalSummaryHandler(db)
 	professionalSummaryRoutes := r.Group("/professional-summary")
-	professionalSummaryRoutes.Use(middleware.AuthMiddleware(cfg))
+	professionalSummaryRoutes.Use(middleware.AuthMiddleware())
 	{
 		professionalSummaryRoutes.POST("", professionalSummaryHandler.CreateProfessionalSummary)
 		professionalSummaryRoutes.GET("", professionalSummaryHandler.GetProfessionalSummary)
@@ -45,7 +45,7 @@ func SetupDataEntryRoutes(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
 	// WORK EXPERIENCE routes
 	workExperienceHandler := dataentry.NewWorkExperienceHandler(db)
 	workExperienceRoutes := r.Group("/work-experience")
-	workExperienceRoutes.Use(middleware.AuthMiddleware(cfg))
+	workExperienceRoutes.Use(middleware.AuthMiddleware())
 	{
 		workExperienceRoutes.POST("", workExperienceHandler.CreateWorkExperience)
 		workExperienceRoutes.GET("", workExperienceHandler.GetWorkExperience)
@@ -56,7 +56,7 @@ func SetupDataEntryRoutes(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
 	// EDUCATION routes
 	educationHandler := dataentry.NewEducationHandler(db)
 	educationRoutes := r.Group("/education")
-	educationRoutes.Use(middleware.AuthMiddleware(cfg))
+	educationRoutes.Use(middleware.AuthMiddleware())
 	{
 		educationRoutes.POST("", educationHandler.CreateEducation)
 		educationRoutes.GET("", educationHandler.GetEducation)
@@ -67,10 +67,10 @@ func SetupDataEntryRoutes(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
 	// CERTIFICATES routes
 	certificateHandler := dataentry.NewCertificateHandler(db)
 	certificateRoutes := r.Group("/certificates")
-	certificateRoutes.Use(middleware.AuthMiddleware(cfg))
+	certificateRoutes.Use(middleware.AuthMiddleware())
 	{
 		certificateRoutes.POST("", certificateHandler.CreateCertificate)
-		certificateRoutes.GET("", certificateHandler.GetCertificates)
+		certificateRoutes.GET("", certificateHandler.GetCertificate)
 		certificateRoutes.PUT(":id", certificateHandler.PutCertificate)
 		certificateRoutes.DELETE(":id", certificateHandler.DeleteCertificate)
 	}
@@ -78,7 +78,7 @@ func SetupDataEntryRoutes(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
 	// LANGUAGES routes
 	languageHandler := dataentry.NewLanguageHandler(db)
 	languageRoutes := r.Group("/languages")
-	languageRoutes.Use(middleware.AuthMiddleware(cfg))
+	languageRoutes.Use(middleware.AuthMiddleware())
 	{
 		languageRoutes.POST("", languageHandler.CreateLanguage)
 		languageRoutes.GET("", languageHandler.GetLanguages)
@@ -89,7 +89,7 @@ func SetupDataEntryRoutes(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
 	// JOB TITLES routes
 	jobTitleHandler := dataentry.NewJobTitleHandler(db)
 	jobTitleRoutes := r.Group("/jobtitles")
-	jobTitleRoutes.Use(middleware.AuthMiddleware(cfg))
+	jobTitleRoutes.Use(middleware.AuthMiddleware())
 	{
 		jobTitleRoutes.POST("", jobTitleHandler.CreateJobTitle)
 		jobTitleRoutes.GET("", jobTitleHandler.GetJobTitle)

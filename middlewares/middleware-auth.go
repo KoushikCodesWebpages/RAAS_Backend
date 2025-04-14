@@ -10,7 +10,7 @@ import (
     "strings"
 )
 
-func AuthMiddleware(cfg *config.Config) gin.HandlerFunc {
+func AuthMiddleware() gin.HandlerFunc {
     return func(c *gin.Context) {
         authHeader := c.GetHeader("Authorization")
         if authHeader == "" {
@@ -20,7 +20,7 @@ func AuthMiddleware(cfg *config.Config) gin.HandlerFunc {
         }
 
         parts := strings.Split(authHeader, " ")
-        if len(parts) != 2 || parts[0] != cfg.AuthHeaderTypes {
+        if len(parts) != 2 || parts[0] != config.Cfg.AuthHeaderTypes {
             c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid authorization header format"})
             c.Abort()
             return
@@ -28,7 +28,7 @@ func AuthMiddleware(cfg *config.Config) gin.HandlerFunc {
 
         tokenStr := parts[1]
         token, err := jwt.ParseWithClaims(tokenStr, &security.CustomClaims{}, func(token *jwt.Token) (interface{}, error) {
-            return []byte(cfg.JWTSecretKey), nil
+            return []byte(config.Cfg.JWTSecretKey), nil
         })
 
         if err != nil || !token.Valid {

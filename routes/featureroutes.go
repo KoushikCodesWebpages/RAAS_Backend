@@ -13,7 +13,7 @@ func SetupFeatureRoutes(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
 	// PROFILE routes
 	seekerProfileHandler := features.NewSeekerProfileHandler(db)
 	seekerProfileRoutes := r.Group("/profile")
-	seekerProfileRoutes.Use(middleware.AuthMiddleware(cfg))
+	seekerProfileRoutes.Use(middleware.AuthMiddleware())
 	{
 		seekerProfileRoutes.GET("", seekerProfileHandler.GetSeekerProfile)
 	}
@@ -22,7 +22,7 @@ func SetupFeatureRoutes(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
 
 	// JOB DATA routes
 	jobRetrievalRoutes := r.Group("/api/jobs")
-	jobRetrievalRoutes.Use(middleware.AuthMiddleware(cfg))
+	jobRetrievalRoutes.Use(middleware.AuthMiddleware())
 	{
 		jobRetrievalRoutes.GET("", features.JobRetrievalHandler)
 	}
@@ -30,7 +30,7 @@ func SetupFeatureRoutes(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
 	// JOB METADATA routes
 	jobDataHandler := features.NewJobDataHandler(db)
 	jobMetaRoutes := r.Group("/api/job-data")
-	jobMetaRoutes.Use(middleware.AuthMiddleware(cfg))
+	jobMetaRoutes.Use(middleware.AuthMiddleware())
 	{
 		jobMetaRoutes.GET("/linkedin", jobDataHandler.GetLinkedInJobs)
 		jobMetaRoutes.GET("/xing", jobDataHandler.GetXingJobs)
@@ -42,7 +42,7 @@ func SetupFeatureRoutes(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
 
 	selectedJobsHandler := features.NewSelectedJobsHandler(db)
 	selectedJobsRoutes := r.Group("/selected-jobs")
-	selectedJobsRoutes.Use(middleware.AuthMiddleware(cfg))
+	selectedJobsRoutes.Use(middleware.AuthMiddleware())
 	{
 		selectedJobsRoutes.POST("", selectedJobsHandler.PostSelectedJob)
 		selectedJobsRoutes.GET("", selectedJobsHandler.GetSelectedJobs)
@@ -55,7 +55,7 @@ func SetupFeatureRoutes(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
 	matchScoreHandler := features.MatchScoreHandler{DB: db}
 	// Define the route group for match scores
 	matchScoreRoutes := r.Group("/matchscores")
-	matchScoreRoutes.Use(middleware.AuthMiddleware(cfg)) // If you want to secure it with authentication
+	matchScoreRoutes.Use(middleware.AuthMiddleware()) // If you want to secure it with authentication
 	{
 		// Route to get all match scores
 		matchScoreRoutes.GET("", matchScoreHandler.GetAllMatchScores)
@@ -65,14 +65,14 @@ func SetupFeatureRoutes(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
 
 	// Cover letter generation route (authenticated)
 	coverLetterRoutes := r.Group("/generate-cover-letter")
-	coverLetterRoutes.Use(middleware.AuthMiddleware(cfg))
+	coverLetterRoutes.Use(middleware.AuthMiddleware())
 	{
 		coverLetterRoutes.POST("", CLHandler.PostCoverLetter)
 	}
 
 	mediaUploadHandler := features.NewMediaUploadHandler(features.GetBlobServiceClient(), os.Getenv("AZURE_BLOB_CONTAINER"))
 	mediaRoutes := r.Group("/media")
-	mediaRoutes.Use(middleware.AuthMiddleware(cfg))
+	mediaRoutes.Use(middleware.AuthMiddleware())
 	{
 		mediaRoutes.POST("/upload", mediaUploadHandler.HandleUpload)
 	}
