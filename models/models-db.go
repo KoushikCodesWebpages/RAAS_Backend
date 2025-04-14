@@ -66,6 +66,7 @@ func InitDB(cfg *config.Config) *gorm.DB {
 	// "xing_job_descriptions",
 	// "job_match_scores",
 	// "selected_job_applications",
+	//"match_scores",
 	})
 
 	AutoMigrate()
@@ -103,7 +104,7 @@ func AutoMigrate() {
 		&UserEntryTimeline{},
 		&LinkedInJobMetaData{},
 		&XingJobMetaData{},
-		&JobMatchScore{},
+		&MatchScore{},
 
 		// Foreign Key Dependent Tables
 		&LinkedInJobApplicationLink{},

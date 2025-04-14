@@ -10,12 +10,12 @@ import (
 
 func SetupFeatureRoutes(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
 	// PROFILE routes
-		seekerProfileHandler := features.NewSeekerProfileHandler(db)
-		seekerProfileRoutes := r.Group("/profile")
-		seekerProfileRoutes.Use(middleware.AuthMiddleware(cfg))
-		{
-			seekerProfileRoutes.GET("", seekerProfileHandler.GetSeekerProfile)
-		}
+	seekerProfileHandler := features.NewSeekerProfileHandler(db)
+	seekerProfileRoutes := r.Group("/profile")
+	seekerProfileRoutes.Use(middleware.AuthMiddleware(cfg))
+	{
+		seekerProfileRoutes.GET("", seekerProfileHandler.GetSeekerProfile)
+	}
 	
 	
 
@@ -48,6 +48,19 @@ func SetupFeatureRoutes(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
 		selectedJobsRoutes.PUT(":id", selectedJobsHandler.UpdateSelectedJob)
 		selectedJobsRoutes.DELETE(":id", selectedJobsHandler.DeleteSelectedJob)
 	}
+
+
+
+	matchScoreHandler := features.MatchScoreHandler{DB: db}
+
+	// Define the route group for match scores
+	matchScoreRoutes := r.Group("/matchscores")
+	matchScoreRoutes.Use(middleware.AuthMiddleware(cfg)) // If you want to secure it with authentication
+	{
+		// Route to get all match scores
+		matchScoreRoutes.GET("", matchScoreHandler.GetAllMatchScores)
+	}
+	
 
 
 }

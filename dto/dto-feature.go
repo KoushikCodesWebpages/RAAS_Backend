@@ -3,7 +3,7 @@ package dto
 import (
     // "RAAS/models"
 	"github.com/google/uuid"
-	"time"
+	//"time"
     "gorm.io/gorm"
 )
 
@@ -38,19 +38,11 @@ type JobFilterDTO struct {
 	Title string `form:"title"` // Query param: /jobs/linkedin?title=developer
 }
 
-// MatchScoreRequest represents the request to calculate a match score.
-type MatchScoreRequest struct {
-	JobID string `json:"job_id" binding:"required"`
-}
-
 // MatchScoreResponse represents the response containing the match score for a job.
 type MatchScoreResponse struct {
-	Score     float64   `json:"score"`
-	Source    string    `json:"source"`    // "cached" or "calculated"
-	JobID     string    `json:"job_id"`
-	UserID    uuid.UUID `json:"user_id"`
-	Platform  string    `json:"platform,omitempty"` // Platform (linkedin/xing)
-	MatchedAt time.Time `json:"matched_at,omitempty"`
+	SeekerID   uuid.UUID `json:"seeker_id"`
+	JobID      string `json:"job_id"`
+	MatchScore float64    `json:"match_score"`
 }
 
 type SelectJobRequest struct {
@@ -126,3 +118,4 @@ type SeekerProfileDTO struct {
 	// New: Profile completion percentage
 	ProfileCompletion int `json:"profileCompletion"`
 }
+

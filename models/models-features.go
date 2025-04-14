@@ -39,11 +39,6 @@ type UserEntryTimeline struct {
 }
 
 
-
-
-
-
-
 type SalaryRange struct {
     Min int `json:"min"`
     Max int `json:"max"`
@@ -71,4 +66,10 @@ type SelectedJobApplication struct {
 	Selected              bool      `gorm:"default:false" json:"selected"`
 	CvGenerated           bool      `gorm:"default:false" json:"cv_generated"`
 	CoverLetterGenerated  bool      `gorm:"default:false" json:"cover_letter_generated"`
+}
+
+type MatchScore struct {
+	SeekerID   uuid.UUID `gorm:"type:char(36);primaryKey"`  // Seeker ID (foreign key reference)
+	JobID      string    `gorm:"primaryKey"`                // Job ID (foreign key reference, as string)
+	MatchScore float64   `gorm:"type:float"`                // Match score percentage (0 to 100)
 }
