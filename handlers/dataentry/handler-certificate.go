@@ -4,71 +4,88 @@ import (
 	"RAAS/dto"
 	"RAAS/models"
 	"net/http"
-
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"RAAS/handlers/features"
+	"os"
+	// "github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
+	// "github.com/joho/godotenv"
+	// "os"
+	// "path/filepath"
+	// "fmt"
 )
 
-// CertificateHandler struct
 type CertificateHandler struct {
 	DB *gorm.DB
 }
 
-// NewCertificateHandler creates a new CertificateHandler
 func NewCertificateHandler(db *gorm.DB) *CertificateHandler {
 	return &CertificateHandler{DB: db}
 }
 
-// CreateCertificate creates a new certificate record for the authenticated user
 func (h *CertificateHandler) CreateCertificate(c *gin.Context) {
-	userID := c.MustGet("userID").(uuid.UUID)
+    userID := c.MustGet("userID").(uuid.UUID)
 
-	var input dto.CertificateRequest
-	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
-		return
-	}
+    // Validate the file type
+    mediaUploadHandler := features.NewMediaUploadHandler(features.GetBlobServiceClient(), os.Getenv("AZURE_BLOB_CONTAINER"))
+    _, header, err := c.Request.FormFile("file")
+    if err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid file"})
+        return
+    }
 
-	certificate := models.Certificate{
-		AuthUserID:      userID,
-		CertificateName: input.CertificateName,
-		CertificateFile: input.CertificateFile,
-	}
+    if !mediaUploadHandler.ValidateFileType(header) {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid file type"})
+        return
+    }
 
-	if input.CertificateNumber != nil {
-		certificate.CertificateNumber = *input.CertificateNumber
-	}
+    // Upload the file to Azure Blob Storage
+    fileURL, err := mediaUploadHandler.UploadMedia(c)
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to upload file"})
+        return
+    }
 
-	if err := h.DB.Create(&certificate).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create certificate", "details": err.Error()})
-		return
-	}
+    // Get the certificate details from the request
+    certificateName := c.PostForm("CertificateName")
+    certificateNumber := c.PostForm("CertificateNumber")
 
-	    // Update the UserEntryTimeline - set CertificatesCompleted to true
-		var timeline models.UserEntryTimeline
-		if err := h.DB.First(&timeline, "user_id = ?", userID).Error; err != nil {
-			c.JSON(http.StatusNotFound, gin.H{"error": "User entry timeline not found"})
-			return
-		}
-	
-		timeline.CertificatesCompleted = true
-	
-		// Save the updated timeline
-		if err := h.DB.Save(&timeline).Error; err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update timeline", "details": err.Error()})
-			return
-		}
+    certificate := models.Certificate{
+        AuthUserID:      userID,
+        CertificateName: certificateName,
+        CertificateFile: fileURL, // Save the URL of the file
+        CertificateNumber: certificateNumber,
+    }
 
-	c.JSON(http.StatusCreated, dto.CertificateResponse{
-		ID:                certificate.ID,
-		AuthUserID:        certificate.AuthUserID,
-		CertificateName:   certificate.CertificateName,
-		CertificateFile:   certificate.CertificateFile,
-		CertificateNumber: input.CertificateNumber,
-	})
+    // Create the certificate record in DB
+    if err := h.DB.Create(&certificate).Error; err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create certificate", "details": err.Error()})
+        return
+    }
+
+    // Update the UserEntryTimeline
+    var timeline models.UserEntryTimeline
+    if err := h.DB.First(&timeline, "user_id = ?", userID).Error; err != nil {
+        c.JSON(http.StatusNotFound, gin.H{"error": "User entry timeline not found"})
+        return
+    }
+
+    timeline.CertificatesCompleted = true
+    if err := h.DB.Save(&timeline).Error; err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update timeline", "details": err.Error()})
+        return
+    }
+
+    // Send back the certificate details in the response
+    c.JSON(http.StatusCreated, dto.CertificateResponse{
+        ID:                certificate.ID,
+        AuthUserID:        certificate.AuthUserID,
+        CertificateName:   certificate.CertificateName,
+        CertificateFile:   certificate.CertificateFile,
+        CertificateNumber: &certificate.CertificateNumber,
+    })
 }
-
 // GetCertificates retrieves all certificate records for the authenticated user
 func (h *CertificateHandler) GetCertificates(c *gin.Context) {
 	userID := c.MustGet("userID").(uuid.UUID)

@@ -91,11 +91,9 @@ type EducationResponse struct {
 
 // CertificateRequest represents the input for creating or updating a certificate
 type CertificateRequest struct {
-	CertificateName   string  `json:"certificateName" binding:"required"`
-	CertificateFile   string  `json:"certificateFile" binding:"required"` // Assume this is a URL or file path
-	CertificateNumber *string `json:"certificateNumber,omitempty"`        // Optional
+	CertificateName   string  `form:"certificateName" json:"certificateName"`
+	CertificateNumber *string `form:"certificateNumber" json:"certificateNumber"`
 }
-
 // CertificateResponse represents the response sent to the client
 type CertificateResponse struct {
 	ID                uint      `json:"id"`

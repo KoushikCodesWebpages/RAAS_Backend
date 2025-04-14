@@ -55,18 +55,39 @@ type Config struct {
     RestThrottleRatesUser  string
 
     // New fields for Hugging Face models and API key
-    HFModel1               string
-    HFModel2               string
-    HFModel3               string
-    HFModel4               string
-    HFModel5               string
-    HFModel6               string
-    HFModel7               string
-    HFModel8               string
-    HFModel9               string
-    HFModel10              string
-    HFAPIKey               string
-}
+    HFModelForMS1               string
+    HFModelForMS2               string
+    HFModelForMS3               string
+    HFModelForMS4               string
+    HFModelForMS5               string
+    HFModelForMS6               string
+    HFModelForMS7               string
+    HFModelForMS8               string
+    HFModelForMS9               string
+    HFModelForMS10              string
+    HFAPIKey                    string
+
+
+    // CV MODELS
+    HFModelForCV1               string
+    HFModelForCV2               string
+    HFModelForCV3               string
+    HFModelForCV4               string
+    HFModelForCV5               string
+    HFModelForCV6               string
+    HFModelForCV7               string
+    HFModelForCV8               string
+    HFModelForCV9               string
+    HFModelForCV10              string
+
+
+    
+    //COVERLETTER GENERATION
+    CL_Url                      string
+    CV_Url                      string
+
+    GEN_API_KEY                 string
+}   
 
 func InitConfig() (*Config, error) {
     // Load .env file only if not running on Railway (or similar env)
@@ -129,18 +150,42 @@ func InitConfig() (*Config, error) {
         RestThrottleRatesUser:  viper.GetString("REST_FRAMEWORK_DEFAULT_THROTTLE_RATES_USER"),
 
         // Load Hugging Face model and API key values from environment variables
-        HFModel1:               viper.GetString("HF_MODEL_1"),
-        HFModel2:               viper.GetString("HF_MODEL_2"),
-        HFModel3:               viper.GetString("HF_MODEL_3"),
-        HFModel4:               viper.GetString("HF_MODEL_4"),
-        HFModel5:               viper.GetString("HF_MODEL_5"),
-        HFModel6:               viper.GetString("HF_MODEL_6"),
-        HFModel7:               viper.GetString("HF_MODEL_7"),
-        HFModel8:               viper.GetString("HF_MODEL_8"),
-        HFModel9:               viper.GetString("HF_MODEL_9"),
-        HFModel10:              viper.GetString("HF_MODEL_10"),
+        HFModelForMS1:               viper.GetString("HF_MODEL_FOR_MS_1"),
+        HFModelForMS2:               viper.GetString("HF_MODEL_FOR_MS_2"),
+        HFModelForMS3:               viper.GetString("HF_MODEL_FOR_MS_3"),
+        HFModelForMS4:               viper.GetString("HF_MODEL_FOR_MS_4"),
+        HFModelForMS5:               viper.GetString("HF_MODEL_FOR_MS_5"),
+        HFModelForMS6:               viper.GetString("HF_MODEL_FOR_MS_6"),
+        HFModelForMS7:               viper.GetString("HF_MODEL_FOR_MS_7"),
+        HFModelForMS8:               viper.GetString("HF_MODEL_FOR_MS_8"),
+        HFModelForMS9:               viper.GetString("HF_MODEL_FOR_MS_9"),
+        HFModelForMS10:              viper.GetString("HF_MODEL_FOR_MS_10"),
         HFAPIKey:               viper.GetString("HF_API_KEY"),
+
+        //CV GEN
+
+        HFModelForCV1: viper.GetString("HF_MODEL_FOR_CV_1"),
+        HFModelForCV2: viper.GetString("HF_MODEL_FOR_CV_2"),
+        HFModelForCV3: viper.GetString("HF_MODEL_FOR_CV_3"),
+        HFModelForCV4: viper.GetString("HF_MODEL_FOR_CV_4"),
+        HFModelForCV5: viper.GetString("HF_MODEL_FOR_CV_5"),
+        HFModelForCV6: viper.GetString("HF_MODEL_FOR_CV_6"),
+        HFModelForCV7: viper.GetString("HF_MODEL_FOR_CV_7"),
+        HFModelForCV8: viper.GetString("HF_MODEL_FOR_CV_8"),
+        HFModelForCV9: viper.GetString("HF_MODEL_FOR_CV_9"),
+        HFModelForCV10: viper.GetString("HF_MODEL_FOR_CV_10"),
+
+
+        //GENERATION
+
+        CL_Url: viper.GetString("COVER_LETTER_API_URL"),
+        CV_Url: viper.GetString("CV_RESUME_API_URL"), 
+        
+        GEN_API_KEY: viper.GetString("COVER_CV_API_KEY"),
     }
 
     return config, nil
 }
+
+
+

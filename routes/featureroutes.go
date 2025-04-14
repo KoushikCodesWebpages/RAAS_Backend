@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 	"RAAS/config"
+	"os"
 )
 
 func SetupFeatureRoutes(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
@@ -52,7 +53,6 @@ func SetupFeatureRoutes(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
 
 
 	matchScoreHandler := features.MatchScoreHandler{DB: db}
-
 	// Define the route group for match scores
 	matchScoreRoutes := r.Group("/matchscores")
 	matchScoreRoutes.Use(middleware.AuthMiddleware(cfg)) // If you want to secure it with authentication
@@ -61,7 +61,21 @@ func SetupFeatureRoutes(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
 		matchScoreRoutes.GET("", matchScoreHandler.GetAllMatchScores)
 	}
 	
+	CLHandler := features.NewCoverLetterHandler(db,cfg)
 
+	// Cover letter generation route (authenticated)
+	coverLetterRoutes := r.Group("/generate-cover-letter")
+	coverLetterRoutes.Use(middleware.AuthMiddleware(cfg))
+	{
+		coverLetterRoutes.POST("", CLHandler.PostCoverLetter)
+	}
+
+	mediaUploadHandler := features.NewMediaUploadHandler(features.GetBlobServiceClient(), os.Getenv("AZURE_BLOB_CONTAINER"))
+	mediaRoutes := r.Group("/media")
+	mediaRoutes.Use(middleware.AuthMiddleware(cfg))
+	{
+		mediaRoutes.POST("/upload", mediaUploadHandler.HandleUpload)
+	}
 
 }
 

@@ -25,7 +25,7 @@ var (
 func LoadHFModels() ([]string, error) {
 	var models []string
 	for i := 1; i <= 10; i++ {
-		model := os.Getenv(fmt.Sprintf("HF_MODEL_%d", i))
+		model := os.Getenv(fmt.Sprintf("HF_MODEL_FOR_MS_%d", i))
 		if model == "" {
 			return nil, fmt.Errorf("model HF_MODEL_%d is not defined", i)
 		}
