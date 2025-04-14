@@ -9,7 +9,14 @@ import (
 	"time"
 )
 
-var jwtSecret = []byte(config.Cfg.JWTSecretKey)
+var jwtSecret []byte
+
+func getJWTSecret() []byte {
+	if jwtSecret == nil {
+		jwtSecret = []byte(config.Cfg.JWTSecretKey)
+	}
+	return jwtSecret
+}
 
 // CustomClaims struct for JWT claims with uuid.UUID for UserID
 type CustomClaims struct {
@@ -31,13 +38,13 @@ func GenerateJWT(userID uuid.UUID, email, role string) (string, error) {
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString(jwtSecret)
+	return token.SignedString(getJWTSecret())
 }
 
 // ValidateJWT checks the token string and returns custom claims
 func ValidateJWT(tokenString string) (*CustomClaims, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &CustomClaims{}, func(token *jwt.Token) (interface{}, error) {
-		return jwtSecret, nil
+		return getJWTSecret(), nil
 	})
 
 	if err != nil || !token.Valid {
