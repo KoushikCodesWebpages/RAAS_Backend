@@ -11,8 +11,8 @@ import (
 	"gorm.io/gorm"
 	"bytes"
 	"strings"
-	"os"
-	"github.com/joho/godotenv"
+	//"os"
+	"github.com/spf13/viper"
 	"RAAS/models"
 	//"RAAS/handlers/repo"
 	"RAAS/config"
@@ -189,29 +189,22 @@ var (
 	HFBaseAPIURL         string
 )
 
-// LoadHFModels loads the Hugging Face models from environment variables
-func LoadHFModels() ([]string, error) {
-	// Load .env file (if it exists)
-	err := godotenv.Load()
-	if err != nil {
-		return nil, fmt.Errorf("error loading .env file: %v", err)
-	}
-
+func LoadHFModels(prefix string) ([]string, error) {
 	var models []string
 	for i := 1; i <= 10; i++ {
-		model := os.Getenv(fmt.Sprintf("HF_MODEL_FOR_CL_%d", i))
+		key := fmt.Sprintf("%s_%d", prefix, i)
+		model := viper.GetString(key)
 		if model == "" {
-			return nil, fmt.Errorf("model HF_MODEL_FOR_CL_%d is not defined", i)
+			return nil, fmt.Errorf("model %s is not defined", key)
 		}
 		models = append(models, model)
 	}
 
 	// Optional: log loaded models for debugging
-	//log.Printf("Loaded Hugging Face models: %+v", models)
+	log.Printf("Loaded Hugging Face models with prefix %s: %+v", prefix, models)
 
 	return models, nil
 }
-
 
 // prepareCoverLetterPrompt prepares the input prompt and API URL for the Hugging Face API
 func prepareCoverLetterPrompt(name, education, experience, skills, company, role string) (string, string, error) {
@@ -221,17 +214,17 @@ func prepareCoverLetterPrompt(name, education, experience, skills, company, role
 	}
 
 	var err error
-	HFModels, err = LoadHFModels()
+	HFModels, err = LoadHFModels("HF_MODEL_FOR_CL")
 	if err != nil {
 		log.Printf("Failed to load models: %v", err)
-		return "", "", fmt.Errorf("error: Failed to load Hugging Face models")
+		return "", "", fmt.Errorf("error loading Hugging Face models: %w", err)
 	}
-
-	APIKey = os.Getenv("HF_API_KEY")
-	HFBaseAPIURL = os.Getenv("HF_BASE_API_URL")
+	
+	APIKey = viper.GetString("HF_API_KEY")
+	HFBaseAPIURL = viper.GetString("HF_BASE_API_URL")
 	if APIKey == "" || HFBaseAPIURL == "" {
 		log.Printf("API Key or Base API URL is not set in the environment.")
-		return "", "", fmt.Errorf("error: API Key or Base API URL is missing")
+		return "", "", fmt.Errorf("API Key or Base API URL is missing")
 	}
 
 	if len(HFModels) == 0 {
