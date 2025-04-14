@@ -10,7 +10,7 @@ import (
 
 	"log"
 	"net/url"
-
+	"github.com/spf13/viper"
 	"github.com/Azure/azure-storage-blob-go/azblob"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -87,8 +87,11 @@ func init() {
 }
 
 func GetBlobServiceClient() *azblob.ServiceURL {
-	accountName := os.Getenv("AZURE_STORAGE_ACCOUNT")
-	accountKey := os.Getenv("AZURE_STORAGE_KEY")
+	accountName := viper.GetString("AZURE_STORAGE_ACCOUNT")
+	accountKey := viper.GetString("AZURE_STORAGE_KEY")
+	if accountName == "" || accountKey == "" {
+		log.Fatal("Azure storage account or key is not set")
+	}
 	credential, err := azblob.NewSharedKeyCredential(accountName, accountKey)
 	if err != nil {
 		log.Fatal("Invalid credentials")
@@ -102,7 +105,6 @@ func GetBlobServiceClient() *azblob.ServiceURL {
 	URL := azblob.NewServiceURL(*u, p)
 	return &URL
 }
-
 func uploadFileToBlobStorage(c *gin.Context) {
 	file, header, err := c.Request.FormFile("file")
 	if err != nil {
