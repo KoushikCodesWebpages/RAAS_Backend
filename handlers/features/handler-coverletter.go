@@ -24,15 +24,14 @@ type CoverLetterRequest struct {
 // CoverLetterHandler struct
 type CoverLetterHandler struct {
 	db     *gorm.DB
-	config *config.Config
 }
 
 func NewCoverLetterHandler(db *gorm.DB, cfg *config.Config) *CoverLetterHandler {
 	return &CoverLetterHandler{
 		db:     db,
-		config: cfg,
 	}
 }
+
 
 
 // GenerateCoverLetterBody function to generate a cover letter body based on user and job data
@@ -202,6 +201,7 @@ func LoadHFModels() ([]string, error) {
 
 	for _, model := range models {
 		if model == "" {
+			log.Printf("Error loading Hugging Face models: one or more models are not defined")
 			return nil, fmt.Errorf("one or more models are not defined")
 		}
 	}
@@ -235,8 +235,11 @@ func prepareCoverLetterPrompt(name, education, experience, skills, company, role
 	modelToUse := HFModels[RoundRobinModelIndex]
 	log.Printf("Selected model: %s", modelToUse)
 
+	if config.Cfg.HFBaseAPIUrl == "" {
+		log.Println("Error: Hugging Face base API URL is not set")
+		return "", "", fmt.Errorf("error: Hugging Face base API URL is not set")
+	}
 	apiURL := fmt.Sprintf("%s/%s", config.Cfg.HFBaseAPIUrl, modelToUse)
-	log.Printf("API URL: %s", apiURL)
 
 	RoundRobinModelIndex = (RoundRobinModelIndex + 1) % len(HFModels)
 	prompt := fmt.Sprintf(`
@@ -270,7 +273,7 @@ func callHuggingFaceAPI(prompt, apiURL string) (string, error) {
         return "", fmt.Errorf("error: Failed to create API request")
     }
 
-    req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", APIKey))
+    req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", config.Cfg.HFAPIKey))
     req.Header.Set("Content-Type", "application/json")
 
     client := &http.Client{}
