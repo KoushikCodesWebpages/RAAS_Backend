@@ -14,6 +14,7 @@ import (
 
 	"RAAS/models"
 	"RAAS/config"
+	"RAAS/handlers/repo"
 )
 
 // CoverLetterRequest struct to receive JobID
@@ -138,37 +139,32 @@ func (h *CoverLetterHandler) PostCoverLetter(c *gin.Context) {
 		jobTitle,
 	)
 
-	// email := authUser.Email
-	// phone := authUser.Phone
-	// address := personalInfo.Address
+	email := authUser.Email
+	phone := authUser.Phone
+	address := personalInfo.Address
 
 
-	// docInput := repo.CoverLetterInput{
-	// 	Name:            fullName,
-	// 	Email:           email,
-	// 	Phone:           phone,
-	// 	Address:         address,
-	// 	RecipientTitle:  fmt.Sprintf("Hiring Manager at %s", companyName),
-	// 	CompanyName:     companyName,
-	// 	CompanyLocation: "Germany", // Or fetch this from jobMetaData if available
-	// 	Body:            coverLetterBody,
-	// 	Closing:          "Sincerely",
-	// }
+	docInput := repo.CoverLetterInput{
+		Name:            fullName,
+		Email:           email,
+		Phone:           phone,
+		Address:         address,
+		RecipientTitle:  fmt.Sprintf("Hiring Manager at %s", companyName),
+		CompanyName:     companyName,
+		CompanyLocation: "Germany", // Or fetch this from jobMetaData if available
+		Body:            coverLetterBody,
+		Closing:          "Sincerely",
+	}
 
-
-	// docURL, err := repo.GenerateCoverLetterDocx(docInput, h.config)
-	// if err != nil {
-	// 	c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate cover letter document", "details": err.Error()})
-	// 	return
-	// }
-
-	// Step 11: Return response
-	c.JSON(http.StatusOK, gin.H{
-		"cover_letter_body": coverLetterBody,
-	})
-
-
-
+	docData, err := repo.GenerateCoverLetterDocx(docInput, config.Cfg)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate cover letter document", "details": err.Error()})
+		return
+	}
+	
+	c.Header("Content-Disposition", "attachment; filename=cover_letter.docx")
+	c.Header("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+	c.Data(http.StatusOK, "application/vnd.openxmlformats-officedocument.wordprocessingml.document", []byte(docData))
 
 }
 
