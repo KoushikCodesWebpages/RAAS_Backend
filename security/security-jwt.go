@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"strings"
 	"time"
+	"log"
 )
 
 var jwtSecret []byte
@@ -28,27 +29,41 @@ type CustomClaims struct {
 
 // GenerateJWT creates an access token for the user
 func GenerateJWT(userID uuid.UUID, email, role string) (string, error) {
-	claims := CustomClaims{
-		UserID: userID,
-		Email:  email,
-		Role:   role,
-		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute * time.Duration(config.Cfg.AccessTokenLifetime))),
-		},
-	}
+    log.Println("AccessTokenLifetime:", config.Cfg.AccessTokenLifetime)
+    log.Println("JWTSecretKey:", config.Cfg.JWTSecretKey)
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString(getJWTSecret())
+    claims := CustomClaims{
+        UserID: userID,
+        Email:  email,
+        Role:   role,
+        RegisteredClaims: jwt.RegisteredClaims{
+            ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute * time.Duration(config.Cfg.AccessTokenLifetime))),
+        },
+    }
+
+    token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+    return token.SignedString(getJWTSecret())
 }
 
-// ValidateJWT checks the token string and returns custom claims
 func ValidateJWT(tokenString string) (*CustomClaims, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &CustomClaims{}, func(token *jwt.Token) (interface{}, error) {
 		return getJWTSecret(), nil
 	})
 
-	if err != nil || !token.Valid {
-		return nil, errors.New("invalid or expired token")
+	if err != nil {
+		if ve, ok := err.(*jwt.ValidationError); ok {
+			if ve.Errors&jwt.ValidationErrorExpired != 0 {
+				return nil, errors.New("token has expired")
+			}
+			if ve.Errors&jwt.ValidationErrorMalformed != 0 {
+				return nil, errors.New("token is malformed")
+			}
+		}
+		return nil, errors.New("invalid token")
+	}
+
+	if !token.Valid {
+		return nil, errors.New("invalid token")
 	}
 
 	claims, ok := token.Claims.(*CustomClaims)
@@ -65,7 +80,7 @@ func ParseJWTFromHeader(authHeader string) (*CustomClaims, error) {
 		return nil, errors.New("missing Bearer token")
 	}
 
-	tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+	tokenStr := strings.TrimSpace(strings.TrimPrefix(authHeader, "Bearer"))
 	return ValidateJWT(tokenStr)
 }
 

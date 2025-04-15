@@ -28,8 +28,8 @@ type Seeker struct {
 	AuthUserID                uuid.UUID `gorm:"type:char(36);unique;not null" json:"authUserId"`
 	SubscriptionTier          string    `gorm:"default:'free'" json:"subscriptionTier"`
 	DailySelectableJobsCount  int       `gorm:"default:5" json:"dailySelectableJobsCount"`       // e.g., default 5 jobs per day
-	DailyGeneratableCV        int       `gorm:"default:1" json:"dailyGeneratableCv"`             // e.g., 1 CV per day
-	DailyGeneratableCoverletter int     `gorm:"default:1" json:"dailyGeneratableCoverletter"`    // e.g., 1 Cover Letter per day
+	DailyGeneratableCV        int       `gorm:"default:10" json:"dailyGeneratableCv"`             // e.g., 1 CV per day
+	DailyGeneratableCoverletter int     `gorm:"default:10" json:"dailyGeneratableCoverletter"`    // e.g., 1 Cover Letter per day
 	TotalApplications         int       `gorm:"default:0" json:"totalApplications"`              // running total of applications submitted
 }
 

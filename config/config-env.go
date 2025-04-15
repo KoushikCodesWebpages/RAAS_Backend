@@ -5,7 +5,8 @@ import (
 	"os"
 
 	"github.com/joho/godotenv"
-	"github.com/spf13/viper"
+    "strings"
+    "github.com/spf13/viper"
 )
 
 var Cfg *Config
@@ -17,11 +18,16 @@ type Config struct {
     ClientId               string
     ClientSecret           string
     FrontendBaseUrl        string
+
+
+    AuthHeaderTypes        string
     AccessTokenLifetime    int
     RefreshTokenLifetime   int
     RotateRefreshTokens    bool
     BlacklistAfterRotation bool
-    AuthHeaderTypes        string
+
+
+
     EmailBackend           string
     EmailHost              string
     EmailPort              int
@@ -95,8 +101,19 @@ type Config struct {
 
     GEN_API_KEY                 string
 }   
+func RemoveSystemEnv() {
+    for _, pair := range os.Environ() {
+        kv := strings.SplitN(pair, "=", 2)
+        if len(kv) != 2 {
+            continue
+        }
+        os.Unsetenv(kv[0])
+    }
+}
 
 func InitConfig() error {
+
+    RemoveSystemEnv()
     // Load .env file only if not running on Railway (or similar env)
     if _, exists := os.LookupEnv("RAILWAY_ENVIRONMENT"); !exists {
         err := godotenv.Load()
@@ -105,8 +122,11 @@ func InitConfig() error {
         }
     }
 
+
+
     // Initialize viper
     viper.AutomaticEnv() // Automatically bind to environment variables
+
 
     // Create and populate the Config struct
     Cfg = &Config{
@@ -116,6 +136,9 @@ func InitConfig() error {
         ClientId:               viper.GetString("CLIENT_ID"),
         ClientSecret:           viper.GetString("CLIENT_SECRET"),
         FrontendBaseUrl:        viper.GetString("FRONTEND_BASE_URL"),
+
+        JWTSecretKey:           viper.GetString("JWT_SECRET_KEY"),
+        JWTExpirationTime:      viper.GetInt("JWT_EXPIRATION_TIME"),
         AccessTokenLifetime:    viper.GetInt("ACCESS_TOKEN_LIFETIME"),
         RefreshTokenLifetime:   viper.GetInt("REFRESH_TOKEN_LIFETIME"),
         RotateRefreshTokens:    viper.GetBool("ROTATE_REFRESH_TOKENS"),
@@ -149,8 +172,7 @@ func InitConfig() error {
         LogLevel:               viper.GetString("LOG_LEVEL"),
         RateLimit:              viper.GetInt("RATE_LIMIT"),
         Environment:            viper.GetString("ENVIRONMENT"),
-        JWTSecretKey:           viper.GetString("JWT_SECRET_KEY"),
-        JWTExpirationTime:      viper.GetInt("JWT_EXPIRATION_TIME"),
+
         RestAuthClasses:        viper.GetString("REST_FRAMEWORK_DEFAULT_AUTHENTICATION_CLASSES"),
         RestPermissionClasses:  viper.GetString("REST_FRAMEWORK_DEFAULT_PERMISSION_CLASSES"),
         RestPaginationClass:    viper.GetString("REST_FRAMEWORK_DEFAULT_PAGINATION_CLASS"),

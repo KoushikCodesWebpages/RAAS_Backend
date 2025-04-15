@@ -48,6 +48,25 @@ func (h *CoverLetterHandler) PostCoverLetter(c *gin.Context) {
 	// Step 2: Extract user information from JWT claims
 	userID := c.MustGet("userID").(uuid.UUID)
 
+
+	//step 2b
+
+	var seeker models.Seeker
+	if err := h.db.Where("auth_user_id = ?", userID).First(&seeker).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve seeker data"})
+		return
+	}
+
+	if seeker.DailyGeneratableCoverletter > 0 {
+		seeker.DailyGeneratableCoverletter -= 1
+		if err := h.db.Save(&seeker).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update seeker data"})
+			return
+		}
+	} else {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Daily cover letter generation limit exceeded"})
+		return
+	}
 	// Step 3: Get user personal info
 	var personalInfo models.PersonalInfo
 	if err := h.db.Where("auth_user_id = ?", userID).First(&personalInfo).Error; err != nil {
@@ -138,7 +157,11 @@ func (h *CoverLetterHandler) PostCoverLetter(c *gin.Context) {
 		companyName,
 		jobTitle,
 	)
-
+	index := strings.Index(coverLetterBody, "\n\n")
+	if index != -1 {
+		coverLetterBody = coverLetterBody[index+2:]
+	}
+	coverLetterBody = strings.Split(coverLetterBody, "Sincerely")[0]
 	email := authUser.Email
 	phone := authUser.Phone
 	address := personalInfo.Address
@@ -163,8 +186,7 @@ func (h *CoverLetterHandler) PostCoverLetter(c *gin.Context) {
 	}
 	
 	c.Header("Content-Disposition", "attachment; filename=cover_letter.docx")
-	c.Header("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
-	c.Data(http.StatusOK, "application/vnd.openxmlformats-officedocument.wordprocessingml.document", []byte(docData))
+	c.Data(http.StatusOK, "application/vnd.openxmlformats-officedocument.wordprocessingml.document", docData)
 
 }
 
@@ -239,10 +261,11 @@ func prepareCoverLetterPrompt(name, education, experience, skills, company, role
 
 	RoundRobinModelIndex = (RoundRobinModelIndex + 1) % len(HFModels)
 	prompt := fmt.Sprintf(`
+	Do not include greeting or Sincerely(Closing)) when you have to
 	Write the body of a professional cover letter for %s applying for the %s role at %s.
 	Education: %s. Experience: %s. Skills: %s.
-	Write at least 3 well-structured paragraphs focusing on motivation, qualifications, and alignment with the role.
-	Do not include greeting or closing.
+	Write at only 2 well-structured paragraphs focusing on motivation, qualifications, and alignment with the role.
+	.
 	`, name, role, company, education, experience, skills)
 
 	log.Printf("Generated prompt: %s", prompt)
