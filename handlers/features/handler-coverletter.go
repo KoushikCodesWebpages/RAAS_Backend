@@ -224,7 +224,7 @@ func LoadHFModels() ([]string, error) {
 		}
 	}
 
-	log.Printf("Loaded Hugging Face models: %+v", models)
+	// log.Printf("Loaded Hugging Face models: %+v", models)
 
 	return models, nil
 }
@@ -248,10 +248,10 @@ func prepareCoverLetterPrompt(name, education, experience, skills, company, role
 		return "", "", fmt.Errorf("error: No Hugging Face models available")
 	}
 
-	log.Printf("Loaded Hugging Face models: %v", HFModels)
+	// log.Printf("Loaded Hugging Face models: %v", HFModels)
 
 	modelToUse := HFModels[RoundRobinModelIndex]
-	log.Printf("Selected model: %s", modelToUse)
+	// log.Printf("Selected model: %s", modelToUse)
 
 	if config.Cfg.HFBaseAPIUrl == "" {
 		log.Println("Error: Hugging Face base API URL is not set")
@@ -268,7 +268,7 @@ func prepareCoverLetterPrompt(name, education, experience, skills, company, role
 	.
 	`, name, role, company, education, experience, skills)
 
-	log.Printf("Generated prompt: %s", prompt)
+	// log.Printf("Generated prompt: %s", prompt)
 
 	return prompt, apiURL, nil
 }
@@ -311,7 +311,7 @@ func callHuggingFaceAPI(prompt, apiURL string) (string, error) {
         return "", fmt.Errorf("error: Failed to read AI response")
     }
 
-    log.Printf("Raw API Response: %s", body)
+    // log.Printf("Raw API Response: %s", body)
 
     var response []struct {
         GeneratedText string `json:"generated_text"`
@@ -323,7 +323,7 @@ func callHuggingFaceAPI(prompt, apiURL string) (string, error) {
     }
 
     if len(response) > 0 && response[0].GeneratedText != "" {
-        log.Printf("Generated Text: %s", response[0].GeneratedText)
+        // log.Printf("Generated Text: %s", response[0].GeneratedText)
         return strings.TrimPrefix(response[0].GeneratedText, prompt), nil
     }
 

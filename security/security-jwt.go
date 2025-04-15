@@ -7,7 +7,7 @@ import (
 	"github.com/google/uuid"
 	"strings"
 	"time"
-	"log"
+	//"log"
 )
 
 var jwtSecret []byte
@@ -29,8 +29,8 @@ type CustomClaims struct {
 
 // GenerateJWT creates an access token for the user
 func GenerateJWT(userID uuid.UUID, email, role string) (string, error) {
-    log.Println("AccessTokenLifetime:", config.Cfg.AccessTokenLifetime)
-    log.Println("JWTSecretKey:", config.Cfg.JWTSecretKey)
+    // log.Println("AccessTokenLifetime:", config.Cfg.AccessTokenLifetime)
+    // log.Println("JWTSecretKey:", config.Cfg.JWTSecretKey)
 
     claims := CustomClaims{
         UserID: userID,

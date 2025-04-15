@@ -2,7 +2,7 @@
 package middleware
 
 import (
-    "RAAS/config"
+    //"RAAS/config"
     "RAAS/security"
     "github.com/gin-gonic/gin"
     "net/http"
@@ -11,8 +11,8 @@ import (
 )
 func AuthMiddleware() gin.HandlerFunc {
     return func(c *gin.Context) {
-        log.Println("AuthHeaderTypes:", config.Cfg.AuthHeaderTypes)
-        log.Println("JWTSecretKey:", config.Cfg.JWTSecretKey)
+        // log.Println("AuthHeaderTypes:", config.Cfg.AuthHeaderTypes)
+        // log.Println("JWTSecretKey:", config.Cfg.JWTSecretKey)
 
         
         authHeader := c.GetHeader("Authorization")
