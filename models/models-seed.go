@@ -27,7 +27,41 @@ func SeedJobs(db *gorm.DB) {
 		{ID: "lnk8", JobID: "L008", Title: "DevOps Engineer", Company: "Spotify", Location: "Dresden", PostedDate: "2024-04-08", Link: "https://linkedin.com/jobs/8", Processed: true},
 		{ID: "lnk9", JobID: "L009", Title: "Software Engineer", Company: "Tesla", Location: "Bonn", PostedDate: "2024-04-09", Link: "https://linkedin.com/jobs/9", Processed: true},
 		{ID: "lnk10", JobID: "L010", Title: "DevOps Engineer", Company: "Intel", Location: "Nuremberg", PostedDate: "2024-04-10", Link: "https://linkedin.com/jobs/10", Processed: true},
-	}
+		// Data Scientist
+	// 	{ID: "lnk11", JobID: "L011", Title: "Data Scientist", Company: "LinkedIn", Location: "Berlin", PostedDate: "2024-04-11", Link: "https://linkedin.com/jobs/11", Processed: true},
+	// 	{ID: "lnk12", JobID: "L012", Title: "Data Scientist", Company: "Google", Location: "Munich", PostedDate: "2024-04-12", Link: "https://linkedin.com/jobs/12", Processed: true},
+	// 	{ID: "lnk13", JobID: "L013", Title: "Data Scientist", Company: "Meta", Location: "Hamburg", PostedDate: "2024-04-13", Link: "https://linkedin.com/jobs/13", Processed: true},
+	// 	{ID: "lnk14", JobID: "L014", Title: "Data Scientist", Company: "Amazon", Location: "Stuttgart", PostedDate: "2024-04-14", Link: "https://linkedin.com/jobs/14", Processed: true},
+	// 	{ID: "lnk15", JobID: "L015", Title: "Data Scientist", Company: "Apple", Location: "Frankfurt", PostedDate: "2024-04-15", Link: "https://linkedin.com/jobs/15", Processed: true},
+
+	// 	// Data Analyst
+	// 	{ID: "lnk16", JobID: "L016", Title: "Data Analyst", Company: "IBM", Location: "Cologne", PostedDate: "2024-04-16", Link: "https://linkedin.com/jobs/16", Processed: true},
+	// 	{ID: "lnk17", JobID: "L017", Title: "Data Analyst", Company: "Netflix", Location: "Leipzig", PostedDate: "2024-04-17", Link: "https://linkedin.com/jobs/17", Processed: true},
+	// 	{ID: "lnk18", JobID: "L018", Title: "Data Analyst", Company: "Spotify", Location: "Dresden", PostedDate: "2024-04-18", Link: "https://linkedin.com/jobs/18", Processed: true},
+	// 	{ID: "lnk19", JobID: "L019", Title: "Data Analyst", Company: "Tesla", Location: "Bonn", PostedDate: "2024-04-19", Link: "https://linkedin.com/jobs/19", Processed: true},
+	// 	{ID: "lnk20", JobID: "L020", Title: "Data Analyst", Company: "Intel", Location: "Nuremberg", PostedDate: "2024-04-20", Link: "https://linkedin.com/jobs/20", Processed: true},
+
+	// 	// Data Engineer
+	// 	{ID: "lnk21", JobID: "L021", Title: "Data Engineer", Company: "LinkedIn", Location: "Berlin", PostedDate: "2024-04-21", Link: "https://linkedin.com/jobs/21", Processed: true},
+	// 	{ID: "lnk22", JobID: "L022", Title: "Data Engineer", Company: "Google", Location: "Munich", PostedDate: "2024-04-22", Link: "https://linkedin.com/jobs/22", Processed: true},
+	// 	{ID: "lnk23", JobID: "L023", Title: "Data Engineer", Company: "Meta", Location: "Hamburg", PostedDate: "2024-04-23", Link: "https://linkedin.com/jobs/23", Processed: true},
+	// 	{ID: "lnk24", JobID: "L024", Title: "Data Engineer", Company: "Amazon", Location: "Stuttgart", PostedDate: "2024-04-24", Link: "https://linkedin.com/jobs/24", Processed: true},
+	// 	{ID: "lnk25", JobID: "L025", Title: "Data Engineer", Company: "Apple", Location: "Frankfurt", PostedDate: "2024-04-25", Link: "https://linkedin.com/jobs/25", Processed: true},
+
+	// 	// Supply Chain Analyst
+	// 	{ID: "lnk26", JobID: "L026", Title: "Supply Chain Analyst", Company: "IBM", Location: "Cologne", PostedDate: "2024-04-26", Link: "https://linkedin.com/jobs/26", Processed: true},
+	// 	{ID: "lnk27", JobID: "L027", Title: "Supply Chain Analyst", Company: "Netflix", Location: "Leipzig", PostedDate: "2024-04-27", Link: "https://linkedin.com/jobs/27", Processed: true},
+	// 	{ID: "lnk28", JobID: "L028", Title: "Supply Chain Analyst", Company: "Spotify", Location: "Dresden", PostedDate: "2024-04-28", Link: "https://linkedin.com/jobs/28", Processed: true},
+	// 	{ID: "lnk29", JobID: "L029", Title: "Supply Chain Analyst", Company: "Tesla", Location: "Bonn", PostedDate: "2024-04-29", Link: "https://linkedin.com/jobs/29", Processed: true},
+	// 	{ID: "lnk30", JobID: "L030", Title: "Supply Chain Analyst", Company: "Intel", Location: "Nuremberg", PostedDate: "2024-04-30", Link: "https://linkedin.com/jobs/30", Processed: true},
+
+	// 	// Data Science Intern
+	// 	{ID: "lnk31", JobID: "L031", Title: "Data Science Intern", Company: "LinkedIn", Location: "Berlin", PostedDate: "2024-05-01", Link: "https://linkedin.com/jobs/31", Processed: true},
+	// 	{ID: "lnk32", JobID: "L032", Title: "Data Science Intern", Company: "Google", Location: "Munich", PostedDate: "2024-05-02", Link: "https://linkedin.com/jobs/32", Processed: true},
+	// 	{ID: "lnk33", JobID: "L033", Title: "Data Science Intern", Company: "Meta", Location: "Hamburg", PostedDate: "2024-05-03", Link: "https://linkedin.com/jobs/33", Processed: true},
+	// 	{ID: "lnk34", JobID: "L034", Title: "Data Science Intern", Company: "Amazon", Location: "Stuttgart", PostedDate: "2024-05-04", Link: "https://linkedin.com/jobs/34", Processed: true},
+	// 	{ID: "lnk35", JobID: "L035", Title: "Data Science Intern", Company: "Apple", Location: "Frankfurt", PostedDate: "2024-05-05", Link: "https://linkedin.com/jobs/35", Processed: true},
+ }
 	db.Create(&linkedinJobs)
 
 	// Seed Xing jobs: same titles

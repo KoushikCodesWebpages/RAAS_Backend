@@ -113,7 +113,7 @@ func RemoveSystemEnv() {
 
 func InitConfig() error {
 
-    // RemoveSystemEnv()
+    //RemoveSystemEnv()
     // Load .env file only if not running on Railway (or similar env)
     if _, exists := os.LookupEnv("RAILWAY_ENVIRONMENT"); !exists {
         err := godotenv.Load()
