@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"io/ioutil"
+	"io"
 	"log"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -18,7 +18,7 @@ import (
 )
 
 // CoverLetterRequest struct to receive JobID
-type CoverLetterRequest struct {
+type CoverLetterAndCVRequest struct {
 	JobID string `json:"job_id" binding:"required"`
 }
 
@@ -33,12 +33,10 @@ func NewCoverLetterHandler(db *gorm.DB, cfg *config.Config) *CoverLetterHandler 
 	}
 }
 
-
-
 // GenerateCoverLetterBody function to generate a cover letter body based on user and job data
 func (h *CoverLetterHandler) PostCoverLetter(c *gin.Context) {
 	// Step 1: Parse job_id from request body
-	var req CoverLetterRequest
+	var req CoverLetterAndCVRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing or invalid job_id in request body"})
 		return
@@ -81,6 +79,7 @@ func (h *CoverLetterHandler) PostCoverLetter(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve auth user info"})
 		return
 	}
+
 
 
 	// Step 4: Get professional summary (includes skills)
@@ -146,8 +145,6 @@ func (h *CoverLetterHandler) PostCoverLetter(c *gin.Context) {
 
 
 
-
-
 	// Step 10: Generate cover letter body using Hugging Face models and input data
 	coverLetterBody := generateCoverLetterBody(
 		fullName,
@@ -184,11 +181,16 @@ func (h *CoverLetterHandler) PostCoverLetter(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate cover letter document", "details": err.Error()})
 		return
 	}
-	
+	result := h.db.Model(&models.SelectedJobApplication{}).Where("auth_user_id = ? AND job_id = ?", userID, jobID).Update("cover_letter_generated", true)
+	if result.Error != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update CvGenerated field"})
+		return
+	}
 	c.Header("Content-Disposition", "attachment; filename=cover_letter.docx")
 	c.Data(http.StatusOK, "application/vnd.openxmlformats-officedocument.wordprocessingml.document", docData)
 
 }
+
 
 // Helper function to join strings with commas
 func joinStrings(arr []string, delimiter string) string {
@@ -224,7 +226,7 @@ func LoadHFModels() ([]string, error) {
 		}
 	}
 
-	// log.Printf("Loaded Hugging Face models: %+v", models)
+	log.Printf("Loaded Hugging Face models: %+v", models)
 
 	return models, nil
 }
@@ -248,10 +250,10 @@ func prepareCoverLetterPrompt(name, education, experience, skills, company, role
 		return "", "", fmt.Errorf("error: No Hugging Face models available")
 	}
 
-	// log.Printf("Loaded Hugging Face models: %v", HFModels)
+	log.Printf("Loaded Hugging Face models: %v", HFModels)
 
 	modelToUse := HFModels[RoundRobinModelIndex]
-	// log.Printf("Selected model: %s", modelToUse)
+	log.Printf("Selected model: %s", modelToUse)
 
 	if config.Cfg.HFBaseAPIUrl == "" {
 		log.Println("Error: Hugging Face base API URL is not set")
@@ -268,7 +270,7 @@ func prepareCoverLetterPrompt(name, education, experience, skills, company, role
 	.
 	`, name, role, company, education, experience, skills)
 
-	// log.Printf("Generated prompt: %s", prompt)
+	log.Printf("Generated prompt: %s", prompt)
 
 	return prompt, apiURL, nil
 }
@@ -305,13 +307,13 @@ func callHuggingFaceAPI(prompt, apiURL string) (string, error) {
 
     log.Printf("API Response Status: %s", resp.Status)
 
-    body, err := ioutil.ReadAll(resp.Body)
+    body, err := io.ReadAll(resp.Body)
     if err != nil {
         log.Printf("Error reading response: %v", err)
         return "", fmt.Errorf("error: Failed to read AI response")
     }
 
-    // log.Printf("Raw API Response: %s", body)
+    log.Printf("Raw API Response: %s", body)
 
     var response []struct {
         GeneratedText string `json:"generated_text"`
@@ -323,7 +325,7 @@ func callHuggingFaceAPI(prompt, apiURL string) (string, error) {
     }
 
     if len(response) > 0 && response[0].GeneratedText != "" {
-        // log.Printf("Generated Text: %s", response[0].GeneratedText)
+        log.Printf("Generated Text: %s", response[0].GeneratedText)
         return strings.TrimPrefix(response[0].GeneratedText, prompt), nil
     }
 

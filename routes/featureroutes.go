@@ -61,14 +61,32 @@ func SetupFeatureRoutes(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
 		matchScoreRoutes.GET("", matchScoreHandler.GetAllMatchScores)
 	}
 	
-	CLHandler := features.NewCoverLetterHandler(db,cfg)
-
-	// Cover letter generation route (authenticated)
+	CoverLetterHandler := features.NewCoverLetterHandler(db, cfg)
+	// CoverLetter  generation route (authenticated)
 	coverLetterRoutes := r.Group("/generate-cover-letter")
 	coverLetterRoutes.Use(middleware.AuthMiddleware())
 	{
-		coverLetterRoutes.POST("", CLHandler.PostCoverLetter)
+		coverLetterRoutes.POST("",CoverLetterHandler.PostCoverLetter)
 	}
+
+	cvHandler := features.NewCVHandler(db, cfg)
+	// CV generation route (authenticated)
+	cvRoutes := r.Group("/generate-cv")
+	cvRoutes.Use(middleware.AuthMiddleware())
+	{
+		cvRoutes.POST("", cvHandler.PostCV)
+	}
+
+	LinkProviderHandler := features.NewLinkProviderHandler(db)
+
+	// Link provider route (authenticated)
+	linkProviderRoutes := r.Group("/provide-link")
+	linkProviderRoutes.Use(middleware.AuthMiddleware())
+	{
+		linkProviderRoutes.POST("", LinkProviderHandler.PostAndGetLink)
+	}
+
+
 
 	mediaUploadHandler := features.NewMediaUploadHandler(features.GetBlobServiceClient(), os.Getenv("AZURE_BLOB_CONTAINER"))
 	mediaRoutes := r.Group("/media")

@@ -3,19 +3,26 @@ package main
 import (
     "fmt"
     "log"
-    "RAAS/config"
-    "RAAS/models"
-    "RAAS/routes"
-    // Import the workers package
+
     "os"
 
     "github.com/gin-gonic/gin"
+
+   
+
+   "RAAS/config"
+   "RAAS/models"
+   "RAAS/routes"
+
+
     // "gorm.io/gorm"
     // "RAAS/workers"
 )
 
 func main() {
     gin.SetMode(gin.ReleaseMode)
+
+  
 
     // Initialize the configuration
     err := config.InitConfig()

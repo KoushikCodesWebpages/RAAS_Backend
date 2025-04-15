@@ -6,9 +6,24 @@ import (
 	"github.com/gin-gonic/gin"
 	"RAAS/middlewares"
 	"RAAS/handlers/repo"
+
+	"github.com/gin-contrib/cors"
+   	"time"
+    "strings"
+
 )
 
 func SetupRoutes(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
+	origins := strings.Split(cfg.CORSAllowedOrigins, ",")
+	corsConfig := cors.Config{
+		AllowOrigins:  origins,
+		AllowMethods:  []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:  []string{"Content-Type", "Content-Length", "Accept-Encoding", "Authorization", "Accept", "Origin", "Cache-Control", "X-Requested-With"},
+		AllowCredentials: true,
+		MaxAge: 12 * time.Hour,
+	}
+
+	r.Use(cors.New(corsConfig))
 	// Middleware: Inject DB into context
 	r.Use(middleware.InjectDB(db))
 

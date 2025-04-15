@@ -45,35 +45,36 @@ func SeedJobs(db *gorm.DB) {
 	}
 	db.Create(&xingJobs)
 
-	// Seed LinkedIn application links
-	linkedinAppLinks := []LinkedInJobApplicationLink{
-		{JobID: "lnk1", JobLink: "https://apply.linkedin.com/job/1"},
-		{JobID: "lnk2", JobLink: "https://apply.linkedin.com/job/2"},
-		{JobID: "lnk3", JobLink: "https://apply.linkedin.com/job/3"},
-		{JobID: "lnk4", JobLink: "https://apply.linkedin.com/job/4"},
-		{JobID: "lnk5", JobLink: "https://apply.linkedin.com/job/5"},
-		{JobID: "lnk6", JobLink: "https://apply.linkedin.com/job/6"},
-		{JobID: "lnk7", JobLink: "https://apply.linkedin.com/job/7"},
-		{JobID: "lnk8", JobLink: "https://apply.linkedin.com/job/8"},
-		{JobID: "lnk9", JobLink: "https://apply.linkedin.com/job/9"},
-		{JobID: "lnk10", JobLink: "https://apply.linkedin.com/job/10"},
-	}
-	db.Create(&linkedinAppLinks)
 
-	// Seed Xing application links
-	xingAppLinks := []XingJobApplicationLink{
-		{JobID: "xg1", JobLink: "https://apply.xing.com/job/1"},
-		{JobID: "xg2", JobLink: "https://apply.xing.com/job/2"},
-		{JobID: "xg3", JobLink: "https://apply.xing.com/job/3"},
-		{JobID: "xg4", JobLink: "https://apply.xing.com/job/4"},
-		{JobID: "xg5", JobLink: "https://apply.xing.com/job/5"},
-		{JobID: "xg6", JobLink: "https://apply.xing.com/job/6"},
-		{JobID: "xg7", JobLink: "https://apply.xing.com/job/7"},
-		{JobID: "xg8", JobLink: "https://apply.xing.com/job/8"},
-		{JobID: "xg9", JobLink: "https://apply.xing.com/job/9"},
-		{JobID: "xg10", JobLink: "https://apply.xing.com/job/10"},
-	}
-	db.Create(&xingAppLinks)
+// Seed LinkedIn application links
+linkedinAppLinks := []LinkedInJobApplicationLink{
+    {JobID: "L001", JobLink: "https://apply.linkedin.com/job/1"},
+    {JobID: "L002", JobLink: "https://apply.linkedin.com/job/2"},
+    {JobID: "L003", JobLink: "https://apply.linkedin.com/job/3"},
+    {JobID: "L004", JobLink: "https://apply.linkedin.com/job/4"},
+    {JobID: "L005", JobLink: "https://apply.linkedin.com/job/5"},
+    {JobID: "L006", JobLink: "https://apply.linkedin.com/job/6"},
+    {JobID: "L007", JobLink: "https://apply.linkedin.com/job/7"},
+    {JobID: "L008", JobLink: "https://apply.linkedin.com/job/8"},
+    {JobID: "L009", JobLink: "https://apply.linkedin.com/job/9"},
+    {JobID: "L010", JobLink: "https://apply.linkedin.com/job/10"},
+}
+db.Create(&linkedinAppLinks)
+
+// Seed Xing application links
+xingAppLinks := []XingJobApplicationLink{
+    {JobID: "X001", JobLink: "https://apply.xing.com/job/1"},
+    {JobID: "X002", JobLink: "https://apply.xing.com/job/2"},
+    {JobID: "X003", JobLink: "https://apply.xing.com/job/3"},
+    {JobID: "X004", JobLink: "https://apply.xing.com/job/4"},
+    {JobID: "X005", JobLink: "https://apply.xing.com/job/5"},
+    {JobID: "X006", JobLink: "https://apply.xing.com/job/6"},
+    {JobID: "X007", JobLink: "https://apply.xing.com/job/7"},
+    {JobID: "X008", JobLink: "https://apply.xing.com/job/8"},
+    {JobID: "X009", JobLink: "https://apply.xing.com/job/9"},
+    {JobID: "X010", JobLink: "https://apply.xing.com/job/10"},
+}
+db.Create(&xingAppLinks)
 
 	// Seed LinkedIn job descriptions
 // Seed LinkedIn job descriptions with additional fields

@@ -16,7 +16,7 @@ func AuthMiddleware() gin.HandlerFunc {
 
         
         authHeader := c.GetHeader("Authorization")
-        log.Println("Authorization Header:", authHeader)
+        //log.Println("Authorization Header:", authHeader)
 
         if authHeader == "" {
             log.Println("Error: Authorization header is missing")

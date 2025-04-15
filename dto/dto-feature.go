@@ -83,6 +83,8 @@ type SelectedJobApplication struct {
     Selected              bool      `gorm:"default:false" json:"selected"`
     CvGenerated           bool      `gorm:"default:false" json:"cv_generated"`
     CoverLetterGenerated  bool      `gorm:"default:false" json:"cover_letter_generated"`
+	ViewLink              bool  	`gorm:"default:false" json:"view_link"`
+
 }
 
 
@@ -119,3 +121,9 @@ type SeekerProfileDTO struct {
 	ProfileCompletion int `json:"profileCompletion"`
 }
 
+// LinkResponseDTO represents the response DTO for job application links
+type LinkResponseDTO struct {
+	JobID   string `json:"job_id"`
+	JobLink string `json:"job_link"`
+	Source  string `json:"source"`
+}

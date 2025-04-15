@@ -66,6 +66,8 @@ type SelectedJobApplication struct {
 	Selected              bool      `gorm:"default:false" json:"selected"`
 	CvGenerated           bool      `gorm:"default:false" json:"cv_generated"`
 	CoverLetterGenerated  bool      `gorm:"default:false" json:"cover_letter_generated"`
+	ViewLink              bool  	`gorm:"default:false" json:"view_link"`
+
 }
 
 type MatchScore struct {

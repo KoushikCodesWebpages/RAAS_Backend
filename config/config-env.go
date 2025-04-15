@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/joho/godotenv"
-    //"strings"
+    "strings"
     "github.com/spf13/viper"
 )
 
@@ -101,19 +101,19 @@ type Config struct {
 
     GEN_API_KEY                 string
 }   
-// func RemoveSystemEnv() {
-//     for _, pair := range os.Environ() {
-//         kv := strings.SplitN(pair, "=", 2)
-//         if len(kv) != 2 {
-//             continue
-//         }
-//         os.Unsetenv(kv[0])
-//     }
-// }
+func RemoveSystemEnv() {
+    for _, pair := range os.Environ() {
+        kv := strings.SplitN(pair, "=", 2)
+        if len(kv) != 2 {
+            continue
+        }
+        os.Unsetenv(kv[0])
+    }
+}
 
 func InitConfig() error {
 
-    //RemoveSystemEnv()
+    // RemoveSystemEnv()
     // Load .env file only if not running on Railway (or similar env)
     if _, exists := os.LookupEnv("RAILWAY_ENVIRONMENT"); !exists {
         err := godotenv.Load()
