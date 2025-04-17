@@ -47,7 +47,7 @@ type SalaryRange struct {
 
 type SelectedJobApplication struct {
 	gorm.Model
-	AuthUserID            uuid.UUID `gorm:"type:char(36);not null" json:"authUserId"`       // Foreign key to Seeker
+	AuthUserID uuid.UUID `gorm:"type:char(36);not null;index;constraint:OnUpdate:CASCADE,OnDelete:CASCADE" json:"authUserId"`    // Foreign key to Seeker
 	Source                string    `gorm:"type:varchar(20);not null" json:"source"`        // "linkedin" or "xing"
 	JobID                 string    `gorm:"type:varchar(100);not null" json:"job_id"`       // Platform-specific job ID
 	Title                 string    `gorm:"type:varchar(255);not null" json:"title"`

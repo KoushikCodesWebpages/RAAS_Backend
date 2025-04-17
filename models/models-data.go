@@ -25,7 +25,7 @@ type AuthUser struct {
 type Seeker struct {
 	gorm.Model
 	ID                        uint      `gorm:"primaryKey"`
-	AuthUserID                uuid.UUID `gorm:"type:char(36);unique;not null" json:"authUserId"`
+	AuthUserID uuid.UUID `gorm:"type:char(36);unique;not null;constraint:OnDelete:CASCADE,OnUpdate:CASCADE" json:"authUserId"`
 	SubscriptionTier          string    `gorm:"default:'free'" json:"subscriptionTier"`
 	DailySelectableJobsCount  int       `gorm:"default:5" json:"dailySelectableJobsCount"`       // e.g., default 5 jobs per day
 	DailyGeneratableCV        int       `gorm:"default:100" json:"dailyGeneratableCv"`             // e.g., 1 CV per day
@@ -36,14 +36,14 @@ type Seeker struct {
 
 type Admin struct {
 	gorm.Model
-	AuthUserID uuid.UUID `gorm:"type:char(36);unique;not null" json:"authUserId"`
+	AuthUserID uuid.UUID `gorm:"type:char(36);unique;not null;constraint:OnDelete:CASCADE,OnUpdate:CASCADE" json:"authUserId"`
 }
 
 // PREFERENCE MODELS
 
 type PersonalInfo struct {
 	gorm.Model
-	AuthUserID      uuid.UUID `gorm:"type:char(36);unique;not null" json:"authUserId"`
+	AuthUserID uuid.UUID `gorm:"type:char(36);unique;not null;constraint:OnDelete:CASCADE,OnUpdate:CASCADE" json:"authUserId"`
 	FirstName       string    `gorm:"type:varchar(100);not null" json:"firstName"`
 	SecondName      *string   `gorm:"type:varchar(100)" json:"secondName"`
 	DateOfBirth     string    `gorm:"type:date;not null" json:"dob"`
@@ -53,7 +53,7 @@ type PersonalInfo struct {
 
 type ProfessionalSummary struct {
 	gorm.Model
-	AuthUserID   uuid.UUID      `gorm:"type:char(36);unique;not null" json:"authUserId"`
+	AuthUserID uuid.UUID `gorm:"type:char(36);unique;not null;constraint:OnDelete:CASCADE,OnUpdate:CASCADE" json:"authUserId"`
 	About        string         `gorm:"type:text;not null" json:"about"`
 	Skills       datatypes.JSON `gorm:"type:json;not null" json:"skills"`
 	AnnualIncome float64        `gorm:"not null" json:"annualIncome"`
@@ -61,7 +61,7 @@ type ProfessionalSummary struct {
 
 type WorkExperience struct {
 	gorm.Model
-	AuthUserID         uuid.UUID  `gorm:"type:char(36);not null;index" json:"authUserId"`
+	AuthUserID uuid.UUID `gorm:"type:char(36);not null;index;constraint:OnUpdate:CASCADE,OnDelete:CASCADE" json:"authUserId"`
 	JobTitle           string     `gorm:"type:varchar(100);not null" json:"jobTitle"`
 	CompanyName        string     `gorm:"type:varchar(100);not null" json:"companyName"`
 	EmployerType       string     `gorm:"type:varchar(50);not null" json:"employerType"`
@@ -72,7 +72,7 @@ type WorkExperience struct {
 
 type Education struct {
 	gorm.Model
-	AuthUserID   uuid.UUID  `gorm:"type:char(36);not null;index" json:"authUserId"`
+	AuthUserID uuid.UUID `gorm:"type:char(36);not null;index;constraint:OnUpdate:CASCADE,OnDelete:CASCADE" json:"authUserId"`
 	Degree       string     `gorm:"type:varchar(100);not null" json:"degree"`
 	Institution  string     `gorm:"type:varchar(150);not null" json:"institution"`
 	FieldOfStudy string     `gorm:"type:varchar(100);not null" json:"fieldOfStudy"`
@@ -83,7 +83,7 @@ type Education struct {
 
 type Certificate struct {
 	gorm.Model
-	AuthUserID        uuid.UUID `gorm:"type:char(36);not null" json:"authUserId"`
+	AuthUserID uuid.UUID `gorm:"type:char(36);not null;index;constraint:OnUpdate:CASCADE,OnDelete:CASCADE" json:"authUserId"`
 	CertificateName   string    `gorm:"type:varchar(255);not null" json:"certificateName"`
 	CertificateFile   string    `gorm:"type:text;not null" json:"certificateFile"`
 	CertificateNumber string    `gorm:"type:varchar(100)" json:"certificateNumber"`
@@ -91,7 +91,7 @@ type Certificate struct {
 
 type Language struct {
 	gorm.Model
-	AuthUserID       uuid.UUID `gorm:"type:char(36);not null" json:"authUserId"`
+	AuthUserID uuid.UUID `gorm:"type:char(36);not null;index;constraint:OnUpdate:CASCADE,OnDelete:CASCADE" json:"authUserId"`
 	LanguageName     string    `gorm:"type:varchar(100);not null" json:"language"`
 	CertificateFile  string    `gorm:"type:text" json:"certificateFile"`
 	ProficiencyLevel string    `gorm:"type:varchar(20);not null" json:"proficiency"`
@@ -99,7 +99,7 @@ type Language struct {
 
 type PreferredJobTitle struct {
 	gorm.Model
-	AuthUserID     uuid.UUID `gorm:"type:char(36);unique;not null" json:"authUserId"`
+	AuthUserID uuid.UUID `gorm:"type:char(36);unique;not null;constraint:OnDelete:CASCADE,OnUpdate:CASCADE" json:"authUserId"`
 	PrimaryTitle   string    `gorm:"type:varchar(255);not null" json:"primaryTitle"`
 	SecondaryTitle *string   `gorm:"type:varchar(255);" json:"secondaryTitle"`
 	TertiaryTitle  *string   `gorm:"type:varchar(255);" json:"tertiaryTitle"`
