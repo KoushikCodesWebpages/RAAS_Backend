@@ -46,7 +46,7 @@ func main() {
     port := os.Getenv("PORT")
     if port == "" {
         port = fmt.Sprintf("%d", config.Cfg.ServerPort)
-        log.Printf("Starting server on dev port: %s", port)
+        log.Printf("Starting server on dev port: http://localhost:%s", port)
     } else {
         log.Printf("Starting server on prod port: %s", port)
     }

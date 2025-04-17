@@ -71,7 +71,7 @@ func InitDB(cfg *config.Config) *gorm.DB {
 
 	AutoMigrate()
 	SeedJobs(DB)
-	PrintAllTables(DB, cfg.DBName)
+	//PrintAllTables(DB, cfg.DBName)
 	return DB
 }
 

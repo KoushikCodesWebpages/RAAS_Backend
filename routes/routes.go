@@ -9,12 +9,18 @@ import (
 
 	"github.com/gin-contrib/cors"
    	"time"
+	//"log"
     "strings"
 
 )
 
 func SetupRoutes(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
 	origins := strings.Split(cfg.CORSAllowedOrigins, ",")
+	for i, origin := range origins {
+		origins[i] = strings.TrimSpace(origin)
+	}
+	//log.Println("Allowed CORS Origins:", origins)
+
 	corsConfig := cors.Config{
 		AllowOrigins:  origins,
 		AllowMethods:  []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
