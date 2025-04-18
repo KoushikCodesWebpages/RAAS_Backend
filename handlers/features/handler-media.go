@@ -28,28 +28,45 @@ func NewMediaUploadHandler(blobServiceClient *azblob.ServiceURL) *MediaUploadHan
 }
 
 // UploadMedia uploads a file to the specified Azure Blob container
+// UploadMedia uploads a file to the specified Azure Blob container
 func (h *MediaUploadHandler) UploadMedia(c *gin.Context, containerName string) (string, error) {
-	// Get the file from the form data
-	file, header, err := c.Request.FormFile("file")
-	if err != nil {
-		return "", err
-	}
-	defer file.Close()
+    // Get the file from the form data
+    file, header, err := c.Request.FormFile("file")
+    if err != nil {
+        return "", err
+    }
+    defer file.Close()
 
-	// Get the container URL dynamically
-	containerURL := h.blobServiceClient.NewContainerURL(containerName)
-	blobURL := containerURL.NewBlockBlobURL(header.Filename)
+    // Get the container URL dynamically
+    containerURL := h.blobServiceClient.NewContainerURL(containerName)
 
-	// Upload the file to Azure Blob Storage
-	_, err = azblob.UploadStreamToBlockBlob(context.Background(), file, blobURL, azblob.UploadStreamToBlockBlobOptions{})
-	if err != nil {
-		return "", err
-	}
+    // Create the container if it does not exist
+    _, err = containerURL.Create(context.Background(), azblob.Metadata{}, azblob.PublicAccessNone)
+    if err != nil {
+        // Check if the error is due to the container already existing
+        if stgErr, ok := err.(azblob.StorageError); ok {
+            if stgErr.ServiceCode() != azblob.ServiceCodeContainerAlreadyExists {
+                return "", err
+            }
+        } else {
+            return "", err
+        }
+    }
 
-	// Construct the file URL for the uploaded file
-	fileURL := fmt.Sprintf("https://%s.blob.core.windows.net/%s/%s", config.Cfg.AzureStorageAccount, containerName, header.Filename)
-	return fileURL, nil
+    // Get the blob URL
+    blobURL := containerURL.NewBlockBlobURL(header.Filename)
+
+    // Upload the file to Azure Blob Storage
+    _, err = azblob.UploadStreamToBlockBlob(context.Background(), file, blobURL, azblob.UploadStreamToBlockBlobOptions{})
+    if err != nil {
+        return "", err
+    }
+
+    // Construct the file URL for the uploaded file
+    fileURL := fmt.Sprintf("https://%s.blob.core.windows.net/%s/%s", config.Cfg.AzureStorageAccount, containerName, header.Filename)
+    return fileURL, nil
 }
+
 
 // ValidateFileType checks if the uploaded file has a valid extension
 func (h *MediaUploadHandler) ValidateFileType(fileHeader *multipart.FileHeader) bool {

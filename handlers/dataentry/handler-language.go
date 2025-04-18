@@ -8,6 +8,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+
+	"RAAS/handlers/features"
+	"RAAS/config"
 )
 
 // LanguageHandler struct
@@ -22,77 +25,100 @@ func NewLanguageHandler(db *gorm.DB) *LanguageHandler {
 
 // CreateLanguage creates a new language entry for the authenticated user
 func (h *LanguageHandler) CreateLanguage(c *gin.Context) {
-	userID := c.MustGet("userID").(uuid.UUID)
+    userID := c.MustGet("userID").(uuid.UUID)
 
-	var input dto.LanguageRequest
-	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
-		return
-	}
+    languageName := c.PostForm("LanguageName")
+    proficiencyLevel := c.PostForm("ProficiencyLevel")
 
-	lang := models.Language{
-		AuthUserID:       userID,
-		LanguageName:     input.LanguageName,
-		ProficiencyLevel: input.ProficiencyLevel,
-	}
+    if languageName == "" || proficiencyLevel == "" {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Language name and proficiency level are required"})
+        return
+    }
 
-	if input.CertificateFile != nil {
-		lang.CertificateFile = *input.CertificateFile
-	}
+    var fileURL string
+    _, header, err := c.Request.FormFile("file")
+    if err == nil {
+        // Initialize your media upload handler
+        mediaUploadHandler := features.NewMediaUploadHandler(features.GetBlobServiceClient())
 
-	if err := h.DB.Create(&lang).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create language entry", "details": err.Error()})
-		return
-	}
+        if !mediaUploadHandler.ValidateFileType(header) {
+            c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid file type"})
+            return
+        }
 
-	// Update the UserEntryTimeline - set LanguagesCompleted to true
-	var timeline models.UserEntryTimeline
-	if err := h.DB.First(&timeline, "user_id = ?", userID).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "User entry timeline not found"})
-		return
-	}
+        fileURL, err = mediaUploadHandler.UploadMedia(c, config.Cfg.AzureLanguagesContainer)
+        if err != nil {
+            c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to upload file", "details": err.Error()})
+            return
+        }
+    }
 
-	timeline.LanguagesCompleted = true
+    language := models.Language{
+        AuthUserID:       userID,
+        LanguageName:     languageName,
+        ProficiencyLevel: proficiencyLevel,
+        CertificateFile:  fileURL,
+    }
 
-	// Save the updated timeline
-	if err := h.DB.Save(&timeline).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update timeline", "details": err.Error()})
-		return
-	}
+    tx := h.DB.Begin()
 
-	c.JSON(http.StatusCreated, dto.LanguageResponse{
-		ID:               lang.ID,
-		AuthUserID:       userID,
-		LanguageName:     lang.LanguageName,
-		CertificateFile:  input.CertificateFile,
-		ProficiencyLevel: lang.ProficiencyLevel,
-	})
+    if err := tx.Create(&language).Error; err != nil {
+        tx.Rollback()
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create language entry", "details": err.Error()})
+        return
+    }
+
+    var timeline models.UserEntryTimeline
+    if err := tx.First(&timeline, "user_id = ?", userID).Error; err != nil {
+        tx.Rollback()
+        c.JSON(http.StatusNotFound, gin.H{"error": "User entry timeline not found"})
+        return
+    }
+
+    timeline.LanguagesCompleted = true
+    if err := tx.Save(&timeline).Error; err != nil {
+        tx.Rollback()
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update timeline", "details": err.Error()})
+        return
+    }
+
+    tx.Commit()
+
+    c.JSON(http.StatusCreated, dto.LanguageResponse{
+        ID:               language.ID,
+        AuthUserID:       language.AuthUserID,
+        LanguageName:     language.LanguageName,
+        CertificateFile:  &language.CertificateFile,
+        ProficiencyLevel: language.ProficiencyLevel,
+    })
 }
+
 
 // GetLanguages retrieves all language entries for the authenticated user
 func (h *LanguageHandler) GetLanguages(c *gin.Context) {
-	userID := c.MustGet("userID").(uuid.UUID)
+    userID := c.MustGet("userID").(uuid.UUID)
 
-	var langs []models.Language
-	if err := h.DB.Where("auth_user_id = ?", userID).Find(&langs).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch language entries", "details": err.Error()})
-		return
-	}
+    var langs []models.Language
+    if err := h.DB.Where("auth_user_id = ?", userID).Find(&langs).Error; err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch language entries", "details": err.Error()})
+        return
+    }
 
-	var response []dto.LanguageResponse
-	for _, lang := range langs {
-		file := lang.CertificateFile
-		response = append(response, dto.LanguageResponse{
-			ID:               lang.ID,
-			AuthUserID:       lang.AuthUserID,
-			LanguageName:     lang.LanguageName,
-			CertificateFile:  &file,
-			ProficiencyLevel: lang.ProficiencyLevel,
-		})
-	}
+    var response []dto.LanguageResponse
+    for _, lang := range langs {
+        file := lang.CertificateFile
+        response = append(response, dto.LanguageResponse{
+            ID:               lang.ID,
+            AuthUserID:       lang.AuthUserID,
+            LanguageName:     lang.LanguageName,
+            CertificateFile:  &file,
+            ProficiencyLevel: lang.ProficiencyLevel,
+        })
+    }
 
-	c.JSON(http.StatusOK, response)
+    c.JSON(http.StatusOK, response)
 }
+
 
 // PutLanguage updates an existing language entry for the authenticated user
 func (h *LanguageHandler) PutLanguage(c *gin.Context) {

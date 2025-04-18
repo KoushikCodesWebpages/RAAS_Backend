@@ -70,7 +70,7 @@ func SetupDataEntryRoutes(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
 	certificateRoutes.Use(middleware.AuthMiddleware())
 	{
 		certificateRoutes.POST("", certificateHandler.CreateCertificate)
-		certificateRoutes.GET("", certificateHandler.GetCertificate)
+		certificateRoutes.GET("", certificateHandler.GetCertificates)
 		certificateRoutes.PUT(":id", certificateHandler.PutCertificate)
 		certificateRoutes.DELETE(":id", certificateHandler.DeleteCertificate)
 	}

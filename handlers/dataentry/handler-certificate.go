@@ -22,10 +22,10 @@ func NewCertificateHandler(db *gorm.DB) *CertificateHandler {
 }
 func (h *CertificateHandler) CreateCertificate(c *gin.Context) {
     userID := c.MustGet("userID").(uuid.UUID)
-    log.Printf("[DEBUG] Starting certificate creation for user: %s", userID)
+    
 
     mediaUploadHandler := features.NewMediaUploadHandler(features.GetBlobServiceClient())
-    log.Printf("[DEBUG] Initialized MediaUploadHandler")
+
 
     _, header, err := c.Request.FormFile("file")
     if err != nil {
@@ -34,7 +34,7 @@ func (h *CertificateHandler) CreateCertificate(c *gin.Context) {
         return
     }
 
-    log.Printf("[DEBUG] Received file: %s", header.Filename)
+
 
     if !mediaUploadHandler.ValidateFileType(header) {
         log.Printf("[ERROR] Invalid file type: %s", header.Filename)
@@ -49,7 +49,6 @@ func (h *CertificateHandler) CreateCertificate(c *gin.Context) {
         return
     }
 
-    log.Printf("[DEBUG] File uploaded successfully. URL: %s", fileURL)
 
     certificateName := c.PostForm("CertificateName")
     certificateNumber := c.PostForm("CertificateNumber")
@@ -109,25 +108,29 @@ func (h *CertificateHandler) CreateCertificate(c *gin.Context) {
 }
 
 
-func (h *CertificateHandler) GetCertificate(c *gin.Context) {
+func (h *CertificateHandler) GetCertificates(c *gin.Context) {
     userID := c.MustGet("userID").(uuid.UUID)
-    id := c.Param("id")
 
-    var certificate models.Certificate
-    if err := h.DB.Where("id = ? AND auth_user_id = ?", id, userID).First(&certificate).Error; err != nil {
-        c.JSON(http.StatusNotFound, gin.H{"error": "Certificate not found"})
+    var certificates []models.Certificate
+    if err := h.DB.Where("auth_user_id = ?", userID).Find(&certificates).Error; err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch certificates", "details": err.Error()})
         return
     }
 
-    c.JSON(http.StatusOK, dto.CertificateResponse{
-        ID:                certificate.ID,
-        AuthUserID:        certificate.AuthUserID,
-        CertificateName:   certificate.CertificateName,
-        CertificateFile:   certificate.CertificateFile,
-        CertificateNumber: &certificate.CertificateNumber,
-    })
-}
+    var response []dto.CertificateResponse
+    for _, cert := range certificates {
+        certNumber := cert.CertificateNumber
+        response = append(response, dto.CertificateResponse{
+            ID:                cert.ID,
+            AuthUserID:        cert.AuthUserID,
+            CertificateName:   cert.CertificateName,
+            CertificateFile:   cert.CertificateFile,
+            CertificateNumber: &certNumber,
+        })
+    }
 
+    c.JSON(http.StatusOK, response)
+}
 
 // PutCertificate updates an existing certificate record for the authenticated user
 func (h *CertificateHandler) PutCertificate(c *gin.Context) {

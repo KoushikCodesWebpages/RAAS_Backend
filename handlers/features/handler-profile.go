@@ -31,7 +31,7 @@ func (h *SeekerProfileHandler) GetSeekerProfile(c *gin.Context) {
 	// Fetch Seeker data
 	var seeker models.Seeker
 	if err := h.DB.Where("auth_user_id = ?", userID).First(&seeker).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
+		c.JSON(http.StatusNoContent, gin.H{
 			"error": "Seeker not found",
 		})
 		return
@@ -40,7 +40,7 @@ func (h *SeekerProfileHandler) GetSeekerProfile(c *gin.Context) {
 	// Fetch PersonalInfo data
 	var personalInfo models.PersonalInfo
 	if err := h.DB.Where("auth_user_id = ?", userID).First(&personalInfo).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
+		c.JSON(http.StatusNoContent, gin.H{
 			"error": "Personal info not found",
 		})
 		return
@@ -49,7 +49,7 @@ func (h *SeekerProfileHandler) GetSeekerProfile(c *gin.Context) {
 	// Fetch ProfessionalSummary data
 	var professionalSummary models.ProfessionalSummary
 	if err := h.DB.Where("auth_user_id = ?", userID).First(&professionalSummary).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
+		c.JSON(http.StatusNoContent, gin.H{
 			"error": "Professional summary not found",
 		})
 		return
@@ -58,7 +58,7 @@ func (h *SeekerProfileHandler) GetSeekerProfile(c *gin.Context) {
 	// Fetch WorkExperience data and calculate total experience in months
 	var workExperiences []models.WorkExperience
 	if err := h.DB.Where("auth_user_id = ?", userID).Find(&workExperiences).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
+		c.JSON(http.StatusNoContent, gin.H{
 			"error": "Work experience not found",
 		})
 		return
@@ -105,7 +105,7 @@ func (h *SeekerProfileHandler) GetSeekerProfile(c *gin.Context) {
 	// Fetch PreferredJobTitle data
 	var preferredJobTitle models.PreferredJobTitle
 	if err := h.DB.Where("auth_user_id = ?", userID).First(&preferredJobTitle).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
+		c.JSON(http.StatusNoContent, gin.H{
 			"error": "Preferred job title not found",
 		})
 		return
