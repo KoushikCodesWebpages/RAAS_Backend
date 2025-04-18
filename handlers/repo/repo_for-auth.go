@@ -30,15 +30,6 @@ func (r *UserRepo) ValidateSeekerSignUpInput(input dto.SeekerSignUpInput) error 
     return nil
 }
 
-func (r *UserRepo) IsEmailTaken(email string) (bool, error) {
-    var count int64
-    err := r.DB.Model(&models.AuthUser{}).Where("email = ?", email).Count(&count).Error
-    if err != nil {
-        return false, err
-    }
-    return count > 0, nil
-}
-
 func (r *UserRepo) CreateSeeker(input dto.SeekerSignUpInput, hashedPassword string) error {
 	// Generate a verification token (UUID)
 	token := uuid.New().String()

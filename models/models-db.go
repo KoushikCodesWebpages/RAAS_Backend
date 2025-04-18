@@ -16,7 +16,7 @@ var DB *gorm.DB
 func InitDB(cfg *config.Config) *gorm.DB {
 	var err error
 
-	log.Println("Using MySQL database")
+
 
 	// Set the GORM logger to silent or info level as needed
 	gormLogger := logger.New(
@@ -26,17 +26,24 @@ func InitDB(cfg *config.Config) *gorm.DB {
 			Colorful: true,
 		},
 	)
+	// log.Println("Using Remote MySQL database")
 
-	dsn := fmt.Sprintf(
-		"%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local",
-		cfg.DBUser,
-		cfg.DBPassword,
-		cfg.DBServer,
-		cfg.DBPort,
-		cfg.DBName,
-	)
+	// // remote MySQL connection:
+	// dsn := fmt.Sprintf(
+	//	"%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local",
+	//	cfg.DBUser,
+	//	cfg.DBPassword,
+	//	cfg.DBServer,
+	//	cfg.DBPort,
+	//	cfg.DBName,
+	//)
 
+	// ** Hardcoded local MySQL connection details **
 	// Open the DB with the custom logger
+
+	log.Println("Using Local MySQL database")
+	dsn := "koushik:Koushik2025!babu@tcp(127.0.0.1:3306)/localraas?charset=utf8mb4&parseTime=True&loc=Local"
+
 	DB, err = gorm.Open(mysql.Open(dsn), &gorm.Config{
 		Logger: gormLogger,
 	})
@@ -45,29 +52,6 @@ func InitDB(cfg *config.Config) *gorm.DB {
 	}
 
 	log.Println("✅ MySQL connection established")
-
-	ResetDB(DB, []string{
-	// "auth_users",
-	// "seekers",
-	// "admins",
-	// "preferred_job_titles",
-	// "personal_infos",
-	// "professional_summaries",
-	// "work_experiences",
-	// "educations",
-	// "languages",
-	// "certificates",
-	// "user_entry_timelines",
-	// "linked_in_job_meta_data",
-	// "xing_job_meta_data",
-	// "linked_in_job_application_links",
-	// "xing_job_application_links",
-	// "linked_in_job_descriptions",
-	// "xing_job_descriptions",
-	// "job_match_scores",
-	// "selected_job_applications",
-	//"match_scores",
-	})
 
 	AutoMigrate()
 	SeedJobs(DB)

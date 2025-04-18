@@ -1,52 +1,57 @@
+
 package features
 
 import (
 	"context"
 	"fmt"
+	"log"
 	"mime/multipart"
 	"net/http"
-	"path/filepath"
-	"log"
 	"net/url"
-	
+	"path/filepath"
+
 	"github.com/Azure/azure-storage-blob-go/azblob"
 	"github.com/gin-gonic/gin"
-
-
 	"RAAS/config"
-
 )
 
+// MediaUploadHandler handles media uploads to Azure Blob Storage
 type MediaUploadHandler struct {
 	blobServiceClient *azblob.ServiceURL
-	containerName     string
 }
 
-func NewMediaUploadHandler(blobServiceClient *azblob.ServiceURL, containerName string) *MediaUploadHandler {
+// NewMediaUploadHandler creates a new MediaUploadHandler with the provided Azure Blob service client
+func NewMediaUploadHandler(blobServiceClient *azblob.ServiceURL) *MediaUploadHandler {
 	return &MediaUploadHandler{
 		blobServiceClient: blobServiceClient,
-		containerName:     containerName,
 	}
 }
 
-func (h *MediaUploadHandler) UploadMedia(c *gin.Context) (string, error) {
+// UploadMedia uploads a file to the specified Azure Blob container
+func (h *MediaUploadHandler) UploadMedia(c *gin.Context, containerName string) (string, error) {
+	// Get the file from the form data
 	file, header, err := c.Request.FormFile("file")
 	if err != nil {
 		return "", err
 	}
 	defer file.Close()
 
-	containerURL := h.blobServiceClient.NewContainerURL(h.containerName)
+	// Get the container URL dynamically
+	containerURL := h.blobServiceClient.NewContainerURL(containerName)
 	blobURL := containerURL.NewBlockBlobURL(header.Filename)
+
+	// Upload the file to Azure Blob Storage
 	_, err = azblob.UploadStreamToBlockBlob(context.Background(), file, blobURL, azblob.UploadStreamToBlockBlobOptions{})
 	if err != nil {
 		return "", err
 	}
 
-	fileURL := fmt.Sprintf("https://%s.blob.core.windows.net/%s/%s", config.Cfg.AzureStorageAccount, h.containerName, header.Filename)
+	// Construct the file URL for the uploaded file
+	fileURL := fmt.Sprintf("https://%s.blob.core.windows.net/%s/%s", config.Cfg.AzureStorageAccount, containerName, header.Filename)
 	return fileURL, nil
 }
 
+// ValidateFileType checks if the uploaded file has a valid extension
 func (h *MediaUploadHandler) ValidateFileType(fileHeader *multipart.FileHeader) bool {
 	allowedExtensions := []string{".jpg", ".jpeg", ".png", ".docx", ".pdf"}
 	fileExtension := filepath.Ext(fileHeader.Filename)
@@ -58,6 +63,7 @@ func (h *MediaUploadHandler) ValidateFileType(fileHeader *multipart.FileHeader) 
 	return false
 }
 
+// HandleUpload handles the media file upload
 func (h *MediaUploadHandler) HandleUpload(c *gin.Context) {
 	_, header, err := c.Request.FormFile("file")
 	if err != nil {
@@ -65,21 +71,28 @@ func (h *MediaUploadHandler) HandleUpload(c *gin.Context) {
 		return
 	}
 
+	// Validate file type
 	if !h.ValidateFileType(header) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid file type"})
 		return
 	}
 
-	fileURL, err := h.UploadMedia(c)
+	// Determine which container to use based on some criteria
+	// Example: We can set the container name based on the request
+	containerName := c.DefaultQuery("container", "default-container") // Pass this dynamically, or define for different routes
+
+	// Upload the file to the appropriate container
+	fileURL, err := h.UploadMedia(c, containerName)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to upload file"})
 		return
 	}
 
+	// Return the file URL in the response
 	c.JSON(http.StatusOK, gin.H{"fileURL": fileURL})
 }
 
-
+// GetBlobServiceClient creates a new Azure Blob service client using credentials
 func GetBlobServiceClient() *azblob.ServiceURL {
 	if config.Cfg.AzureStorageAccount == "" || config.Cfg.AzureStorageKey == "" {
 		log.Fatal("Azure storage account or key is not set")

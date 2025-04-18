@@ -40,9 +40,14 @@ type Config struct {
     MediaRoot              string
     StaticRoot             string
 
-    AzureStorageAccount    string
-    AzureStorageKey        string
-    AzureBlobContainer     string
+    AzureStorageAccount             string
+    AzureStorageKey                 string
+
+    AzureCertificatesContainer      string
+    AzureLanguagesContainer         string
+    AzureCoverlettersContainer      string
+    AzureResumesContainer           string
+    AzureProfilePicContainer        string
 
     DBType                 string
     DBServer               string
@@ -158,7 +163,12 @@ func InitConfig() error {
 
         AzureStorageAccount: viper.GetString("AZURE_STORAGE_ACCOUNT"),
         AzureStorageKey:    viper.GetString("AZURE_STORAGE_KEY"),
-        AzureBlobContainer: viper.GetString("AZURE_BLOB_CONTAINER"),
+
+        AzureCertificatesContainer:viper.GetString("AZURE_CERTIFICATES_CONTAINER"),
+        AzureLanguagesContainer:viper.GetString("AZURE_LANGUAGES_CONTAINER"),
+        AzureCoverlettersContainer:viper.GetString("AZURE_COVERLETTERS_CONTAINER"),
+        AzureResumesContainer:viper.GetString("AZURE_RESUMES_CONTAINER"),
+        AzureProfilePicContainer:viper.GetString("AZURE_PROFILEPICS_CONTAINER"),
 
         DBType:                 viper.GetString("DB_TYPE"),
         DBServer:               viper.GetString("DB_SERVER"),
@@ -222,6 +232,5 @@ func InitConfig() error {
 
     return nil
 }
-
 
 

@@ -1,16 +1,16 @@
 package dataentry
 
 import (
+	"RAAS/config"
 	"RAAS/dto"
+	"RAAS/handlers/features"
 	"RAAS/models"
+	"log"
 	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
-	"RAAS/handlers/features"
-	
-
-	"RAAS/config"
 )
 
 type CertificateHandler struct {
@@ -22,56 +22,68 @@ func NewCertificateHandler(db *gorm.DB) *CertificateHandler {
 }
 func (h *CertificateHandler) CreateCertificate(c *gin.Context) {
     userID := c.MustGet("userID").(uuid.UUID)
+    log.Printf("[DEBUG] Starting certificate creation for user: %s", userID)
 
-    // Validate the file type
-	mediaUploadHandler := features.NewMediaUploadHandler(features.GetBlobServiceClient(), config.Cfg.AzureBlobContainer)
+    mediaUploadHandler := features.NewMediaUploadHandler(features.GetBlobServiceClient())
+    log.Printf("[DEBUG] Initialized MediaUploadHandler")
 
     _, header, err := c.Request.FormFile("file")
     if err != nil {
+        log.Printf("[ERROR] Failed to retrieve file from request: %v", err)
         c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid file", "details": err.Error()})
         return
     }
 
+    log.Printf("[DEBUG] Received file: %s", header.Filename)
+
     if !mediaUploadHandler.ValidateFileType(header) {
+        log.Printf("[ERROR] Invalid file type: %s", header.Filename)
         c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid file type"})
         return
     }
 
-    // Upload the file to Azure Blob Storage
-    fileURL, err := mediaUploadHandler.UploadMedia(c)
+    fileURL, err := mediaUploadHandler.UploadMedia(c, config.Cfg.AzureCertificatesContainer)
     if err != nil {
+        log.Printf("[ERROR] Failed to upload file to Azure Blob Storage: %v", err)
         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to upload file", "details": err.Error()})
         return
     }
 
-    // Get the certificate details from the request
+    log.Printf("[DEBUG] File uploaded successfully. URL: %s", fileURL)
+
     certificateName := c.PostForm("CertificateName")
     certificateNumber := c.PostForm("CertificateNumber")
+    log.Printf("[DEBUG] Certificate form data - Name: %s, Number: %s", certificateName, certificateNumber)
 
     if certificateName == "" || certificateNumber == "" {
+        log.Printf("[ERROR] Missing certificate name or number")
         c.JSON(http.StatusBadRequest, gin.H{"error": "Certificate name and number are required"})
         return
     }
 
     certificate := models.Certificate{
-        AuthUserID:      userID,
-        CertificateName: certificateName,
-        CertificateFile: fileURL, // Save the URL of the file
+        AuthUserID:        userID,
+        CertificateName:   certificateName,
+        CertificateFile:   fileURL,
         CertificateNumber: certificateNumber,
     }
 
-    // Create the certificate record in DB
     tx := h.DB.Begin()
+    log.Printf("[DEBUG] Database transaction started")
+
     if err := tx.Create(&certificate).Error; err != nil {
         tx.Rollback()
+        log.Printf("[ERROR] Failed to insert certificate: %v", err)
         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create certificate", "details": err.Error()})
         return
     }
 
-    // Update the UserEntryTimeline
+    log.Printf("[DEBUG] Certificate record created with ID: %s", certificate.CertificateNumber)
+
     var timeline models.UserEntryTimeline
     if err := tx.First(&timeline, "user_id = ?", userID).Error; err != nil {
         tx.Rollback()
+        log.Printf("[ERROR] User entry timeline not found for user: %s", userID)
         c.JSON(http.StatusNotFound, gin.H{"error": "User entry timeline not found"})
         return
     }
@@ -79,13 +91,14 @@ func (h *CertificateHandler) CreateCertificate(c *gin.Context) {
     timeline.CertificatesCompleted = true
     if err := tx.Save(&timeline).Error; err != nil {
         tx.Rollback()
+        log.Printf("[ERROR] Failed to update user entry timeline: %v", err)
         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update timeline", "details": err.Error()})
         return
     }
 
     tx.Commit()
+    log.Printf("[DEBUG] Transaction committed successfully")
 
-    // Send back the certificate details in the response
     c.JSON(http.StatusCreated, dto.CertificateResponse{
         ID:                certificate.ID,
         AuthUserID:        certificate.AuthUserID,
@@ -94,6 +107,7 @@ func (h *CertificateHandler) CreateCertificate(c *gin.Context) {
         CertificateNumber: &certificate.CertificateNumber,
     })
 }
+
 
 func (h *CertificateHandler) GetCertificate(c *gin.Context) {
     userID := c.MustGet("userID").(uuid.UUID)

@@ -13,4 +13,5 @@ func SetupAuthRoutes(r *gin.Engine, cfg *config.Config) {
 	r.GET("/verify-email", auth.VerifyEmail)
 	r.POST("/login", auth.Login)
 	
+	
 }

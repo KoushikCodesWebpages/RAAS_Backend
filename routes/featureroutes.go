@@ -6,7 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 	"RAAS/config"
-	"os"
+	//"os"
 )
 
 func SetupFeatureRoutes(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
@@ -86,14 +86,6 @@ func SetupFeatureRoutes(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
 		linkProviderRoutes.POST("", LinkProviderHandler.PostAndGetLink)
 	}
 
-
-
-	mediaUploadHandler := features.NewMediaUploadHandler(features.GetBlobServiceClient(), os.Getenv("AZURE_BLOB_CONTAINER"))
-	mediaRoutes := r.Group("/media")
-	mediaRoutes.Use(middleware.AuthMiddleware())
-	{
-		mediaRoutes.POST("/upload", mediaUploadHandler.HandleUpload)
-	}
 
 }
 
