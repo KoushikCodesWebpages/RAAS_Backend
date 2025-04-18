@@ -39,6 +39,7 @@ func main() {
     // Create a new Gin router
     r := gin.Default()
 
+    
     // Register all routes
     routes.SetupRoutes(r, db, config.Cfg)
 
