@@ -5,8 +5,11 @@ import (
 	"RAAS/dto"
 	"RAAS/handlers/features"
 	"RAAS/models"
+	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -20,157 +23,214 @@ type CertificateHandler struct {
 func NewCertificateHandler(db *gorm.DB) *CertificateHandler {
 	return &CertificateHandler{DB: db}
 }
+
 func (h *CertificateHandler) CreateCertificate(c *gin.Context) {
-    userID := c.MustGet("userID").(uuid.UUID)
-    
-
-    mediaUploadHandler := features.NewMediaUploadHandler(features.GetBlobServiceClient())
-
-
-    _, header, err := c.Request.FormFile("file")
-    if err != nil {
-        log.Printf("[ERROR] Failed to retrieve file from request: %v", err)
-        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid file", "details": err.Error()})
-        return
-    }
-
-
-
-    if !mediaUploadHandler.ValidateFileType(header) {
-        log.Printf("[ERROR] Invalid file type: %s", header.Filename)
-        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid file type"})
-        return
-    }
-
-    fileURL, err := mediaUploadHandler.UploadMedia(c, config.Cfg.AzureCertificatesContainer)
-    if err != nil {
-        log.Printf("[ERROR] Failed to upload file to Azure Blob Storage: %v", err)
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to upload file", "details": err.Error()})
-        return
-    }
-
-
-    certificateName := c.PostForm("CertificateName")
-    certificateNumber := c.PostForm("CertificateNumber")
-    log.Printf("[DEBUG] Certificate form data - Name: %s, Number: %s", certificateName, certificateNumber)
-
-    if certificateName == "" || certificateNumber == "" {
-        log.Printf("[ERROR] Missing certificate name or number")
-        c.JSON(http.StatusBadRequest, gin.H{"error": "Certificate name and number are required"})
-        return
-    }
-
-    certificate := models.Certificate{
-        AuthUserID:        userID,
-        CertificateName:   certificateName,
-        CertificateFile:   fileURL,
-        CertificateNumber: certificateNumber,
-    }
-
-    tx := h.DB.Begin()
-    log.Printf("[DEBUG] Database transaction started")
-
-    if err := tx.Create(&certificate).Error; err != nil {
-        tx.Rollback()
-        log.Printf("[ERROR] Failed to insert certificate: %v", err)
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create certificate", "details": err.Error()})
-        return
-    }
-
-    log.Printf("[DEBUG] Certificate record created with ID: %s", certificate.CertificateNumber)
-
-    var timeline models.UserEntryTimeline
-    if err := tx.First(&timeline, "user_id = ?", userID).Error; err != nil {
-        tx.Rollback()
-        log.Printf("[ERROR] User entry timeline not found for user: %s", userID)
-        c.JSON(http.StatusNotFound, gin.H{"error": "User entry timeline not found"})
-        return
-    }
-
-    timeline.CertificatesCompleted = true
-    if err := tx.Save(&timeline).Error; err != nil {
-        tx.Rollback()
-        log.Printf("[ERROR] Failed to update user entry timeline: %v", err)
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update timeline", "details": err.Error()})
-        return
-    }
-
-    tx.Commit()
-    log.Printf("[DEBUG] Transaction committed successfully")
-
-    c.JSON(http.StatusCreated, dto.CertificateResponse{
-        ID:                certificate.ID,
-        AuthUserID:        certificate.AuthUserID,
-        CertificateName:   certificate.CertificateName,
-        CertificateFile:   certificate.CertificateFile,
-        CertificateNumber: &certificate.CertificateNumber,
-    })
-}
-
-
-func (h *CertificateHandler) GetCertificates(c *gin.Context) {
-    userID := c.MustGet("userID").(uuid.UUID)
-
-    var certificates []models.Certificate
-    if err := h.DB.Where("auth_user_id = ?", userID).Find(&certificates).Error; err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch certificates", "details": err.Error()})
-        return
-    }
-
-    var response []dto.CertificateResponse
-    for _, cert := range certificates {
-        certNumber := cert.CertificateNumber
-        response = append(response, dto.CertificateResponse{
-            ID:                cert.ID,
-            AuthUserID:        cert.AuthUserID,
-            CertificateName:   cert.CertificateName,
-            CertificateFile:   cert.CertificateFile,
-            CertificateNumber: &certNumber,
-        })
-    }
-
-    c.JSON(http.StatusOK, response)
-}
-
-// PutCertificate updates an existing certificate record for the authenticated user
-func (h *CertificateHandler) PutCertificate(c *gin.Context) {
 	userID := c.MustGet("userID").(uuid.UUID)
-	id := c.Param("id")
+	certificateName := c.PostForm("CertificateName")
+	certificateNumber := c.PostForm("CertificateNumber")
 
-	var existing models.Certificate
-	if err := h.DB.Where("id = ? AND auth_user_id = ?", id, userID).First(&existing).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Certificate not found"})
+	if certificateName == "" || certificateNumber == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Certificate name and number are required"})
 		return
 	}
 
-	var updated models.Certificate
-	if err := c.ShouldBindJSON(&updated); err != nil {
+	// File upload
+	mediaUploadHandler := features.NewMediaUploadHandler(features.GetBlobServiceClient())
+	_, header, err := c.Request.FormFile("file")
+	if err != nil {
+		log.Printf("[WARN] No file uploaded: %v", err)
+	}
+
+	var fileURL string
+	if header != nil {
+		if !mediaUploadHandler.ValidateFileType(header) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid file type"})
+			return
+		}
+		fileURL, err = mediaUploadHandler.UploadMedia(c, config.Cfg.AzureCertificatesContainer)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to upload file", "details": err.Error()})
+			return
+		}
+	}
+
+	// Get Seeker
+	var seeker models.Seeker
+	if err := h.DB.First(&seeker, "auth_user_id = ?", userID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Seeker not found"})
+		return
+	}
+
+	// Parse existing certificates
+	var certificates []map[string]interface{}
+	if len(seeker.Certificates) > 0 {
+		if err := json.Unmarshal(seeker.Certificates, &certificates); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse certificates", "details": err.Error()})
+			return
+		}
+	}
+
+	// Add new certificate
+	newCert := map[string]interface{}{
+		"certificateName":   certificateName,
+		"certificateNumber": certificateNumber,
+		"certificateFile":   fileURL,
+	}
+	certificates = append(certificates, newCert)
+
+	updatedJSON, err := json.Marshal(certificates)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to marshal certificates"})
+		return
+	}
+	seeker.Certificates = updatedJSON
+	if err := h.DB.Save(&seeker).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save seeker certificates"})
+		return
+	}
+
+	response := dto.CertificateResponse{
+		ID:                uint(len(certificates)),
+		AuthUserID:        userID,
+		CertificateName:   certificateName,
+		CertificateNumber: &certificateNumber,
+		CertificateFile:   fileURL,
+	}
+
+	c.JSON(http.StatusCreated, response)
+}
+
+func (h *CertificateHandler) GetCertificates(c *gin.Context) {
+	userID := c.MustGet("userID").(uuid.UUID)
+
+	var seeker models.Seeker
+	if err := h.DB.First(&seeker, "auth_user_id = ?", userID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Seeker not found"})
+		return
+	}
+
+	if len(seeker.Certificates) == 0 || string(seeker.Certificates) == "null" {
+		c.JSON(http.StatusNotFound, gin.H{"error": "No certificate records found"})
+		return
+	}
+
+	var certs []map[string]interface{}
+	if err := json.Unmarshal(seeker.Certificates, &certs); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse certificate records"})
+		return
+	}
+
+	var response []dto.CertificateResponse
+	for idx, cert := range certs {
+		num := cert["certificateNumber"].(string)
+		response = append(response, dto.CertificateResponse{
+			ID:                uint(idx + 1),
+			AuthUserID:        userID,
+			CertificateName:   cert["certificateName"].(string),
+			CertificateNumber: &num,
+			CertificateFile:   cert["certificateFile"].(string),
+		})
+	}
+
+	c.JSON(http.StatusOK, response)
+}
+
+func (h *CertificateHandler) PatchCertificate(c *gin.Context) {
+	userID := c.MustGet("userID").(uuid.UUID)
+	id := c.Param("id")
+
+	var updateFields map[string]interface{}
+	if err := c.ShouldBindJSON(&updateFields); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
 		return
 	}
 
-	// Ensure these critical fields are preserved
-	updated.ID = existing.ID
-	updated.AuthUserID = userID
-	updated.CreatedAt = existing.CreatedAt
-
-	if err := h.DB.Save(&updated).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update certificate", "details": err.Error()})
+	var seeker models.Seeker
+	if err := h.DB.First(&seeker, "auth_user_id = ?", userID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Seeker not found"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Certificate updated"})
+	var certs []map[string]interface{}
+	if err := json.Unmarshal(seeker.Certificates, &certs); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse certificates"})
+		return
+	}
+
+	index, err := strconv.Atoi(id)
+	if err != nil || index <= 0 || index > len(certs) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid certificate index"})
+		return
+	}
+
+	entry := certs[index-1]
+	for key, value := range updateFields {
+		if _, exists := entry[key]; exists {
+			entry[key] = value
+		} else {
+			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Invalid field: %s", key)})
+			return
+		}
+	}
+	certs[index-1] = entry
+
+	updatedJSON, err := json.Marshal(certs)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to marshal updated certificates"})
+		return
+	}
+
+	seeker.Certificates = updatedJSON
+	if err := h.DB.Save(&seeker).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update seeker certificates"})
+		return
+	}
+
+	num := entry["certificateNumber"].(string)
+	c.JSON(http.StatusOK, dto.CertificateResponse{
+		ID:                uint(index),
+		AuthUserID:        userID,
+		CertificateName:   entry["certificateName"].(string),
+		CertificateNumber: &num,
+		CertificateFile:   entry["certificateFile"].(string),
+	})
 }
 
-// DeleteCertificate deletes an existing certificate record for the authenticated user
 func (h *CertificateHandler) DeleteCertificate(c *gin.Context) {
 	userID := c.MustGet("userID").(uuid.UUID)
 	id := c.Param("id")
 
-	if err := h.DB.Where("id = ? AND auth_user_id = ?", id, userID).Delete(&models.Certificate{}).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete certificate", "details": err.Error()})
+	var seeker models.Seeker
+	if err := h.DB.First(&seeker, "auth_user_id = ?", userID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Seeker not found"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Certificate deleted"})
+	var certs []map[string]interface{}
+	if err := json.Unmarshal(seeker.Certificates, &certs); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse certificates"})
+		return
+	}
+
+	index, err := strconv.Atoi(id)
+	if err != nil || index <= 0 || index > len(certs) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid certificate index"})
+		return
+	}
+
+	certs = append(certs[:index-1], certs[index:]...)
+
+	updatedJSON, err := json.Marshal(certs)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to marshal updated certificates"})
+		return
+	}
+
+	seeker.Certificates = updatedJSON
+	if err := h.DB.Save(&seeker).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update seeker"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Certificate deleted successfully"})
 }

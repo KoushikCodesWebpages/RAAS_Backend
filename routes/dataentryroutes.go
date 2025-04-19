@@ -72,11 +72,11 @@ func SetupDataEntryRoutes(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
 	{
 		certificateRoutes.POST("", certificateHandler.CreateCertificate)
 		certificateRoutes.GET("", certificateHandler.GetCertificates)
-		certificateRoutes.PUT(":id", certificateHandler.PutCertificate)
+		certificateRoutes.PUT(":id", certificateHandler.PatchCertificate)
 		certificateRoutes.DELETE(":id", certificateHandler.DeleteCertificate)
 	}
 
-	// LANGUAGES routes
+	// LANGUAGES routes	
 	languageHandler := dataentry.NewLanguageHandler(db)
 	languageRoutes := r.Group("/languages")
 	languageRoutes.Use(middleware.AuthMiddleware())

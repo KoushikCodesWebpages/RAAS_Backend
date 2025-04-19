@@ -29,16 +29,30 @@ func (h *JobTitleHandler) CreateJobTitle(c *gin.Context) {
 		return
 	}
 
-	jobTitle := models.PreferredJobTitle{
-		PrimaryTitle:   input.PrimaryTitle,
-		SecondaryTitle: input.SecondaryTitle,
-		TertiaryTitle:  input.TertiaryTitle,
-		AuthUserID:     userID,
+	// Find the Seeker model by AuthUserID
+	var seeker models.Seeker
+	if err := h.DB.First(&seeker, "auth_user_id = ?", userID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Seeker not found"})
+		return
 	}
 
-	if err := h.DB.Create(&jobTitle).Error; err != nil {
+	// Set the job titles for the authenticated user
+	seeker.PrimaryTitle = input.PrimaryTitle
+	seeker.SecondaryTitle = input.SecondaryTitle
+	seeker.TertiaryTitle = input.TertiaryTitle
+
+	// Save the updated Seeker model
+	if err := h.DB.Save(&seeker).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create job title", "details": err.Error()})
 		return
+	}
+
+	// Create the response using JobTitleResponse
+	jobTitleResponse := dto.JobTitleResponse{
+		AuthUserID:   seeker.AuthUserID,
+		PrimaryTitle: seeker.PrimaryTitle,
+		SecondaryTitle: seeker.SecondaryTitle,
+		TertiaryTitle: seeker.TertiaryTitle,
 	}
 
 	// Update the UserEntryTimeline - set PreferredJobTitlesCompleted to true
@@ -56,20 +70,30 @@ func (h *JobTitleHandler) CreateJobTitle(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, jobTitle)
+	// Return the formatted response
+	c.JSON(http.StatusOK, jobTitleResponse)
 }
+
 
 // GetJobTitle retrieves the preferred job title for the authenticated user
 func (h *JobTitleHandler) GetJobTitle(c *gin.Context) {
 	userID := c.MustGet("userID").(uuid.UUID)
 
-	var jobTitle models.PreferredJobTitle
-	if err := h.DB.Where("auth_user_id = ?", userID).First(&jobTitle).Error; err != nil {
+	var seeker models.Seeker
+	if err := h.DB.Where("auth_user_id = ?", userID).First(&seeker).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "No job title found. Please set your preferred job titles first."})
 		return
 	}
 
-	c.JSON(http.StatusOK, jobTitle)
+	// Create response containing the job titles from Seeker
+	jobTitleResponse := dto.JobTitleResponse{
+		AuthUserID:  seeker.AuthUserID,
+		PrimaryTitle: seeker.PrimaryTitle,
+		SecondaryTitle: seeker.SecondaryTitle,
+		TertiaryTitle:  seeker.TertiaryTitle,
+	}
+
+	c.JSON(http.StatusOK, jobTitleResponse)
 }
 
 // UpdateJobTitle updates the job titles for the authenticated user
@@ -82,22 +106,24 @@ func (h *JobTitleHandler) UpdateJobTitle(c *gin.Context) {
 		return
 	}
 
-	var jobTitle models.PreferredJobTitle
-	if err := h.DB.Where("auth_user_id = ?", userID).First(&jobTitle).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Job title not found", "details": err.Error()})
+	// Find the Seeker model by AuthUserID
+	var seeker models.Seeker
+	if err := h.DB.Where("auth_user_id = ?", userID).First(&seeker).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Seeker not found", "details": err.Error()})
 		return
 	}
 
-	jobTitle.PrimaryTitle = input.PrimaryTitle
-	jobTitle.SecondaryTitle = input.SecondaryTitle
-	jobTitle.TertiaryTitle = input.TertiaryTitle
+	// Update the job titles for the Seeker
+	seeker.PrimaryTitle = input.PrimaryTitle
+	seeker.SecondaryTitle = input.SecondaryTitle
+	seeker.TertiaryTitle = input.TertiaryTitle
 
-	if err := h.DB.Save(&jobTitle).Error; err != nil {
+	if err := h.DB.Save(&seeker).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update job title", "details": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Job title updated successfully", "jobTitle": jobTitle})
+	c.JSON(http.StatusOK, gin.H{"message": "Job title updated successfully", "jobTitle": seeker})
 }
 
 // PatchJobTitle allows partial update of job titles for the authenticated user
@@ -110,26 +136,28 @@ func (h *JobTitleHandler) PatchJobTitle(c *gin.Context) {
 		return
 	}
 
-	var jobTitle models.PreferredJobTitle
-	if err := h.DB.Where("auth_user_id = ?", userID).First(&jobTitle).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Job title not found", "details": err.Error()})
+	// Find the Seeker model by AuthUserID
+	var seeker models.Seeker
+	if err := h.DB.Where("auth_user_id = ?", userID).First(&seeker).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Seeker not found", "details": err.Error()})
 		return
 	}
 
+	// Update only the fields that are provided
 	if input.PrimaryTitle != "" {
-		jobTitle.PrimaryTitle = input.PrimaryTitle
+		seeker.PrimaryTitle = input.PrimaryTitle
 	}
 	if input.SecondaryTitle != nil {
-		jobTitle.SecondaryTitle = input.SecondaryTitle
+		seeker.SecondaryTitle = input.SecondaryTitle
 	}
 	if input.TertiaryTitle != nil {
-		jobTitle.TertiaryTitle = input.TertiaryTitle
+		seeker.TertiaryTitle = input.TertiaryTitle
 	}
 
-	if err := h.DB.Save(&jobTitle).Error; err != nil {
+	if err := h.DB.Save(&seeker).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to patch job title", "details": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Job title patched successfully", "jobTitle": jobTitle})
+	c.JSON(http.StatusOK, gin.H{"message": "Job title patched successfully", "jobTitle": seeker})
 }

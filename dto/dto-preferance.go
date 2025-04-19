@@ -13,6 +13,14 @@ type JobTitleInput struct {
 	TertiaryTitle  *string `json:"tertiaryTitle,omitempty"`
 }
 
+type JobTitleResponse struct {
+	AuthUserID    uuid.UUID `json:"authUserId"`
+	PrimaryTitle  string    `json:"primaryTitle"`
+	SecondaryTitle *string  `json:"secondaryTitle,omitempty"`
+	TertiaryTitle *string  `json:"tertiaryTitle,omitempty"`
+}
+
+
 type PersonalInfoRequest struct {
 	FirstName       string  `json:"firstName" binding:"required"`
 	SecondName      *string `json:"secondName,omitempty"`
