@@ -106,7 +106,7 @@ func (h *ProfessionalSummaryHandler) GetProfessionalSummary(c *gin.Context) {
 	// Ensure all required fields exist and are of the correct type
 	about, aboutOk := professionalSummary["about"].(string)
 	skills, skillsOk := professionalSummary["skills"].([]interface{})
-	annualIncome, annualIncomeOk := professionalSummary["annualIncome"].(float64)
+	annualIncome, annualIncomeOk := professionalSummary["annualIncome"].(float64)	
 
 	if !aboutOk || !skillsOk || !annualIncomeOk {
 		c.JSON(http.StatusInternalServerError, gin.H{

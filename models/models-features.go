@@ -75,3 +75,33 @@ type MatchScore struct {
 	JobID      string    `gorm:"primaryKey"`                // Job ID (foreign key reference, as string)
 	MatchScore float64   `gorm:"type:float"`                // Match score percentage (0 to 100)
 }
+
+
+type CV struct {
+	gorm.Model
+	AuthUserID  uuid.UUID `gorm:"type:uuid;not null"`
+	JobID       uuid.UUID `gorm:"type:uuid;not null"`
+	CVUrl       string    `gorm:"type:varchar(255);not null"` // Path/URL to the CV document
+}
+
+
+func (CV) TableName() string {
+	return "cv" // Specify the table name (optional, default is the plural form of the struct name)
+}
+
+
+// models/cover_letter.go
+
+
+
+
+type CoverLetter struct {
+	gorm.Model
+	AuthUserID     uuid.UUID `gorm:"type:uuid;not null"`
+	JobID          uuid.UUID `gorm:"type:uuid;not null"`
+	CoverLetterURL string    `gorm:"type:varchar(255);not null"` // URL for the cover letter
+}
+
+func (CoverLetter) TableName() string {
+	return "cover_letters" // Specify the table name (optional, default is the plural form of the struct name)
+}

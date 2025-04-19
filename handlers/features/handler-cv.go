@@ -14,7 +14,7 @@ import (
 	"RAAS/models"
 	"RAAS/config"
 
-
+	"time"
 	"RAAS/handlers/repo"
 	// "bytes"
 	// "log"
@@ -72,27 +72,18 @@ func (h *CVHandler) PostCV(c *gin.Context) {
 	// Step 1: Extract user information from JWT claims
 	userID := c.MustGet("userID").(uuid.UUID)
 
-	// Step 2: Get user personal info
+	// Step 2: Get Contact details
 
-	//NAME
-	var personalInfo models.PersonalInfo
-	if err := h.db.Where("auth_user_id = ?", userID).First(&personalInfo).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve user personal information"})
+
+	var authUser models.AuthUser
+	if err := h.db.Where("id = ?", userID).First(&authUser).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve auth user info"})
 		return
 	}
 
-	var fullName string
-	if personalInfo.SecondName != nil {
-		fullName = fmt.Sprintf("%s %s", personalInfo.FirstName, *personalInfo.SecondName)
-	} else {
-		fullName = personalInfo.FirstName
-	}
-
-	//ADDRESS
-	address := personalInfo.Address
-
-	//LINK
-	linkedinlink:=personalInfo.LinkedInProfile
+	//Email PHONE
+	email := authUser.Email
+	phone := authUser.Phone
 
 
 	//Step 3: Get seeker model
@@ -114,136 +105,213 @@ func (h *CVHandler) PostCV(c *gin.Context) {
 		return
 	}
 
-	//Step 4: Get Contact details.
+    // Step 3: Get personal info from seeker
 
-	var authUser models.AuthUser
-	if err := h.db.Where("id = ?", userID).First(&authUser).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve auth user info"})
+	type PersonalInfo struct {
+		FirstName      string `json:"firstName"`
+		SecondName     string `json:"secondName"`
+		Address        string `json:"address"`
+		LinkedInProfile string `json:"linkedInProfile"`
+		DateOfBirth    string `json:"dateOfBirth"`
+	}
+	var personalInfo PersonalInfo
+	if err := json.Unmarshal(seeker.PersonalInfo, &personalInfo); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse personal information", "details": err.Error()})
+		return
+	}	
+
+	
+    // Name and contact details
+    var fullName string
+    if personalInfo.SecondName != "" {
+        fullName = fmt.Sprintf("%s %s", personalInfo.FirstName, personalInfo.SecondName)
+    } else {
+        fullName = personalInfo.FirstName
+    }
+
+    // Address and LinkedIn profile
+    address := personalInfo.Address
+    linkedin := personalInfo.LinkedInProfile
+
+
+
+	// Step 4: Get professional summary (includes skills)
+
+	type ProfessionalSummary struct {
+		About  string   `json:"about"`
+		Skills []string `json:"skills"`
+	}
+
+	var summary ProfessionalSummary
+	if err := json.Unmarshal(seeker.ProfessionalSummary, &summary); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse professional summary", "details": err.Error()})
 		return
 	}
 
-	//Email PHONE
-	email := authUser.Email
-	phone := authUser.Phone
-
-	// Step 5: Get professional summary (includes skills)
-	var summary models.ProfessionalSummary
-	if err := h.db.Where("auth_user_id = ?", userID).First(&summary).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve professional summary"})
-		return
-	}
+	// Profile summary
 	profile_summary := summary.About
 
+	// Skills
+	skills := summary.Skills
 
-	var skills []string
-	if err := json.Unmarshal(summary.Skills, &skills); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse skills"})
+// Step 6: Get education details
+type Education struct {
+	Degree       string    `json:"degree"`
+	StartDate    string    `json:"startDate"`
+	EndDate      string    `json:"endDate"`
+	Institution  string    `json:"institution"`
+	Achievements string    `json:"achievements"`
+}
+
+var educations []Education
+if err := json.Unmarshal(seeker.Educations, &educations); err != nil {
+	c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse education details", "details": err.Error()})
+	return
+}
+
+// Validate and parse start and end dates
+educationData := make([]struct {
+	Years      string   `json:"years"`
+	Institution string  `json:"institution"`
+	Details    []string `json:"details"`
+}, 0)
+
+for _, edu := range educations {
+	// Parse start date
+	startDate, err := time.Parse("2006-01-02", edu.StartDate)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid start date format", "details": err.Error()})
 		return
 	}
 
-	// Step 6: Get education
-
-	var educations []models.Education
-	if err := h.db.Where("auth_user_id = ?", userID).Find(&educations).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve education details"})
-		return
+	// Parse end date (if available)
+	endDate := "Present"
+	if edu.EndDate != "" {
+		endDateParsed, err := time.Parse("2006-01-02", edu.EndDate)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid end date format", "details": err.Error()})
+			return
+		}
+		endDate = endDateParsed.Format("2006")
 	}
-	
-	educationData := make([]struct {
+
+	// Prepare education details
+	details := []string{edu.Degree}
+	if edu.Achievements != "" {
+		details = append(details, edu.Achievements)
+	}
+
+	educationData = append(educationData, struct {
 		Years      string   `json:"years"`
-		Institution string `json:"institution"`
+		Institution string  `json:"institution"`
 		Details    []string `json:"details"`
-	}, 0)
-	for _, edu := range educations {
-		startYear := edu.StartDate.Format("2006")
-		endYear := "Present"
-		if edu.EndDate != nil {
-			endYear = edu.EndDate.Format("2006")
-		}
-		details := make([]string, 0)
-		details = append(details, edu.Degree)
-		if edu.Achievements != "" {
-			details = append(details, edu.Achievements)
-		}
-		educationData = append(educationData, struct {
-			Years      string   `json:"years"`
-			Institution string `json:"institution"`
-			Details    []string `json:"details"`
-		}{
-			Years: fmt.Sprintf("%s - %s", startYear, endYear),
-			Institution: edu.Institution,
-			Details: details,
-		})
+	}{
+		Years:      fmt.Sprintf("%s - %s", startDate.Format("2006"), endDate),
+		Institution: edu.Institution,
+		Details:    details,
+	})
+}
+
+	
+	
+		// Step 7: Get work experience details
+	type WorkExperience struct {
+		JobTitle           string `json:"jobTitle"`
+		CompanyName        string `json:"companyName"`
+		EmploymentType     string `json:"employmentType"`
+		StartDate          string `json:"startDate"`
+		EndDate            string `json:"endDate"` // Required
+		KeyResponsibilities string `json:"keyResponsibilities"`
 	}
 
-	// Step 7: Get work experience
-	var workExperiences []models.WorkExperience
-	if err := h.db.Where("auth_user_id = ?", userID).Find(&workExperiences).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve work experience"})
+	var workExperiences []WorkExperience
+	if err := json.Unmarshal(seeker.WorkExperiences, &workExperiences); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse work experience", "details": err.Error()})
 		return
 	}
-	var workExpText string
-	for _, we := range workExperiences {
-		workExpText += fmt.Sprintf("Job Title: %s at %s. Responsibilities: %s. ", we.JobTitle, we.CompanyName, we.KeyResponsibilities)
-	}
 
+	// Validate and parse work experience dates
+	var workExpText string
 	experienceSummaryData := make([]struct {
-		Title  string   `json:"title"`
+		Title   string   `json:"title"`
 		Bullets []string `json:"bullets"`
 	}, 0)
+
 	for _, we := range workExperiences {
-		startYear := we.StartDate.Format("2006")
-		endYear := "PRESENT"
-		if we.EndDate != nil {
-			endYear = we.EndDate.Format("2006")
+		// Parse start date
+		startDate, err := time.Parse("2006-01-02", we.StartDate)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid start date format for work experience", "details": err.Error()})
+			return
 		}
+
+		// Parse end date (if available)
+		endDate := "Present"
+		if we.EndDate != "" {
+			endDateParsed, err := time.Parse("2006-01-02", we.EndDate)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid end date format for work experience", "details": err.Error()})
+				return
+			}
+			endDate = endDateParsed.Format("2006")
+		}
+
+		// Append work experience summary text
+		workExpText += fmt.Sprintf("Job Title: %s at %s. Responsibilities: %s. ", we.JobTitle, we.CompanyName, we.KeyResponsibilities)
+
+		// Split key responsibilities into bullets
 		bullets := strings.Split(we.KeyResponsibilities, ".")
 		for i, bullet := range bullets {
 			bullets[i] = strings.TrimSpace(bullet)
 		}
-		bullets = removeEmptyStrings(bullets)
+		bullets = removeEmptyStrings(bullets) // Remove empty strings
+
+		// Add to experience summary data
 		experienceSummaryData = append(experienceSummaryData, struct {
-			Title  string   `json:"title"`
+			Title   string   `json:"title"`
 			Bullets []string `json:"bullets"`
 		}{
-			Title: fmt.Sprintf("%s at %s (%s - %s)", we.JobTitle, we.CompanyName, startYear, endYear),
+			Title:   fmt.Sprintf("%s at %s (%s - %s)", we.JobTitle, we.CompanyName, startDate.Format("2006"), endDate),
 			Bullets: bullets,
 		})
 	}
 
-	// Step 8: Get Language
 
-	var languages []models.Language
-	if err := h.db.Where("auth_user_id = ?", userID).Find(&languages).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve languages"})
+	// Step 8: Get languages details
+	type Language struct {
+		LanguageName     string `json:"language"`
+		ProficiencyLevel string `json:"proficiency"`
+	}
+
+	var languages []Language
+	if err := json.Unmarshal(seeker.Languages, &languages); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse language details", "details": err.Error()})
 		return
 	}
 
+	// Format the language data for the CV
 	languageData := make([]string, 0)
 	for _, lang := range languages {
+		// Print every language's name and proficiency level for debugging
+		fmt.Printf("Language Name: %s, Proficiency Level: %s\n", lang.LanguageName, lang.ProficiencyLevel)
+		
 		languageData = append(languageData, fmt.Sprintf("%s - %s", lang.LanguageName, lang.ProficiencyLevel))
 	}
 
-	var linkedin string
-	if linkedinlink != nil {
-		linkedin = *linkedinlink
-	}
+	// Print the formatted language data to the console for debugging
+	fmt.Println("Formatted Language Data:", languageData)
+
 
 	// Step 9 Get Job Title
 
-	var jobTitle string
-	var jobMetaData models.LinkedInJobMetaData
-	if err := h.db.Where("job_id = ?", jobID).First(&jobMetaData).Error; err == nil {
-		jobTitle = jobMetaData.Title
-	} else {
-		var xingJobMetaData models.XingJobMetaData
-		if err := h.db.Where("job_id = ?", jobID).First(&xingJobMetaData).Error; err == nil {
-			jobTitle = xingJobMetaData.Title
-		} else {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve job metadata"})
-			return
-		}
+	var job models.Job
+	if err := h.db.Where("job_id = ?", jobID).First(&job).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve job metadata"})
+		return
 	}
+	
+	// Job details are now in jobMetaData
+	jobTitle := job.Title
 
 	contact := fmt.Sprintf("Email: %s\nPhone: %s\nAddress: %s\nLinkedIn: %s", email, phone, address, linkedin)
 
@@ -257,23 +325,24 @@ func (h *CVHandler) PostCV(c *gin.Context) {
 		ExperienceSummary: experienceSummaryData,
 		Languages:        languageData,
 	}
-
 	cvData, err := repo.GenerateCVDocx(cvInput)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate CV document", "details": err.Error()})
 		return
 	}
+	
 	result := h.db.Model(&models.SelectedJobApplication{}).Where("auth_user_id = ? AND job_id = ?", userID, jobID).Update("cv_generated", true)
 	if result.Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update CvGenerated field"})
 		return
 	}
+	
+
 	c.Header("Content-Disposition", "attachment; filename=cv.docx")
 	c.Data(http.StatusOK, "application/vnd.openxmlformats-officedocument.wordprocessingml.document", cvData)
+
 }
 
-
-	// Step 7: Generate CV using external service or template
 
 
 
