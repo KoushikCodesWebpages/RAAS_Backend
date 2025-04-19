@@ -5,7 +5,7 @@ import (
 	"log"
 	"net/http"
     "encoding/json"
-
+    "fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -14,6 +14,8 @@ import (
 	"RAAS/dto"
 	"RAAS/handlers/features"
 	"RAAS/models"
+    "strconv"
+
 )
 
 type LanguageHandler struct {
@@ -141,46 +143,105 @@ func (h *LanguageHandler) GetLanguages(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
-
-// UpdateLanguage updates an existing language record for the authenticated user
-func (h *LanguageHandler) UpdateLanguage(c *gin.Context) {
+func (h *LanguageHandler) PatchLanguage(c *gin.Context) {
 	userID := c.MustGet("userID").(uuid.UUID)
 	id := c.Param("id")
 
-	var existing models.Language
-	if err := h.DB.Where("id = ? AND auth_user_id = ?", id, userID).First(&existing).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Language not found"})
-		return
-	}
-
-	var updated models.Language
-	if err := c.ShouldBindJSON(&updated); err != nil {
+	var updateFields map[string]interface{}
+	if err := c.ShouldBindJSON(&updateFields); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
 		return
 	}
 
-	// Ensure these critical fields are preserved
-	updated.ID = existing.ID
-	updated.AuthUserID = userID
-	updated.CreatedAt = existing.CreatedAt
-
-	if err := h.DB.Save(&updated).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update language", "details": err.Error()})
+	var seeker models.Seeker
+	if err := h.DB.First(&seeker, "auth_user_id = ?", userID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Seeker not found"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Language updated"})
+	var languages []map[string]interface{}
+	if err := json.Unmarshal(seeker.Languages, &languages); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse languages"})
+		return
+	}
+
+	index, err := strconv.Atoi(id)
+	if err != nil || index <= 0 || index > len(languages) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid language index"})
+		return
+	}
+
+	entry := languages[index-1]
+	for key, value := range updateFields {
+		if _, exists := entry[key]; exists {
+			entry[key] = value
+		} else {
+			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Invalid field: %s", key)})
+			return
+		}
+	}
+	languages[index-1] = entry
+
+	updatedJSON, err := json.Marshal(languages)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to marshal updated languages"})
+		return
+	}
+
+	seeker.Languages = updatedJSON
+	if err := h.DB.Save(&seeker).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update seeker"})
+		return
+	}
+
+	response := dto.LanguageResponse{
+		ID:              uint(index),
+		AuthUserID:      userID,
+		LanguageName:        entry["language"].(string),
+		ProficiencyLevel:     entry["proficiency"].(string),
+		CertificateFile: entry["certificateFile"].(string),
+	}
+
+	c.JSON(http.StatusOK, response)
 }
 
-// DeleteLanguage deletes an existing language record for the authenticated user
+
 func (h *LanguageHandler) DeleteLanguage(c *gin.Context) {
 	userID := c.MustGet("userID").(uuid.UUID)
 	id := c.Param("id")
 
-	if err := h.DB.Where("id = ? AND auth_user_id = ?", id, userID).Delete(&models.Language{}).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete language", "details": err.Error()})
+	var seeker models.Seeker
+	if err := h.DB.First(&seeker, "auth_user_id = ?", userID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Seeker not found"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Language deleted"})
+	var languages []map[string]interface{}
+	if err := json.Unmarshal(seeker.Languages, &languages); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse languages"})
+		return
+	}
+
+	index, err := strconv.Atoi(id)
+	if err != nil || index <= 0 || index > len(languages) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid language index"})
+		return
+	}
+
+	// Remove the language at the specified index
+	languages = append(languages[:index-1], languages[index:]...)
+
+	updatedJSON, err := json.Marshal(languages)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to marshal updated languages"})
+		return
+	}
+
+	seeker.Languages = updatedJSON
+	if err := h.DB.Save(&seeker).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update seeker"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Language deleted successfully"})
 }
