@@ -64,6 +64,7 @@ func SetupDataEntryRoutes(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
 		educationRoutes.DELETE(":id", educationHandler.DeleteEducation)
 	}
 
+	
 	// CERTIFICATES routes
 	certificateHandler := dataentry.NewCertificateHandler(db)
 	certificateRoutes := r.Group("/certificates")
