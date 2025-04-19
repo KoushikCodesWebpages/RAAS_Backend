@@ -17,7 +17,7 @@ type SalaryRange struct {
 }
 type JobDTO struct {
     Source         string       `json:"source"`                   // "linkedin" or "xing"
-    ID             string       `json:"id"`                       // UUID or unique DB ID
+    ID             uint       `json:"id"`                       // UUID or unique DB ID
     JobID          string       `json:"job_id"`                   // Platform-specific Job ID
     Title          string       `json:"title"`
     Company        string       `json:"company"`
