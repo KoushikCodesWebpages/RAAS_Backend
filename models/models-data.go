@@ -41,6 +41,15 @@ type Seeker struct {
 
     // Work Experience
     WorkExperiences datatypes.JSON `gorm:"type:json" json:"workExperiences"`
+	
+    // Education
+    Education datatypes.JSON `gorm:"type:json" json:"education"`
+
+    // Certificates
+    Certificates datatypes.JSON `gorm:"type:json" json:"certificates"`
+
+    // Languages
+    Languages datatypes.JSON `gorm:"type:json" json:"languages"`
 
     // Job Titles (Primary, Secondary, Tertiary)
     JobTitles datatypes.JSON `gorm:"type:json" json:"jobTitles"` // Store job titles JSON
