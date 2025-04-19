@@ -1,5 +1,51 @@
 package models
 
+
+// Job model combining Metadata, Description, and JobLink
+type Job struct {
+	ID             uint   `gorm:"primaryKey;autoIncrement"`
+	JobID          string `gorm:"unique;type:varchar(191)"`
+	Title          string
+	Company        string
+	Location       string
+	PostedDate     string
+	Link           string `gorm:"unique;type:varchar(191)"`
+	Processed      bool
+	Source         string // LinkedIn or Xing (to differentiate the source)
+
+	// Job Description
+	JobDescription string
+	JobType        string
+	Skills         string
+
+	// JobLink for unique reference
+	JobLink string `gorm:"unique;type:varchar(191);not null"`
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // LinkedIn job metadata
 type LinkedInJobMetaData struct {
 	ID         string `gorm:"primaryKey;type:varchar(191)"`
@@ -61,3 +107,4 @@ type XingJobDescription struct {
 	Skills         string
 
 }
+

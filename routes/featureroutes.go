@@ -1,11 +1,13 @@
 package routes
 
 import (
+	"RAAS/config"
 	"RAAS/handlers/features"
+	"RAAS/handlers/repo"
 	"RAAS/middlewares"
+
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
-	"RAAS/config"
 	//"os"
 )
 
@@ -17,8 +19,12 @@ func SetupFeatureRoutes(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
 	{
 		seekerProfileRoutes.GET("", seekerProfileHandler.GetSeekerProfile)
 	}
-	
-	
+
+		// Initialize the SeekerHandler
+	seekerHandler := repo.NewSeekerHandler(db)
+
+	// Define the route for getting seeker profile
+	r.GET("/seeker/profile", middleware.AuthMiddleware(), seekerHandler.GetSeeker)
 
 	// JOB DATA routes
 	jobRetrievalRoutes := r.Group("/api/jobs")
@@ -32,12 +38,7 @@ func SetupFeatureRoutes(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
 	jobMetaRoutes := r.Group("/api/job-data")
 	jobMetaRoutes.Use(middleware.AuthMiddleware())
 	{
-		jobMetaRoutes.GET("/linkedin", jobDataHandler.GetLinkedInJobs)
-		jobMetaRoutes.GET("/xing", jobDataHandler.GetXingJobs)
-		jobMetaRoutes.GET("/linkedin/links", jobDataHandler.GetLinkedInLinks)
-		jobMetaRoutes.GET("/xing/links", jobDataHandler.GetXingLinks)
-		jobMetaRoutes.GET("/linkedin/descriptions", jobDataHandler.GetLinkedInDescriptions)
-		jobMetaRoutes.GET("/xing/descriptions", jobDataHandler.GetXingDescriptions)
+		jobMetaRoutes.GET("", jobDataHandler.GetAllJobs)
 	}
 
 	selectedJobsHandler := features.NewSelectedJobsHandler(db)
