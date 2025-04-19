@@ -13,24 +13,22 @@ type JobTitleInput struct {
 	TertiaryTitle  *string `json:"tertiaryTitle,omitempty"`
 }
 
-//PERSONAL INFO
-type PersonalInfoRequest struct {                // Set from JWT or session
-	FirstName       string    `json:"firstName" binding:"required"`
-	SecondName      *string   `json:"secondName,omitempty"`       // Optional
-	DateOfBirth     string    `json:"dob" binding:"required"`     // Format: YYYY-MM-DD
-	Address         string    `json:"address" binding:"required"`
-	LinkedInProfile *string   `json:"linkedinProfile,omitempty"`  // Optional
+type PersonalInfoRequest struct {
+	FirstName       string  `json:"firstName" binding:"required"`
+	SecondName      *string `json:"secondName,omitempty"`
+	DateOfBirth     string  `json:"dateOfBirth" binding:"required"` // 🛠 Updated to match incoming JSON
+	Address         string  `json:"address" binding:"required"`
+	LinkedInProfile *string `json:"linkedinProfile,omitempty"`
 }
 
 type PersonalInfoResponse struct {
 	AuthUserID      uuid.UUID `json:"authUserId"`
 	FirstName       string    `json:"firstName"`
 	SecondName      *string   `json:"secondName,omitempty"`
-	DateOfBirth     string    `json:"dob"`
+	DateOfBirth     string    `json:"dateOfBirth"` // 🛠 Updated to match response key
 	Address         string    `json:"address"`
 	LinkedInProfile *string   `json:"linkedinProfile,omitempty"`
 }
-
 //PROFESSNAL SUMMARY
 type ProfessionalSummaryRequest struct {
 	About        string   `json:"about" binding:"required"`

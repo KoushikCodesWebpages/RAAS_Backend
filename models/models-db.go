@@ -53,31 +53,31 @@ func InitDB(cfg *config.Config) *gorm.DB {
 
 	log.Println("✅ MySQL connection established")
 	// tables := []string
-	{
-		// "auth_users",
-		// "seekers",
-		// "admins",
+	// {
+	// 	// "auth_users",
+	// 	// "seekers",
+	// 	// "admins",
 
-		// "personal_infos",
-		// "professional_summaries",
-		// "work_experiences",
-		// "educations",
-		// "languages",
-		// "certificates",
-		// "preferred_job_titles",
+	// 	//"personal_infos",
+	// 	// "professional_summaries",
+	// 	// "work_experiences",
+	// 	// "educations",
+	// 	// "languages",
+	// 	// "certificates",
+	// 	// "preferred_job_titles",
 
-		// "linked_in_job_meta_data",
-		// "xing_job_meta_data",
-		// "linked_in_failed_jobs",
-		// "xing_failed_jobs",
-		// "linked_in_job_application_links",
-		// "xing_job_application_links",
-		// "linked_in_job_descriptions",
-		// "xing_job_descriptions",
+	// 	// "linked_in_job_meta_data",
+	// 	// "xing_job_meta_data",
+	// 	// "linked_in_failed_jobs",
+	// 	// "xing_failed_jobs",
+	// 	// "linked_in_job_application_links",
+	// 	// "xing_job_application_links",
+	// 	// "linked_in_job_descriptions",
+	// 	// "xing_job_descriptions",
 
-		// "job_match_scores",
-	}
-	//ResetDB(DB,tables)
+	// 	// "job_match_scores",
+	// }
+	// ResetDB(DB,tables)
 	AutoMigrate()
 	SeedJobs(DB)
 	//PrintAllTables(DB, cfg.DBName)

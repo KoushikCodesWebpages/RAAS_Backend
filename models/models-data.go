@@ -64,7 +64,7 @@ type PersonalInfo struct {
 	AuthUserID uuid.UUID `gorm:"type:char(36);unique;not null;constraint:OnDelete:CASCADE,OnUpdate:CASCADE" json:"authUserId"`
 	FirstName       string    `gorm:"type:varchar(100);not null" json:"firstName"`
 	SecondName      *string   `gorm:"type:varchar(100)" json:"secondName"`
-	DateOfBirth     string    `gorm:"type:date;not null" json:"dob"`
+	DateOfBirth     string    `gorm:"type:date;not null" json:"dateOfBirth"`
 	Address         string    `gorm:"type:text;not null" json:"address"`
 	LinkedInProfile *string   `gorm:"type:varchar(255)" json:"linkedinProfile"`
 }
