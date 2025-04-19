@@ -91,14 +91,14 @@ func JobRetrievalHandler(c *gin.Context) {
 	// Process job data stored in Seeker (no database saving)
 	for _, job := range jobData {
 		// Log job data for each job
-		fmt.Println("Processing job:", job)
+		// fmt.Println("Processing job:", job)
 
 		// Generate random salary range
 		salaryRange := randomSalary()
 
 		// Check the match score for this user and job pair
 		var matchScore models.MatchScore
-		if err := db.Where("seeker_id = ? AND job_id = ?", userID, job.ID).First(&matchScore).Error; err != nil {
+		if err := db.Where("seeker_id = ? AND job_id = ?", userID, job.JobID).First(&matchScore).Error; err != nil {
 			// If no match score is found, set default to 50
 			if err == gorm.ErrRecordNotFound {
 				matchScore.MatchScore = 50

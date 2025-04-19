@@ -1,7 +1,7 @@
 package models
 
 import (
-	"time"
+	// "time"
 
 	"github.com/google/uuid"
 	"gorm.io/datatypes"
@@ -65,68 +65,68 @@ type Admin struct {
 
 // PREFERENCE MODELS
 
-type PersonalInfo struct {
-	gorm.Model
-	AuthUserID uuid.UUID `gorm:"type:char(36);unique;not null;constraint:OnDelete:CASCADE,OnUpdate:CASCADE" json:"authUserId"`
-	FirstName       string    `gorm:"type:varchar(100);not null" json:"firstName"`
-	SecondName      *string   `gorm:"type:varchar(100)" json:"secondName"`
-	DateOfBirth     string    `gorm:"type:date;not null" json:"dateOfBirth"`
-	Address         string    `gorm:"type:text;not null" json:"address"`
-	LinkedInProfile *string   `gorm:"type:varchar(255)" json:"linkedinProfile"`
-}
+// type PersonalInfo struct {
+// 	gorm.Model
+// 	AuthUserID uuid.UUID `gorm:"type:char(36);unique;not null;constraint:OnDelete:CASCADE,OnUpdate:CASCADE" json:"authUserId"`
+// 	FirstName       string    `gorm:"type:varchar(100);not null" json:"firstName"`
+// 	SecondName      *string   `gorm:"type:varchar(100)" json:"secondName"`
+// 	DateOfBirth     string    `gorm:"type:date;not null" json:"dateOfBirth"`
+// 	Address         string    `gorm:"type:text;not null" json:"address"`
+// 	LinkedInProfile *string   `gorm:"type:varchar(255)" json:"linkedinProfile"`
+// }
 
-type ProfessionalSummary struct {
-	gorm.Model
-	AuthUserID uuid.UUID `gorm:"type:char(36);unique;not null;constraint:OnDelete:CASCADE,OnUpdate:CASCADE" json:"authUserId"`
-	About        string         `gorm:"type:text;not null" json:"about"`
-	Skills       datatypes.JSON `gorm:"type:json;not null" json:"skills"`
-	AnnualIncome float64        `gorm:"not null" json:"annualIncome"`
-}
+// type ProfessionalSummary struct {
+// 	gorm.Model
+// 	AuthUserID uuid.UUID `gorm:"type:char(36);unique;not null;constraint:OnDelete:CASCADE,OnUpdate:CASCADE" json:"authUserId"`
+// 	About        string         `gorm:"type:text;not null" json:"about"`
+// 	Skills       datatypes.JSON `gorm:"type:json;not null" json:"skills"`
+// 	AnnualIncome float64        `gorm:"not null" json:"annualIncome"`
+// }
 
-type WorkExperience struct {
-	gorm.Model
-	AuthUserID uuid.UUID `gorm:"type:char(36);not null;index;constraint:OnUpdate:CASCADE,OnDelete:CASCADE" json:"authUserId"`
-	JobTitle           string     `gorm:"type:varchar(100);not null" json:"jobTitle"`
-	CompanyName        string     `gorm:"type:varchar(100);not null" json:"companyName"`
-	EmploymentType       string     `gorm:"type:varchar(50);not null" json:"employerType"`
-	StartDate          time.Time  `gorm:"not null" json:"startDate"`
-	EndDate            *time.Time `json:"endDate,omitempty"`
-	KeyResponsibilities string     `gorm:"type:text" json:"keyResponsibilities"`
-}
+// type WorkExperience struct {
+// 	gorm.Model
+// 	AuthUserID uuid.UUID `gorm:"type:char(36);not null;index;constraint:OnUpdate:CASCADE,OnDelete:CASCADE" json:"authUserId"`
+// 	JobTitle           string     `gorm:"type:varchar(100);not null" json:"jobTitle"`
+// 	CompanyName        string     `gorm:"type:varchar(100);not null" json:"companyName"`
+// 	EmploymentType       string     `gorm:"type:varchar(50);not null" json:"employerType"`
+// 	StartDate          time.Time  `gorm:"not null" json:"startDate"`
+// 	EndDate            *time.Time `json:"endDate,omitempty"`
+// 	KeyResponsibilities string     `gorm:"type:text" json:"keyResponsibilities"`
+// }
 
-type Education struct {
-	gorm.Model
-	AuthUserID uuid.UUID `gorm:"type:char(36);not null;index;constraint:OnUpdate:CASCADE,OnDelete:CASCADE" json:"authUserId"`
-	Degree       string     `gorm:"type:varchar(100);not null" json:"degree"`
-	Institution  string     `gorm:"type:varchar(150);not null" json:"institution"`
-	FieldOfStudy string     `gorm:"type:varchar(100);not null" json:"fieldOfStudy"`
-	StartDate    time.Time  `gorm:"not null" json:"startDate"`
-	EndDate      *time.Time `json:"endDate,omitempty"`
-	Achievements string     `gorm:"type:text" json:"achievements"`
-}
+// type Education struct {
+// 	gorm.Model
+// 	AuthUserID uuid.UUID `gorm:"type:char(36);not null;index;constraint:OnUpdate:CASCADE,OnDelete:CASCADE" json:"authUserId"`
+// 	Degree       string     `gorm:"type:varchar(100);not null" json:"degree"`
+// 	Institution  string     `gorm:"type:varchar(150);not null" json:"institution"`
+// 	FieldOfStudy string     `gorm:"type:varchar(100);not null" json:"fieldOfStudy"`
+// 	StartDate    time.Time  `gorm:"not null" json:"startDate"`
+// 	EndDate      *time.Time `json:"endDate,omitempty"`
+// 	Achievements string     `gorm:"type:text" json:"achievements"`
+// }
 
-type Certificate struct {
-	gorm.Model
-	AuthUserID uuid.UUID `gorm:"type:char(36);not null;index;constraint:OnUpdate:CASCADE,OnDelete:CASCADE" json:"authUserId"`
-	CertificateName   string    `gorm:"type:varchar(255);not null" json:"certificateName"`
-	CertificateFile   string    `gorm:"type:text;not null" json:"certificateFile"`
-	CertificateNumber string    `gorm:"type:varchar(100)" json:"certificateNumber"`
-}
+// type Certificate struct {
+// 	gorm.Model
+// 	AuthUserID uuid.UUID `gorm:"type:char(36);not null;index;constraint:OnUpdate:CASCADE,OnDelete:CASCADE" json:"authUserId"`
+// 	CertificateName   string    `gorm:"type:varchar(255);not null" json:"certificateName"`
+// 	CertificateFile   string    `gorm:"type:text;not null" json:"certificateFile"`
+// 	CertificateNumber string    `gorm:"type:varchar(100)" json:"certificateNumber"`
+// }
 
-type Language struct {
-	gorm.Model
-	AuthUserID uuid.UUID `gorm:"type:char(36);not null;index;constraint:OnUpdate:CASCADE,OnDelete:CASCADE" json:"authUserId"`
-	LanguageName     string    `gorm:"type:varchar(100);not null" json:"language"`
-	CertificateFile  string    `gorm:"type:text" json:"certificateFile"`
-	ProficiencyLevel string    `gorm:"type:varchar(20);not null" json:"proficiency"`
-}
+// type Language struct {
+// 	gorm.Model
+// 	AuthUserID uuid.UUID `gorm:"type:char(36);not null;index;constraint:OnUpdate:CASCADE,OnDelete:CASCADE" json:"authUserId"`
+// 	LanguageName     string    `gorm:"type:varchar(100);not null" json:"language"`
+// 	CertificateFile  string    `gorm:"type:text" json:"certificateFile"`
+// 	ProficiencyLevel string    `gorm:"type:varchar(20);not null" json:"proficiency"`
+// }
 
-type PreferredJobTitle struct {
-	gorm.Model
-	AuthUserID uuid.UUID `gorm:"type:char(36);unique;not null;constraint:OnDelete:CASCADE,OnUpdate:CASCADE" json:"authUserId"`
-	PrimaryTitle   string    `gorm:"type:varchar(255);not null" json:"primaryTitle"`
-	SecondaryTitle *string   `gorm:"type:varchar(255);" json:"secondaryTitle"`
-	TertiaryTitle  *string   `gorm:"type:varchar(255);" json:"tertiaryTitle"`
-}
+// type PreferredJobTitle struct {
+// 	gorm.Model
+// 	AuthUserID uuid.UUID `gorm:"type:char(36);unique;not null;constraint:OnDelete:CASCADE,OnUpdate:CASCADE" json:"authUserId"`
+// 	PrimaryTitle   string    `gorm:"type:varchar(255);not null" json:"primaryTitle"`
+// 	SecondaryTitle *string   `gorm:"type:varchar(255);" json:"secondaryTitle"`
+// 	TertiaryTitle  *string   `gorm:"type:varchar(255);" json:"tertiaryTitle"`
+// }
 
 // FEATURE MODELS

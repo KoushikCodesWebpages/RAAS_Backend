@@ -35,20 +35,15 @@ func NewCoverLetterHandler(db *gorm.DB, cfg *config.Config) *CoverLetterHandler 
 
 // GenerateCoverLetterBody function to generate a cover letter body based on user and job data
 func (h *CoverLetterHandler) PostCoverLetter(c *gin.Context) {
-	// Step 1: Parse job_id from request body
 	var req CoverLetterAndCVRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing or invalid job_id in request body"})
 		return
 	}
 	jobID := req.JobID
-
-	// Step 2: Extract user information from JWT claims
 	userID := c.MustGet("userID").(uuid.UUID)
 
-
-	//step 2b
-
+	// Step 1: Fetch seeker
 	var seeker models.Seeker
 	if err := h.db.Where("auth_user_id = ?", userID).First(&seeker).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve seeker data"})
@@ -65,87 +60,80 @@ func (h *CoverLetterHandler) PostCoverLetter(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Daily cover letter generation limit exceeded"})
 		return
 	}
-	// Step 3: Get user personal info
-	var personalInfo models.PersonalInfo
-	if err := h.db.Where("auth_user_id = ?", userID).First(&personalInfo).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve user personal information"})
+
+	// Step 2: Parse personal info
+	var personalInfo struct {
+		FirstName   string  `json:"firstName"`
+		SecondName  *string `json:"secondName"`
+		Address     string  `json:"address"`
+	}
+	if err := json.Unmarshal(seeker.PersonalInfo, &personalInfo); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse personal info"})
 		return
 	}
+	fullName := personalInfo.FirstName
+	if personalInfo.SecondName != nil {
+		fullName += " " + *personalInfo.SecondName
+	}
 
-
-	// Step 3b: Get auth user info (email, phone)
+	// Step 3: Get email & phone from AuthUser
 	var authUser models.AuthUser
 	if err := h.db.Where("id = ?", userID).First(&authUser).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve auth user info"})
 		return
 	}
+	email := authUser.Email
+	phone := authUser.Phone
+	address := personalInfo.Address
 
-
-
-	// Step 4: Get professional summary (includes skills)
-	var summary models.ProfessionalSummary
-	if err := h.db.Where("auth_user_id = ?", userID).First(&summary).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve professional summary"})
+	// Step 4: Parse professional summary
+	var summary struct {
+		About  string   `json:"about"`
+		Skills []string `json:"skills"`
+	}
+	if err := json.Unmarshal(seeker.ProfessionalSummary, &summary); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse professional summary"})
 		return
 	}
+	skillsStr := joinStrings(summary.Skills, ", ")
 
-	var skills []string
-	if err := json.Unmarshal(summary.Skills, &skills); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse skills"})
-		return
-	}
-	skillsStr := joinStrings(skills, ", ")
-
-	// Step 5: Get work experience
-	var workExperiences []models.WorkExperience
-	if err := h.db.Where("auth_user_id = ?", userID).Find(&workExperiences).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve work experience"})
+	// Step 5: Work experience
+	var workExperiences []map[string]interface{}
+	if err := json.Unmarshal(seeker.WorkExperiences, &workExperiences); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse work experiences"})
 		return
 	}
 	var workExpText string
 	for _, we := range workExperiences {
-		workExpText += fmt.Sprintf("Job Title: %s at %s. Responsibilities: %s. ", we.JobTitle, we.CompanyName, we.KeyResponsibilities)
+		workExpText += fmt.Sprintf("Job Title: %s at %s. Responsibilities: %s. ",
+			getStr(we["jobTitle"]), getStr(we["companyName"]), getStr(we["keyResponsibilities"]))
 	}
 
-	// Step 6: Get job metadata (LinkedIn or Xing)
-	var companyName, jobTitle string
-	var jobMetaData models.LinkedInJobMetaData
-	if err := h.db.Where("job_id = ?", jobID).First(&jobMetaData).Error; err == nil {
-		companyName = jobMetaData.Company
-		jobTitle = jobMetaData.Title
-	} else {
-		var xingJobMetaData models.XingJobMetaData
-		if err := h.db.Where("job_id = ?", jobID).First(&xingJobMetaData).Error; err == nil {
-			companyName = xingJobMetaData.Company
-			jobTitle = xingJobMetaData.Title
-		} else {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve job metadata"})
-			return
-		}
-	}
-
-	// Step 7: Get education
-	var educations []models.Education
-	if err := h.db.Where("auth_user_id = ?", userID).Find(&educations).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve education details"})
+	// Step 6: Education
+	var educations []map[string]interface{}
+	if err := json.Unmarshal(seeker.Educations, &educations); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse education"})
 		return
 	}
 	var eduText string
 	for _, edu := range educations {
-		eduText += fmt.Sprintf("Degree: %s from %s in %s. Achievements: %s. ", edu.Degree, edu.Institution, edu.FieldOfStudy, edu.Achievements)
+		eduText += fmt.Sprintf("Degree: %s from %s in %s. Achievements: %s. ",
+			getStr(edu["degree"]), getStr(edu["institution"]), getStr(edu["fieldOfStudy"]), getStr(edu["achievements"]))
 	}
 
-	// Step 8: Construct full name
-	var fullName string
-	if personalInfo.SecondName != nil {
-		fullName = fmt.Sprintf("%s %s", personalInfo.FirstName, *personalInfo.SecondName)
-	} else {
-		fullName = personalInfo.FirstName
+	// Step 7: Get job metadata from a single table
+	var companyName, jobTitle string
+	var job models.Job // Assuming a unified JobMetaData model
+
+	if err := h.db.Where("job_id = ?", jobID).First(&job).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve job metadata", "details": err.Error()})
+		return
 	}
 
+	companyName = job.Company
+	jobTitle = job.Title
 
-
-	// Step 10: Generate cover letter body using Hugging Face models and input data
+	// Step 8: Generate cover letter body
 	coverLetterBody := generateCoverLetterBody(
 		fullName,
 		eduText,
@@ -159,43 +147,76 @@ func (h *CoverLetterHandler) PostCoverLetter(c *gin.Context) {
 		coverLetterBody = coverLetterBody[index+2:]
 	}
 	coverLetterBody = strings.Split(coverLetterBody, "Sincerely")[0]
-	email := authUser.Email
-	phone := authUser.Phone
-	address := personalInfo.Address
 
+	// Step 10: Generate cover letter document (commented out)
+		docInput := repo.CoverLetterInput{
+			Name:            fullName,
+			Email:           email,
+			Phone:           phone,
+			Address:         address,
+			RecipientTitle:  fmt.Sprintf("Hiring Manager at %s", companyName),
+			CompanyName:     companyName,
+			CompanyLocation: "Germany", // Or fetch this from jobMetaData if available
+			Body:            coverLetterBody,
+			Closing:         "Sincerely",
+		}
 
-	docInput := repo.CoverLetterInput{
-		Name:            fullName,
-		Email:           email,
-		Phone:           phone,
-		Address:         address,
-		RecipientTitle:  fmt.Sprintf("Hiring Manager at %s", companyName),
-		CompanyName:     companyName,
-		CompanyLocation: "Germany", // Or fetch this from jobMetaData if available
-		Body:            coverLetterBody,
-		Closing:          "Sincerely",
-	}
-
-	docData, err := repo.GenerateCoverLetterDocx(docInput, config.Cfg)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate cover letter document", "details": err.Error()})
-		return
-	}
-	result := h.db.Model(&models.SelectedJobApplication{}).Where("auth_user_id = ? AND job_id = ?", userID, jobID).Update("cover_letter_generated", true)
-	if result.Error != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update CvGenerated field"})
-		return
-	}
-	c.Header("Content-Disposition", "attachment; filename=cover_letter.docx")
-	c.Data(http.StatusOK, "application/vnd.openxmlformats-officedocument.wordprocessingml.document", docData)
+		docData, err := repo.GenerateCoverLetterDocx(docInput, config.Cfg)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate cover letter document", "details": err.Error()})
+			return
+		}
+		result := h.db.Model(&models.SelectedJobApplication{}).Where("auth_user_id = ? AND job_id = ?", userID, jobID).Update("cover_letter_generated", true)
+		if result.Error != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update CvGenerated field"})
+			return
+		}
+		c.Header("Content-Disposition", "attachment; filename=cover_letter.docx")
+		c.Data(http.StatusOK, "application/vnd.openxmlformats-officedocument.wordprocessingml.document", docData)
 
 }
+
 
 
 // Helper function to join strings with commas
 func joinStrings(arr []string, delimiter string) string {
 	return fmt.Sprintf("%s", arr)
 }
+
+
+func getStr(value interface{}) string {
+    if str, ok := value.(string); ok {
+        return str
+    }
+    return ""
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // Global variables
 var (
@@ -226,7 +247,7 @@ func LoadHFModels() ([]string, error) {
 		}
 	}
 
-	log.Printf("Loaded Hugging Face models: %+v", models)
+	//log.Printf("Loaded Hugging Face models: %+v", models)
 
 	return models, nil
 }
@@ -235,28 +256,28 @@ func LoadHFModels() ([]string, error) {
 // prepareCoverLetterPrompt prepares the input prompt and API URL for the Hugging Face API
 func prepareCoverLetterPrompt(name, education, experience, skills, company, role string) (string, string, error) {
 	if name == "" || education == "" || experience == "" || skills == "" || company == "" || role == "" {
-		log.Println("Error: Missing required field. All input fields must be provided.")
+		//log.Println("Error: Missing required field. All input fields must be provided.")
 		return "", "", fmt.Errorf("error: Missing required information")
 	}
 
 	HFModels, err := LoadHFModels()
 	if err != nil {
-		log.Printf("Failed to load models: %v", err)
+		//log.Printf("Failed to load models: %v", err)
 		return "", "", fmt.Errorf("error loading Hugging Face models: %w", err)
 	}
 
 	if len(HFModels) == 0 {
-		log.Println("Error: HFModels is empty. Cannot generate cover letter.")
+		//log.Println("Error: HFModels is empty. Cannot generate cover letter.")
 		return "", "", fmt.Errorf("error: No Hugging Face models available")
 	}
 
-	log.Printf("Loaded Hugging Face models: %v", HFModels)
+	//log.Printf("Loaded Hugging Face models: %v", HFModels)
 
 	modelToUse := HFModels[RoundRobinModelIndex]
-	log.Printf("Selected model: %s", modelToUse)
+	//log.Printf("Selected model: %s", modelToUse)
 
 	if config.Cfg.HFBaseAPIUrl == "" {
-		log.Println("Error: Hugging Face base API URL is not set")
+		//log.Println("Error: Hugging Face base API URL is not set")
 		return "", "", fmt.Errorf("error: Hugging Face base API URL is not set")
 	}
 	apiURL := fmt.Sprintf("%s/%s", config.Cfg.HFBaseAPIUrl, modelToUse)

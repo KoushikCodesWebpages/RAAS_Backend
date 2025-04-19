@@ -12,9 +12,9 @@ import (
 )
 
 // CVHandler struct to hold DB reference (or other dependencies)
-type CVDownloadHandler struct {
-	db *gorm.DB
-}
+// type CVDownloadHandler struct {
+// 	db *gorm.DB
+// }
 
 // NewCVHandler creates a new CVHandler with the given DB instance
 func NewCVDownloadHandler(db *gorm.DB) *CVHandler {
