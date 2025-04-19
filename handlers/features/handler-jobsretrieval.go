@@ -15,6 +15,7 @@ import (
 )
 
 // JobRetrievalHandler handles the retrieval of jobs based on user's preferences and skills
+// JobRetrievalHandler handles the retrieval of jobs based on user's preferences and skills
 func JobRetrievalHandler(c *gin.Context) {
 	// Retrieve database and userID from context
 	db := c.MustGet("db").(*gorm.DB)
@@ -32,8 +33,6 @@ func JobRetrievalHandler(c *gin.Context) {
 		return
 	}
 
-	// Log the seeker data to check what it contains
-
 	// Collect preferred titles
 	var preferredTitles []string
 	if seeker.PrimaryTitle != "" {
@@ -45,9 +44,6 @@ func JobRetrievalHandler(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "No preferred job titles set for user."})
 		return
 	}
-
-	// Log preferred titles to verify collection
-
 
 	// Title filtering (case-insensitive)
 	var conditions []string
@@ -70,9 +66,6 @@ func JobRetrievalHandler(c *gin.Context) {
 		return
 	}
 
-	// Log the job data to see if we are getting results
-
-
 	// Fetch user's professional summary to get skills (stored in Seeker model)
 	var summary struct {
 		Skills []string `json:"skills"`
@@ -84,9 +77,6 @@ func JobRetrievalHandler(c *gin.Context) {
 		})
 		return
 	}
-
-	// Log the extracted skills
-	
 
 	// Helper function to generate a random salary range (between 25k and 50k)
 	randomSalary := func() dto.SalaryRange {
@@ -106,10 +96,25 @@ func JobRetrievalHandler(c *gin.Context) {
 		// Generate random salary range
 		salaryRange := randomSalary()
 
-		// Add job to jobs list (just filtering and formatting the response, no saving)
+		// Check the match score for this user and job pair
+		var matchScore models.MatchScore
+		if err := db.Where("seeker_id = ? AND job_id = ?", userID, job.ID).First(&matchScore).Error; err != nil {
+			// If no match score is found, set default to 50
+			if err == gorm.ErrRecordNotFound {
+				matchScore.MatchScore = 50
+			} else {
+				fmt.Println("Error fetching match score:", err) // Log error for debugging
+				c.JSON(http.StatusInternalServerError, gin.H{
+					"error": "Error fetching match score",
+				})
+				return
+			}
+		}
+
+		// Add job to jobs list with match score
 		jobs = append(jobs, dto.JobDTO{
 			Source:         "seeker", // All jobs are now stored under "seeker" in the Seeker model
-			ID:             job.ID, // Assuming job.ID is a UUID
+			ID:             job.ID,   // Assuming job.ID is a UUID
 			JobID:          job.JobID,
 			Title:          job.Title,
 			Company:        job.Company,
@@ -120,13 +125,10 @@ func JobRetrievalHandler(c *gin.Context) {
 			Skills:         job.Skills, // Assuming Skills is part of the Job model stored in Seeker
 			UserSkills:     summary.Skills, // Skills parsed from ProfessionalSummary
 			ExpectedSalary: salaryRange,
-			MatchScore:     0, // Initially 0, can be calculated later
-			Description:    job.JobDescription, // Assuming Description is part of the Job model stored in Seeker
+			MatchScore:     matchScore.MatchScore, // Use the fetched or default match score
+			Description:    job.JobDescription,    // Assuming Description is part of the Job model stored in Seeker
 		})
 	}
-
-	// Log the final job list
-
 
 	// Respond with the filtered jobs and pagination
 	c.JSON(http.StatusOK, gin.H{

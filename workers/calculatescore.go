@@ -37,140 +37,161 @@ func LoadHFModels(prefix string) ([]string, error) {
 }
 
 // CalculateMatchScore calculates the match score between the seeker and the job
-func CalculateMatchScore(seeker models.Seeker, job interface{}) (float64, error) {
-	if err := godotenv.Load(); err != nil {
-		return 0, fmt.Errorf("error loading .env file: %v", err)
-	}
-	//log.Println("Loaded environment variables.")
+func CalculateMatchScore(seeker models.Seeker, job models.Job) (float64, error) {
+	log.Println("📥 Starting match score calculation...")
 
-// Load Hugging Face API key
+	if err := godotenv.Load(); err != nil {
+		log.Printf("⚠️ Error loading .env file: %v", err)
+		// Not returning here—.env might already be loaded
+	}
+
+	// Load API key
 	hfAPIKey := viper.GetString("HF_API_KEY")
 	if hfAPIKey == "" {
-		log.Printf("Hugging Face API key not found in configuration")
+		log.Println("❌ Hugging Face API key not found in config")
 		return 0, fmt.Errorf("hugging Face API key not found")
 	}
-	// Load Hugging Face models
+	log.Println("✅ Hugging Face API key loaded.")
+
+	// Load models
 	modelsList, err := LoadHFModels("HF_MODEL_FOR_MS")
 	if err != nil {
+		log.Printf("❌ Failed to load models: %v", err)
 		return 0, fmt.Errorf("error loading models: %v", err)
 	}
-
 	currentModel := modelsList[RoundRobinModelIndex]
 	RoundRobinModelIndex = (RoundRobinModelIndex + 1) % len(modelsList)
+	log.Printf("🔁 Using model: %s", currentModel)
 
 	// === Professional Summary ===
-	var summary models.ProfessionalSummary
-	if err := models.DB.Where("auth_user_id = ?", seeker.AuthUserID).First(&summary).Error; err != nil {
-		return 0, fmt.Errorf("failed to find professional summary for SeekerID %s: %v", seeker.AuthUserID, err)
+	var summary struct {
+		About        string   `json:"about"`
+		Skills       []string `json:"skills"`
+		AnnualIncome float64  `json:"annualIncome"`
 	}
-
-	var skills []string
-	if err := json.Unmarshal(summary.Skills, &skills); err != nil {
-		return 0, fmt.Errorf("failed to parse skills for SeekerID %s: %v", seeker.AuthUserID, err)
+	if err := json.Unmarshal(seeker.ProfessionalSummary, &summary); err != nil {
+		log.Printf("❌ Failed to parse professional summary: %v", err)
+		return 0, fmt.Errorf("failed to parse professional summary: %v", err)
 	}
-	skillsStr := joinStrings(skills, ", ")
+	skillsStr := joinStrings(summary.Skills, ", ")
+	log.Printf("✅ Parsed skills: %s", skillsStr)
 
 	// === Work Experience ===
-	var workExperiences []models.WorkExperience
-	if err := models.DB.Where("auth_user_id = ?", seeker.AuthUserID).Find(&workExperiences).Error; err != nil {
-		return 0, fmt.Errorf("failed to fetch work experience for SeekerID %s: %v", seeker.AuthUserID, err)
+	var workExperiences []map[string]interface{}
+	if err := json.Unmarshal(seeker.WorkExperiences, &workExperiences); err != nil {
+		log.Printf("❌ Failed to parse work experiences: %v", err)
+		return 0, fmt.Errorf("failed to parse work experiences: %v", err)
 	}
+	log.Printf("✅ Parsed %d work experience entries", len(workExperiences))
 
 	var workExpText string
 	for _, we := range workExperiences {
-		workExpText += fmt.Sprintf("Job Title: %s. Responsibilities: %s. ", we.JobTitle, we.KeyResponsibilities)
+		workExpText += fmt.Sprintf("Job Title: %s. Responsibilities: %s. ",
+			getStr(we["jobTitle"]), getStr(we["keyResponsibilities"]))
 	}
 
 	// === Education ===
-	var educations []models.Education
-	if err := models.DB.Where("auth_user_id = ?", seeker.AuthUserID).Find(&educations).Error; err != nil {
-		return 0, fmt.Errorf("failed to fetch education for SeekerID %s: %v", seeker.AuthUserID, err)
+	var educations []map[string]interface{}
+	if err := json.Unmarshal(seeker.Educations, &educations); err != nil {
+		log.Printf("❌ Failed to parse education: %v", err)
+		return 0, fmt.Errorf("failed to parse education: %v", err)
 	}
+	log.Printf("✅ Parsed %d education entries", len(educations))
 
 	var eduText string
 	for _, edu := range educations {
-		eduText += fmt.Sprintf("Degree: %s in %s. Achievements: %s. ", edu.Degree, edu.FieldOfStudy, edu.Achievements)
+		eduText += fmt.Sprintf("Degree: %s in %s. Achievements: %s. ",
+			getStr(edu["degree"]), getStr(edu["fieldOfStudy"]), getStr(edu["achievements"]))
 	}
 
 	// === Certificates ===
-	var certificates []models.Certificate
-	if err := models.DB.Where("auth_user_id = ?", seeker.AuthUserID).Find(&certificates).Error; err != nil {
-		return 0, fmt.Errorf("failed to fetch certificates for SeekerID %s: %v", seeker.AuthUserID, err)
+	var certificates []map[string]interface{}
+	if err := json.Unmarshal(seeker.Certificates, &certificates); err != nil {
+		log.Printf("❌ Failed to parse certificates: %v", err)
+		return 0, fmt.Errorf("failed to parse certificates: %v", err)
 	}
+	log.Printf("✅ Parsed %d certificates", len(certificates))
 
 	var certText string
 	for _, cert := range certificates {
-		certText += fmt.Sprintf("Certificate: %s. ", cert.CertificateName)
+		certText += fmt.Sprintf("Certificate: %s. ", getStr(cert["certificateName"]))
 	}
 
 	// === Languages ===
-	var languages []models.Language
-	if err := models.DB.Where("auth_user_id = ?", seeker.AuthUserID).Find(&languages).Error; err != nil {
-		return 0, fmt.Errorf("failed to fetch languages for SeekerID %s: %v", seeker.AuthUserID, err)
+	var languages []map[string]interface{}
+	if err := json.Unmarshal(seeker.Languages, &languages); err != nil {
+		log.Printf("❌ Failed to parse languages: %v", err)
+		return 0, fmt.Errorf("failed to parse languages: %v", err)
 	}
+	log.Printf("✅ Parsed %d languages", len(languages))
 
 	var langText string
 	for _, lang := range languages {
-		langText += fmt.Sprintf("Language: %s (%s). ", lang.LanguageName, lang.ProficiencyLevel)
+		langText += fmt.Sprintf("Language: %s (%s). ",
+			getStr(lang["language"]), getStr(lang["proficiency"]))
 	}
 
-	// === Preferred Job Titles ===
-	var titles models.PreferredJobTitle
-	if err := models.DB.Where("auth_user_id = ?", seeker.AuthUserID).First(&titles).Error; err != nil {
-		return 0, fmt.Errorf("failed to fetch preferred job titles for SeekerID %s: %v", seeker.AuthUserID, err)
+	// === Preferred Titles ===
+	titles := []string{}
+	if seeker.PrimaryTitle != "" {
+		titles = append(titles, seeker.PrimaryTitle)
 	}
+	if seeker.SecondaryTitle != nil && *seeker.SecondaryTitle != "" {
+		titles = append(titles, *seeker.SecondaryTitle)
+	}
+	if seeker.TertiaryTitle != nil && *seeker.TertiaryTitle != "" {
+		titles = append(titles, *seeker.TertiaryTitle)
+	}
+	jobTitles := "Preferred Job Titles: " + strings.Join(titles, ", ") + "."
 
-	jobTitles := "Preferred Job Titles: " + titles.PrimaryTitle
-	if titles.SecondaryTitle != nil {
-		jobTitles += ", " + *titles.SecondaryTitle
-	}
-	if titles.TertiaryTitle != nil {
-		jobTitles += ", " + *titles.TertiaryTitle
-	}
-	jobTitles += "."
-
-	// === Final Seeker Text ===
 	seekerText := fmt.Sprintf(
 		"Skills: %s. About: %s. Work Experience: %s Education: %s Certificates: %s Languages: %s %s",
 		skillsStr, summary.About, workExpText, eduText, certText, langText, jobTitles,
 	)
 
-	// === Job Text from Metadata + Description ===
-	var jobText string
+	jobText := fmt.Sprintf("Title: %s. Description: %s. Skills: %s. Type: %s.",
+		job.Title, job.JobDescription, job.Skills, job.JobType)
 
-	switch jobMeta := job.(type) {
-	case models.LinkedInJobMetaData:
-		var jobDesc models.LinkedInJobDescription
-		if err := models.DB.Where("job_id = ?", jobMeta.JobID).First(&jobDesc).Error; err != nil {
-			return 0, fmt.Errorf("failed to fetch LinkedIn job description for JobID %s: %v", jobMeta.JobID, err)
-		}
-		jobText = fmt.Sprintf("Title: %s. Description: %s. Skills: %s. Type: %s.",
-			jobMeta.Title, jobDesc.JobDescription, jobDesc.Skills, jobDesc.JobType,
-		)
-
-	case models.XingJobMetaData:
-		var jobDesc models.XingJobDescription
-		if err := models.DB.Where("job_id = ?", jobMeta.JobID).First(&jobDesc).Error; err != nil {
-			return 0, fmt.Errorf("failed to fetch Xing job description for JobID %s: %v", jobMeta.JobID, err)
-		}
-		jobText = fmt.Sprintf("Title: %s. Description: %s. Skills: %s. Type: %s.",
-			jobMeta.Title, jobDesc.JobDescription, jobDesc.Skills, jobDesc.JobType,
-		)
-
-	default:
-		return 0, fmt.Errorf("unsupported job type")
-	}
-
-	// === Hugging Face API Call ===
-	//matchScore, err := getDirectMatchScoreFromHuggingFace(hfAPIKey, seekerText, jobText, currentModel)
-
-	matchScore,err := CosineSimilarity(seekerText, jobText)
+	log.Println("🧠 Computing cosine similarity...")
+	matchScore, err := CosineSimilarity(seekerText, jobText)
 	if err != nil {
+		log.Printf("❌ Error from CosineSimilarity: %v", err)
 		return 0, fmt.Errorf("error getting match score from model %s: %v", currentModel, err)
 	}
+	log.Printf("✅ Match score computed: %.2f", matchScore)
 
 	return matchScore, nil
 }
+
+
+
+func getStr(val interface{}) string {
+	if str, ok := val.(string); ok {
+		return str
+	}
+	return ""
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // Apply sigmoid function for scaling
 func sigmoid(x float64) float64 {
 	return 100 / (1 + math.Exp(-x)) // Converts into a range of 0 to 100
@@ -178,55 +199,46 @@ func sigmoid(x float64) float64 {
 
 // CosineSimilarity calculates the cosine similarity between two text strings and applies sigmoid scaling
 func CosineSimilarity(text1, text2 string) (float64, error) {
-	// Tokenize the texts by splitting into words
+	log.Println("📐 Starting CosineSimilarity calculation...")
+
 	tokens1 := tokenize(text1)
 	tokens2 := tokenize(text2)
 
-	// If either of the texts results in no tokens, return an error
+	log.Printf("🔤 Tokens1: %d tokens | Tokens2: %d tokens", len(tokens1), len(tokens2))
+
 	if len(tokens1) == 0 || len(tokens2) == 0 {
 		return 0, errors.New("one of the input texts is empty after tokenization")
 	}
 
-	// Calculate term frequencies (TF)
 	tf1 := termFrequency(tokens1)
 	tf2 := termFrequency(tokens2)
 
-	// Calculate dot product and magnitudes
 	dotProduct := 0.0
 	magnitude1 := 0.0
 	magnitude2 := 0.0
 
-	// Calculate the dot product and magnitudes
 	for word, freq1 := range tf1 {
 		freq2 := tf2[word]
 		dotProduct += freq1 * freq2
 		magnitude1 += freq1 * freq1
 	}
-
 	for _, freq2 := range tf2 {
 		magnitude2 += freq2 * freq2
 	}
 
-	// Compute the cosine similarity
 	if magnitude1 == 0 || magnitude2 == 0 {
+		log.Println("❌ One of the vectors has zero magnitude")
 		return 0, errors.New("one of the vectors has zero magnitude")
 	}
 
-	// Calculate cosine similarity in the range of 0 to 1
 	cosineSim := dotProduct / (math.Sqrt(magnitude1) * math.Sqrt(magnitude2))
+	log.Printf("📏 Cosine similarity (raw): %.4f", cosineSim)
 
-	// Apply sigmoid transformation to scale the score between 0 and 100
-	matchScore := sigmoid(cosineSim * 10) // Amplifying cosine similarity a bit before sigmoid
-
-	if matchScore < 0 {
-		matchScore = 0
-	} else if matchScore > 100 {
-		matchScore = 100
-	}
+	matchScore := sigmoid(cosineSim * 10) // Amplify
+	log.Printf("🎯 Match score (scaled with sigmoid): %.2f", matchScore)
 
 	return matchScore, nil
 }
-
 
 
 // tokenize splits a string into words (tokens)

@@ -1,5 +1,9 @@
 package models
 
+import
+(
+	"github.com/google/uuid"
+)
 
 // Job model combining Metadata, Description, and JobLink
 type Job struct {
@@ -22,6 +26,11 @@ type Job struct {
 	JobLink string `gorm:"unique;type:varchar(191);not null"`
 }
 
+	type MatchScore struct {
+		SeekerID   uuid.UUID `gorm:"type:char(36);primaryKey"`  // Seeker ID (foreign key reference)
+		JobID      string    `gorm:"primaryKey"`                // Job ID (foreign key reference, as string)
+		MatchScore float64   `gorm:"type:float"`                // Match score percentage (0 to 100)
+	}
 
 
 

@@ -70,11 +70,6 @@ type SelectedJobApplication struct {
 
 }
 
-type MatchScore struct {
-	SeekerID   uuid.UUID `gorm:"type:char(36);primaryKey"`  // Seeker ID (foreign key reference)
-	JobID      string    `gorm:"primaryKey"`                // Job ID (foreign key reference, as string)
-	MatchScore float64   `gorm:"type:float"`                // Match score percentage (0 to 100)
-}
 
 
 type CV struct {

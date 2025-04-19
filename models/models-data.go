@@ -130,12 +130,3 @@ type PreferredJobTitle struct {
 }
 
 // FEATURE MODELS
-
-type JobMatchScore struct {
-	ID         uint      `gorm:"primaryKey;autoIncrement"`
-	AuthUserID uuid.UUID `gorm:"type:char(36);not null;uniqueIndex:idx_user_job" json:"authUserId"`
-	JobID      string    `gorm:"type:varchar(255);not null;uniqueIndex:idx_user_job"` // ✅ Specify length
-	Platform   string    `gorm:"type:varchar(50);not null"`                           // Better to limit this too
-	Score      float64   `gorm:"not null"`
-	MatchedAt  time.Time `gorm:"autoCreateTime"`
-}
