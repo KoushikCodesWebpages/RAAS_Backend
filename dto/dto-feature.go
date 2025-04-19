@@ -88,38 +88,38 @@ type SelectedJobApplication struct {
 }
 
 
-type SeekerProfileDTO struct {
-	ID                         uint      `json:"id"`
-	AuthUserID                 uuid.UUID `json:"authUserId"`
+    type SeekerProfileDTO struct {
+        ID                         uint      `json:"id"`
+        AuthUserID                 uuid.UUID `json:"authUserId"`
 
-	// From PersonalInfo
-	FirstName   string  `json:"firstName"`
-	SecondName  *string `json:"secondName,omitempty"`
+        // From PersonalInfo
+        FirstName   string  `json:"firstName"`
+        SecondName  *string `json:"secondName,omitempty"`
 
-	// From ProfessionalSummary
-	Skills []string `json:"skills"`
+        // From ProfessionalSummary
+        Skills []string `json:"skills"`
 
-	// From WorkExperience
-	TotalExperienceInMonths int `json:"totalExperienceInMonths"`
+        // From WorkExperience
+        TotalExperienceInMonths int `json:"totalExperienceInMonths"`
 
-	// From Certificate
-	Certificates []string `json:"certificates"`
+        // From Certificate
+        Certificates []string `json:"certificates"`
 
-	// From PreferredJobTitle
-	PreferredJobTitle string `json:"preferredJobTitle"`
+        // From PreferredJobTitle
+        PreferredJobTitle string `json:"preferredJobTitle"`
 
-    SubscriptionTier           string    `json:"subscriptionTier"`
-	DailySelectableJobsCount   int       `json:"dailySelectableJobsCount"`
-	DailyGeneratableCV         int       `json:"dailyGeneratableCv"`
-	DailyGeneratableCoverletter int      `json:"dailyGeneratableCoverletter"`
-	TotalApplications          int       `json:"totalApplications"`
+        SubscriptionTier           string    `json:"subscriptionTier"`
+        DailySelectableJobsCount   int       `json:"dailySelectableJobsCount"`
+        DailyGeneratableCV         int       `json:"dailyGeneratableCv"`
+        DailyGeneratableCoverletter int      `json:"dailyGeneratableCoverletter"`
+        TotalApplications          int       `json:"totalApplications"`
 
-	// New: Total number of jobs available across sources
-	TotalJobsAvailable int `json:"totalJobsAvailable"`
+        // New: Total number of jobs available across sources
+        TotalJobsAvailable int `json:"totalJobsAvailable"`
 
-	// New: Profile completion percentage
-	ProfileCompletion int `json:"profileCompletion"`
-}
+        // New: Profile completion percentage
+        ProfileCompletion int `json:"profileCompletion"`
+    }
 
 // LinkResponseDTO represents the response DTO for job application links
 type LinkResponseDTO struct {

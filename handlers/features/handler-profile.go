@@ -1,14 +1,13 @@
 package features
 
 import (
-
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 	"github.com/google/uuid"
 	"net/http"
 	"time"
 	"encoding/json"
-
+	"fmt"
 	"RAAS/models"
 	"RAAS/dto"
 )
@@ -22,151 +21,128 @@ type SeekerProfileHandler struct {
 func NewSeekerProfileHandler(db *gorm.DB) *SeekerProfileHandler {
 	return &SeekerProfileHandler{DB: db}
 }
-
-// GetSeekerProfile - Get all the data related to a user's profile from multiple sources
 func (h *SeekerProfileHandler) GetSeekerProfile(c *gin.Context) {
-	// Get user ID from JWT claims
-	userID := c.MustGet("userID").(uuid.UUID)
+    userID := c.MustGet("userID").(uuid.UUID)
 
-	// Fetch Seeker data
-	var seeker models.Seeker
-	if err := h.DB.Where("auth_user_id = ?", userID).First(&seeker).Error; err != nil {
-		c.JSON(http.StatusNoContent, gin.H{
-			"error": "Seeker not found",
-		})
-		return
-	}
+    var seeker models.Seeker
+    if err := h.DB.Where("auth_user_id = ?", userID).First(&seeker).Error; err != nil {
+        c.JSON(http.StatusNoContent, gin.H{"error": "Seeker not found"})
+        return
+    }
 
-	// Fetch PersonalInfo data
-	var personalInfo models.PersonalInfo
-	if err := h.DB.Where("auth_user_id = ?", userID).First(&personalInfo).Error; err != nil {
-		c.JSON(http.StatusNoContent, gin.H{
-			"error": "Personal info not found",
-		})
-		return
-	}
+    // Unmarshal PersonalInfo
+    var personalInfo struct {
+        FirstName  string  `json:"firstName"`
+        SecondName *string `json:"secondName"`
+    }
+    if err := json.Unmarshal(seeker.PersonalInfo, &personalInfo); err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse personal info"})
+        return
+    }
 
-	// Fetch ProfessionalSummary data
-	var professionalSummary models.ProfessionalSummary
-	if err := h.DB.Where("auth_user_id = ?", userID).First(&professionalSummary).Error; err != nil {
-		c.JSON(http.StatusNoContent, gin.H{
-			"error": "Professional summary not found",
-		})
-		return
-	}
+    // Unmarshal ProfessionalSummary
+    var summary struct {
+        Skills []string `json:"skills"`
+    }
+    if err := json.Unmarshal(seeker.ProfessionalSummary, &summary); err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse professional summary"})
+        return
+    }
 
-	// Fetch WorkExperience data and calculate total experience in months
-	var workExperiences []models.WorkExperience
-	if err := h.DB.Where("auth_user_id = ?", userID).Find(&workExperiences).Error; err != nil {
-		c.JSON(http.StatusNoContent, gin.H{
-			"error": "Work experience not found",
-		})
-		return
-	}
-	totalExperienceInMonths := 0
-	for _, work := range workExperiences {
-		// Calculate months of experience for each work entry
-		var endDate time.Time
-		if work.EndDate != nil {
-			endDate = *work.EndDate
-		} else {
-			endDate = time.Now()
-		}
-		experienceDuration := endDate.Sub(work.StartDate)
-		totalExperienceInMonths += int(experienceDuration.Hours() / 24 / 30) // Rough estimate in months
-	}
+    // Unmarshal WorkExperiences
+    var workExperiences []map[string]interface{}
+    if len(seeker.WorkExperiences) > 0 {
+        if err := json.Unmarshal(seeker.WorkExperiences, &workExperiences); err != nil {
+            fmt.Printf("Failed to unmarshal work experiences: %v\n", err)
+            c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse work experiences", "details": err.Error()})
+            return
+        }
+    }
 
-	// Fetch Certificate data
-	var certificates []models.Certificate
-	if err := h.DB.Where("auth_user_id = ?", userID).Find(&certificates).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Certificates not found",
-		})
-		return
-	}
-	certificateNames := []string{}
-	for _, cert := range certificates {
-		certificateNames = append(certificateNames, cert.CertificateName)
-	}
+    // Total experience in months
+    totalExperienceInMonths := 0
+    for _, w := range workExperiences {
+        startDate, err := time.Parse("2006-01-02", w["startDate"].(string))
+        if err != nil {
+            fmt.Printf("Error parsing start date: %v\n", err)
+            continue
+        }
 
-	// Fetch Language data
-	var languages []models.Language
-	if err := h.DB.Where("auth_user_id = ?", userID).Find(&languages).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Languages not found",
-		})
-		return
-	}
-	languageNames := []string{}
-	for _, lang := range languages {
-		languageNames = append(languageNames, lang.LanguageName)
-	}
+        var endDate time.Time
+        if endStr, ok := w["endDate"].(string); ok && endStr != "" {
+            endDate, err = time.Parse("2006-01-02", endStr)
+            if err != nil {
+                fmt.Printf("Error parsing end date: %v\n", err)
+                continue
+            }
+        } else {
+            endDate = time.Now() // Current time if end date is missing
+        }
 
-	// Fetch PreferredJobTitle data
-	var preferredJobTitle models.PreferredJobTitle
-	if err := h.DB.Where("auth_user_id = ?", userID).First(&preferredJobTitle).Error; err != nil {
-		c.JSON(http.StatusNoContent, gin.H{
-			"error": "Preferred job title not found",
-		})
-		return
-	}
+        duration := endDate.Sub(startDate)
+        totalExperienceInMonths += int(duration.Hours() / 24 / 30) // Convert to months
+    }
 
-	// Fetch total number of available jobs from all sources
-	var totalJobs int
-	var linkedInJobs []models.LinkedInJobMetaData
-	var xingJobs []models.XingJobMetaData
-	if err := h.DB.Find(&linkedInJobs).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Error fetching LinkedIn job data",
-		})
-		return
-	}
-	if err := h.DB.Find(&xingJobs).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Error fetching Xing job data",
-		})
-		return
-	}
-	totalJobs = len(linkedInJobs) + len(xingJobs)
+    // Unmarshal Certificates
+    var certificates []struct {
+        CertificateName string `json:"certificateName"`
+    }
+    if err := json.Unmarshal(seeker.Certificates, &certificates); err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse certificates"})
+        return
+    }
 
-	// Calculate profile completion percentage
-	completionPercentage := 0
-	// Assume all required fields must be non-empty for completion
-	if seeker.SubscriptionTier != "" && personalInfo.FirstName != "" && professionalSummary.Skills != nil && totalExperienceInMonths > 0 && len(certificates) > 0 && len(languageNames) > 0 && preferredJobTitle.PrimaryTitle != "" {
-		completionPercentage = 100
-	} else {
-		completionPercentage = 70 // Example value, you could calculate based on which fields are present
-	}
+    certNames := make([]string, 0, len(certificates))
+    for _, cert := range certificates {
+        certNames = append(certNames, cert.CertificateName)
+    }
 
-	var skills []string
-	if err := json.Unmarshal(professionalSummary.Skills, &skills); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to parse skills",
-		})
-		return
-	}
+    // Unmarshal Languages
+    var languages []struct {
+        LanguageName string `json:"languageName"`
+    }
+    if err := json.Unmarshal(seeker.Languages, &languages); err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse languages"})
+        return
+    }
 
+    // Count total available jobs
+    var totalJobs int64
+    if err := h.DB.Model(&models.Job{}).Count(&totalJobs).Error; err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Error fetching total jobs"})
+        return
+    }
 
-	// Create SeekerProfileDTO response
-	profileDTO := dto.SeekerProfileDTO{
-		ID:                       seeker.ID,
-		AuthUserID:               seeker.AuthUserID,
-		FirstName:                personalInfo.FirstName,
-		SecondName:               personalInfo.SecondName,
-		Skills: skills,
-		TotalExperienceInMonths:  totalExperienceInMonths,
-		Certificates:             certificateNames,
-		PreferredJobTitle:       preferredJobTitle.PrimaryTitle,
-		SubscriptionTier:         seeker.SubscriptionTier,
-		DailySelectableJobsCount: seeker.DailySelectableJobsCount,
-		DailyGeneratableCV:       seeker.DailyGeneratableCV,
-		DailyGeneratableCoverletter: seeker.DailyGeneratableCoverletter,
-		TotalApplications:        seeker.TotalApplications,
-		TotalJobsAvailable:       totalJobs,
-		ProfileCompletion:        completionPercentage,
-	}
+    // Profile completion logic
+    completion := 70
+    if seeker.SubscriptionTier != "" &&
+        personalInfo.FirstName != "" &&
+        len(summary.Skills) > 0 &&
+        totalExperienceInMonths > 0 &&
+        len(certNames) > 0 &&
+        len(languages) > 0 &&
+        seeker.PrimaryTitle != "" {
+        completion = 100
+    }
 
-	c.JSON(http.StatusOK, gin.H{
-		"profile": profileDTO,
-	})
+    // Build and return DTO
+    dto := dto.SeekerProfileDTO{
+        ID:                          seeker.ID,
+        AuthUserID:                  seeker.AuthUserID,
+        FirstName:                   personalInfo.FirstName,
+        SecondName:                  personalInfo.SecondName,
+        Skills:                      summary.Skills,
+        TotalExperienceInMonths:     totalExperienceInMonths,
+        Certificates:                certNames,
+        PreferredJobTitle:           seeker.PrimaryTitle,
+        SubscriptionTier:            seeker.SubscriptionTier,
+        DailySelectableJobsCount:    seeker.DailySelectableJobsCount,
+        DailyGeneratableCV:          seeker.DailyGeneratableCV,
+        DailyGeneratableCoverletter: seeker.DailyGeneratableCoverletter,
+        TotalApplications:           seeker.TotalApplications,
+        TotalJobsAvailable:          int(totalJobs),
+        ProfileCompletion:           completion,
+    }
+
+    c.JSON(http.StatusOK, gin.H{"profile": dto})
 }

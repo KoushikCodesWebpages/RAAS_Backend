@@ -115,36 +115,41 @@ func (h *PersonalInfoHandler) GetPersonalInfo(c *gin.Context) {
 		return
 	}
 
-	// Check if PersonalInfo is empty or uninitialized
 	if len(seeker.PersonalInfo) == 0 || string(seeker.PersonalInfo) == "null" {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Personal info not yet filled"})
 		return
 	}
 
-	// Unmarshal the PersonalInfo JSON field into a map
 	var personalInfo map[string]interface{}
 	if err := json.Unmarshal(seeker.PersonalInfo, &personalInfo); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse personal info", "details": err.Error()})
 		return
 	}
 
-	// Ensure all required fields exist and are of the correct type
-	firstName, firstNameOk := personalInfo["first_name"].(string)
-	secondName, secondNameOk := personalInfo["second_name"].(*string)
-	dateOfBirth, dateOfBirthOk := personalInfo["date_of_birth"].(string)
+	firstName, firstNameOk := personalInfo["firstName"].(string)
+	dateOfBirth, dateOfBirthOk := personalInfo["dateOfBirth"].(string)
 	address, addressOk := personalInfo["address"].(string)
-	linkedinProfile, linkedinProfileOk := personalInfo["linkedin_profile"].(*string)
+	
+	var secondName *string
+	if val, ok := personalInfo["secondName"].(string); ok {
+		secondName = &val
+	}
+	
+	var linkedinProfile *string
+	if val, ok := personalInfo["linkedinProfile"].(string); ok {
+		linkedinProfile = &val
+	}
+	
 
-	if !firstNameOk || !secondNameOk || !dateOfBirthOk || !addressOk || !linkedinProfileOk {
+	if !firstNameOk || !dateOfBirthOk || !addressOk {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Invalid personal info data",
-			"details": "Expected 'first_name', 'second_name', 'date_of_birth', 'address', and 'linkedin_profile' to be strings",
+			"error":   "Invalid personal info data",
+			"details": "Expected 'first_name', 'date_of_birth', and 'address' to be strings",
 		})
 		return
 	}
 
-	// Create a response containing the PersonalInfo data
-	personalInfoResponse := dto.PersonalInfoResponse{
+	response := dto.PersonalInfoResponse{
 		AuthUserID:      seeker.AuthUserID,
 		FirstName:       firstName,
 		SecondName:      secondName,
@@ -153,7 +158,7 @@ func (h *PersonalInfoHandler) GetPersonalInfo(c *gin.Context) {
 		LinkedInProfile: linkedinProfile,
 	}
 
-	c.JSON(http.StatusOK, personalInfoResponse)
+	c.JSON(http.StatusOK, response)
 }
 
 // UpdatePersonalInfo performs full update on personal info within Seeker model

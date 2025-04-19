@@ -25,8 +25,8 @@ type AuthUser struct {
 // Seeker represents a user who is seeking a job.
 type Seeker struct {
     gorm.Model
-    ID                        uint           `gorm:"primaryKey"`
-    AuthUserID                uuid.UUID      `gorm:"type:char(36);unique;not null;constraint:OnDelete:CASCADE,OnUpdate:CASCADE" json:"authUserId"`
+    AuthUserID uuid.UUID `gorm:"type:char(36);uniqueIndex;not null;constraint:OnDelete:CASCADE,OnUpdate:CASCADE" json:"authUserId"`
+
     SubscriptionTier          string         `gorm:"default:'free'" json:"subscriptionTier"`
     DailySelectableJobsCount  int            `gorm:"default:5" json:"dailySelectableJobsCount"`       
     DailyGeneratableCV        int            `gorm:"default:100" json:"dailyGeneratableCv"`             

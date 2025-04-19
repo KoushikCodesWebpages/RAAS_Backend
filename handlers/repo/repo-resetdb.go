@@ -36,15 +36,6 @@ func ResetDBHandler(c *gin.Context) {
 		"certificates",
 		"preferred_job_titles",
 
-		"linked_in_job_meta_data",
-		"xing_job_meta_data",
-		"linked_in_failed_jobs",
-		"xing_failed_jobs",
-		"linked_in_job_application_links",
-		"xing_job_application_links",
-		"linked_in_job_descriptions",
-		"xing_job_descriptions",
-
 		"job_match_scores",
 	}
 
