@@ -53,9 +53,20 @@ func (r *UserRepo) CreateSeeker(input dto.SeekerSignUpInput, hashedPassword stri
 	// Create associated Seeker profile
 	seeker := models.Seeker{
 		AuthUserID:       authUser.ID,
-		SubscriptionTier: "free",
+		SubscriptionTier: "free",  // Default value for subscription tier
+		DailySelectableJobsCount: 5, // Default value
+		DailyGeneratableCV: 100,  // Default value
+		DailyGeneratableCoverletter: 100,  // Default value
+		TotalApplications: 0,  // Default value
+		// Initialize the JSON fields with empty objects if needed
+		PersonalInfo:        nil, // or initialize with an empty JSON object
+		ProfessionalSummary: nil, // or initialize with an empty JSON object
+		WorkExperiences:     nil, // or initialize with an empty JSON object
+		JobTitles:           nil, // or initialize with an empty JSON object
+		PrimaryTitle:        "",  // You can leave it empty initially
+		SecondaryTitle:      nil, // You can leave it nil initially
+		TertiaryTitle:       nil, // You can leave it nil initially
 	}
-
 	// Save Seeker to the database
 	if err := r.DB.Create(&seeker).Error; err != nil {
 		return fmt.Errorf("failed to create seeker profile: %v", err)
@@ -96,6 +107,8 @@ func (r *UserRepo) CreateSeeker(input dto.SeekerSignUpInput, hashedPassword stri
 
 	return nil
 }
+
+
 func (r *UserRepo) AuthenticateUser(email, password string) (*models.AuthUser, error) {
     var user models.AuthUser
 

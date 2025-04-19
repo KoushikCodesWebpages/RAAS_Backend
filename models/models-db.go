@@ -26,23 +26,23 @@ func InitDB(cfg *config.Config) *gorm.DB {
 			Colorful: true,
 		},
 	)
-	log.Println("Using Remote MySQL database")
+	// log.Println("Using Remote MySQL database")
 
-	// remote MySQL connection:
-	dsn := fmt.Sprintf(
-		"%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local",
-		cfg.DBUser,
-		cfg.DBPassword,
-		cfg.DBServer,
-		cfg.DBPort,
-		cfg.DBName,
-	)
+	// // remote MySQL connection:
+	// dsn := fmt.Sprintf(
+	// 	"%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local",
+	// 	cfg.DBUser,
+	// 	cfg.DBPassword,
+	// 	cfg.DBServer,
+	// 	cfg.DBPort,
+	// 	cfg.DBName,
+	// )
 
 	// ** Hardcoded local MySQL connection details **
 	// Open the DB with the custom logger
 
-	// log.Println("Using Local MySQL database")
-	// dsn := "koushik:Koushik2025!babu@tcp(127.0.0.1:3306)/localraas?charset=utf8mb4&parseTime=True&loc=Local"
+	log.Println("Using Local MySQL database")
+	dsn := "koushik:Koushik2025!babu@tcp(127.0.0.1:3306)/localraas?charset=utf8mb4&parseTime=True&loc=Local"
 
 	DB, err = gorm.Open(mysql.Open(dsn), &gorm.Config{
 		Logger: gormLogger,

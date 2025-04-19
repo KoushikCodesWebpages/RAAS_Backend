@@ -22,15 +22,33 @@ type AuthUser struct {
 	Provider          string `gorm:"default:'local'"`
 }
 
+// Seeker represents a user who is seeking a job.
 type Seeker struct {
-	gorm.Model
-	ID                        uint      `gorm:"primaryKey"`
-	AuthUserID uuid.UUID `gorm:"type:char(36);unique;not null;constraint:OnDelete:CASCADE,OnUpdate:CASCADE" json:"authUserId"`
-	SubscriptionTier          string    `gorm:"default:'free'" json:"subscriptionTier"`
-	DailySelectableJobsCount  int       `gorm:"default:5" json:"dailySelectableJobsCount"`       // e.g., default 5 jobs per day
-	DailyGeneratableCV        int       `gorm:"default:100" json:"dailyGeneratableCv"`             // e.g., 1 CV per day
-	DailyGeneratableCoverletter int     `gorm:"default:100" json:"dailyGeneratableCoverletter"`    // e.g., 1 Cover Letter per day
-	TotalApplications         int       `gorm:"default:0" json:"totalApplications"`              // running total of applications submitted
+    gorm.Model
+    ID                        uint           `gorm:"primaryKey"`
+    AuthUserID                uuid.UUID      `gorm:"type:char(36);unique;not null;constraint:OnDelete:CASCADE,OnUpdate:CASCADE" json:"authUserId"`
+    SubscriptionTier          string         `gorm:"default:'free'" json:"subscriptionTier"`
+    DailySelectableJobsCount  int            `gorm:"default:5" json:"dailySelectableJobsCount"`       
+    DailyGeneratableCV        int            `gorm:"default:100" json:"dailyGeneratableCv"`             
+    DailyGeneratableCoverletter int          `gorm:"default:100" json:"dailyGeneratableCoverletter"`    
+    TotalApplications         int            `gorm:"default:0" json:"totalApplications"`              
+    
+    // Personal Info
+    PersonalInfo datatypes.JSON `gorm:"type:json" json:"personalInfo"` // Store JSON for personal info
+
+    // Professional Summary
+    ProfessionalSummary datatypes.JSON `gorm:"type:json" json:"professionalSummary"`
+
+    // Work Experience
+    WorkExperiences datatypes.JSON `gorm:"type:json" json:"workExperiences"`
+
+    // Job Titles (Primary, Secondary, Tertiary)
+    JobTitles datatypes.JSON `gorm:"type:json" json:"jobTitles"` // Store job titles JSON
+    
+    // Preferred Job Titles
+    PrimaryTitle   string    `gorm:"type:varchar(255);" json:"primaryTitle"`
+    SecondaryTitle *string   `gorm:"type:varchar(255);" json:"secondaryTitle"`
+    TertiaryTitle  *string   `gorm:"type:varchar(255);" json:"tertiaryTitle"`
 }
 
 
@@ -64,7 +82,7 @@ type WorkExperience struct {
 	AuthUserID uuid.UUID `gorm:"type:char(36);not null;index;constraint:OnUpdate:CASCADE,OnDelete:CASCADE" json:"authUserId"`
 	JobTitle           string     `gorm:"type:varchar(100);not null" json:"jobTitle"`
 	CompanyName        string     `gorm:"type:varchar(100);not null" json:"companyName"`
-	EmployerType       string     `gorm:"type:varchar(50);not null" json:"employerType"`
+	EmploymentType       string     `gorm:"type:varchar(50);not null" json:"employerType"`
 	StartDate          time.Time  `gorm:"not null" json:"startDate"`
 	EndDate            *time.Time `json:"endDate,omitempty"`
 	KeyResponsibilities string     `gorm:"type:text" json:"keyResponsibilities"`

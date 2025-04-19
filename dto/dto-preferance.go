@@ -50,7 +50,7 @@ type ProfessionalSummaryResponse struct {
 type WorkExperienceRequest struct {
 	JobTitle            string     `json:"jobTitle" binding:"required"`
 	CompanyName         string     `json:"companyName" binding:"required"`
-	EmployerType        string     `json:"employerType" binding:"required"` // e.g., Full-time, Contract
+	EmploymentType        string     `json:"employmentType" binding:"required"` // e.g., Full-time, Contract
 	StartDate           time.Time  `json:"startDate" binding:"required"`    // Format: YYYY-MM-DD
 	EndDate             *time.Time `json:"endDate,omitempty"`               // Nullable
 	KeyResponsibilities string     `json:"keyResponsibilities" binding:"required"`
@@ -61,7 +61,7 @@ type WorkExperienceResponse struct {
 	AuthUserID         uuid.UUID  `json:"authUserId"`
 	JobTitle           string     `json:"jobTitle"`
 	CompanyName        string     `json:"companyName"`
-	EmployerType       string     `json:"employerType"`
+	EmploymentType       string     `json:"employmentType"`
 	StartDate          time.Time  `json:"startDate"`
 	EndDate            *time.Time `json:"endDate,omitempty"`
 	KeyResponsibilities string    `json:"keyResponsibilities"`
