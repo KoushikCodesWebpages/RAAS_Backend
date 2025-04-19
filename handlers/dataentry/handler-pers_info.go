@@ -228,7 +228,7 @@ func (h *PersonalInfoHandler) PatchPersonalInfo(c *gin.Context) {
 		return
 	}
 
-	// Update the map with the valid updates
+	// Update the map with the valid updates	
 	for key, value := range validUpdates {
 		personalInfo[key] = value
 	}

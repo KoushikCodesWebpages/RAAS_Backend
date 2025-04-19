@@ -50,9 +50,6 @@ type Seeker struct {
 
     // Languages
     Languages datatypes.JSON `gorm:"type:json" json:"languages"`
-
-    // Job Titles (Primary, Secondary, Tertiary)
-    JobTitles datatypes.JSON `gorm:"type:json" json:"jobTitles"` // Store job titles JSON
     
     // Preferred Job Titles
     PrimaryTitle   string    `gorm:"type:varchar(255);" json:"primaryTitle"`

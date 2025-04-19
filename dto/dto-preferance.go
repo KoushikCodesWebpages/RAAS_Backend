@@ -45,26 +45,28 @@ type ProfessionalSummaryResponse struct {
 
 //WORKEXPERIENCE
 
+// WorkExperienceRequest struct for incoming work experience data
 type WorkExperienceRequest struct {
 	JobTitle            string     `json:"jobTitle" binding:"required"`
 	CompanyName         string     `json:"companyName" binding:"required"`
-	EmploymentType        string     `json:"employmentType" binding:"required"` // e.g., Full-time, Contract
-	StartDate           time.Time  `json:"startDate" binding:"required"`    // Format: YYYY-MM-DD
-	EndDate             *time.Time `json:"endDate,omitempty"`               // Nullable
+	EmploymentType      string     `json:"employmentType" binding:"required"` // e.g., Full-time, Contract
+	StartDate           time.Time  `json:"startDate" binding:"required"`       // Format: YYYY-MM-DD
+	EndDate             time.Time 	`json:"endDate" binding:"required"`               
 	KeyResponsibilities string     `json:"keyResponsibilities" binding:"required"`
 }
 
+// WorkExperienceResponse struct for returning work experience data
 type WorkExperienceResponse struct {
-	ID                 uint       `json:"id"`
-	AuthUserID         uuid.UUID  `json:"authUserId"`
-	JobTitle           string     `json:"jobTitle"`
-	CompanyName        string     `json:"companyName"`
-	EmploymentType       string     `json:"employmentType"`
-	StartDate          time.Time  `json:"startDate"`
-	EndDate            *time.Time `json:"endDate,omitempty"`
-	KeyResponsibilities string    `json:"keyResponsibilities"`
-
+	ID                  uint       `json:"id"`                          // Dynamically generated ID
+	AuthUserID          uuid.UUID  `json:"authUserId"`                  // Associated user ID
+	JobTitle            string     `json:"jobTitle"`                    // Job title
+	CompanyName         string     `json:"companyName"`                 // Company name
+	EmploymentType      string     `json:"employmentType"`              // Employment type (e.g., Full-time, Contract)
+	StartDate           time.Time  `json:"startDate"`                   // Start date
+	EndDate             time.Time `json:"endDate"`           
+	KeyResponsibilities string     `json:"keyResponsibilities"`         // Key responsibilities
 }
+
 //EDUCATION
 type EducationRequest struct {
 	Degree       string     `json:"degree" binding:"required"`

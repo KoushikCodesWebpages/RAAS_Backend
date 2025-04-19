@@ -3,137 +3,269 @@ package dataentry
 import (
 	"RAAS/dto"
 	"RAAS/models"
-	"net/http"
-
+	"encoding/json"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"net/http"
+	"strconv"
+	"time"
 )
 
-// WorkExperienceHandler struct
 type WorkExperienceHandler struct {
 	DB *gorm.DB
 }
 
-// NewWorkExperienceHandler creates a new WorkExperienceHandler
 func NewWorkExperienceHandler(db *gorm.DB) *WorkExperienceHandler {
 	return &WorkExperienceHandler{DB: db}
 }
-
-// CreateWorkExperience creates a work experience for the authenticated user
 func (h *WorkExperienceHandler) CreateWorkExperience(c *gin.Context) {
-	userID := c.MustGet("userID").(uuid.UUID)
+    userID := c.MustGet("userID").(uuid.UUID)
 
-	var input dto.WorkExperienceRequest
-	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
-		return
-	}
-
-	workExp := models.WorkExperience{
-		AuthUserID:         userID,
-		JobTitle:           input.JobTitle,
-		CompanyName:        input.CompanyName,
-		EmploymentType:       input.EmploymentType,
-		StartDate:          input.StartDate,
-		EndDate:            input.EndDate,
-		KeyResponsibilities: input.KeyResponsibilities,
-	}
-
-	if err := h.DB.Create(&workExp).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create work experience", "details": err.Error()})
-		return
-	}
-
-	var timeline models.UserEntryTimeline
-    if err := h.DB.First(&timeline, "user_id = ?", userID).Error; err != nil {
-        c.JSON(http.StatusNotFound, gin.H{"error": "User entry timeline not found"})
+    var input dto.WorkExperienceRequest
+    if err := c.ShouldBindJSON(&input); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
         return
     }
 
-    timeline.WorkExperiencesCompleted = true
-
-    // Save the updated timeline
-    if err := h.DB.Save(&timeline).Error; err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update timeline", "details": err.Error()})
+    // Validate that none of the required fields are empty
+    if input.JobTitle == "" || input.CompanyName == "" || input.EmploymentType == "" || input.StartDate.IsZero() || input.KeyResponsibilities == "" {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "All fields are required"})
         return
     }
 
-	response := dto.WorkExperienceResponse{
-		ID:                 workExp.ID,
-		AuthUserID:         userID,
-		JobTitle:           workExp.JobTitle,
-		CompanyName:        workExp.CompanyName,
-		EmploymentType:       workExp.EmploymentType,
-		StartDate:          workExp.StartDate,
-		EndDate:            workExp.EndDate,
-		KeyResponsibilities: workExp.KeyResponsibilities,
-	}
+    // Fetch seeker from the database
+    var seeker models.Seeker
+    if err := h.DB.First(&seeker, "auth_user_id = ?", userID).Error; err != nil {
+        c.JSON(http.StatusNotFound, gin.H{"error": "Seeker not found"})
+        return
+    }
 
-	c.JSON(http.StatusCreated, response)
+    // Check if WorkExperiences is empty or null, and initialize it as an empty slice if necessary
+    var workExperiences []map[string]interface{}
+    if len(seeker.WorkExperiences) > 0 {
+        if err := json.Unmarshal(seeker.WorkExperiences, &workExperiences); err != nil {
+            c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse work experiences", "details": err.Error()})
+            return
+        }
+    }
+
+    // Create a new work experience entry
+    newWorkExperience := map[string]interface{}{
+        "jobTitle":          input.JobTitle,
+        "companyName":       input.CompanyName,
+        "employmentType":    input.EmploymentType,
+        "startDate":         input.StartDate.Format("2006-01-02"),
+        "endDate":           input.EndDate.Format("2006-01-02"),
+        "keyResponsibilities": input.KeyResponsibilities,
+    }
+
+    // Append the new work experience entry
+    workExperiences = append(workExperiences, newWorkExperience)
+
+    // Convert the updated work experiences back to JSON
+    updatedWorkExperiencesJSON, err := json.Marshal(workExperiences)
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to marshal updated work experiences", "details": err.Error()})
+        return
+    }
+
+    // Update the work experiences in the database
+    seeker.WorkExperiences = updatedWorkExperiencesJSON
+    if err := h.DB.Save(&seeker).Error; err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update work experiences", "details": err.Error()})
+        return
+    }
+
+    // Create a response object for the new work experience
+    response := dto.WorkExperienceResponse{
+        ID:                  uint(len(workExperiences)),  // Dynamically generate ID
+        AuthUserID:          userID,
+        JobTitle:            input.JobTitle,
+        CompanyName:         input.CompanyName,
+        EmploymentType:      input.EmploymentType,
+        StartDate:           input.StartDate,
+        EndDate:             input.EndDate,
+        KeyResponsibilities: input.KeyResponsibilities,
+    }
+
+    // Return the response with the new work experience
+    c.JSON(http.StatusCreated, response)
 }
 
-// GetWorkExperience retrieves the work experiences of the authenticated user
-func (h *WorkExperienceHandler) GetWorkExperience(c *gin.Context) {
+
+func (h *WorkExperienceHandler) GetWorkExperiences(c *gin.Context) {
 	userID := c.MustGet("userID").(uuid.UUID)
 
-	var workExps []models.WorkExperience
-	if err := h.DB.Where("auth_user_id = ?", userID).Find(&workExps).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch work experiences", "details": err.Error()})
+	var seeker models.Seeker
+	if err := h.DB.First(&seeker, "auth_user_id = ?", userID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Seeker not found"})
+		return
+	}
+
+	if len(seeker.WorkExperiences) == 0 || string(seeker.WorkExperiences) == "null" {
+		c.JSON(http.StatusNotFound, gin.H{"error": "No work experiences found"})
+		return
+	}
+
+	var workExperiences []map[string]interface{}
+	if err := json.Unmarshal(seeker.WorkExperiences, &workExperiences); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse work experiences"})
 		return
 	}
 
 	var response []dto.WorkExperienceResponse
-	for _, we := range workExps {
+	for idx, we := range workExperiences {
+		startDate, err := time.Parse("2006-01-02", we["startDate"].(string))
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid start date format"})
+			return
+		}
+
+		// Parse EndDate directly as it's now required
+		endDate, err := time.Parse("2006-01-02", we["endDate"].(string))
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid end date format"})
+			return
+		}
+
 		response = append(response, dto.WorkExperienceResponse{
-			ID:                 we.ID,
-			AuthUserID:         we.AuthUserID,
-			JobTitle:           we.JobTitle,
-			CompanyName:        we.CompanyName,
-			EmploymentType:       we.EmploymentType,
-			StartDate:          we.StartDate,
-			EndDate:            we.EndDate,
-			KeyResponsibilities: we.KeyResponsibilities,
+			ID:                  uint(idx + 1),
+			AuthUserID:          userID,
+			JobTitle:            we["jobTitle"].(string),
+			CompanyName:         we["companyName"].(string),
+			EmploymentType:      we["employmentType"].(string),
+			StartDate:           startDate,
+			EndDate:             endDate,
+			KeyResponsibilities: we["keyResponsibilities"].(string),
 		})
 	}
 
 	c.JSON(http.StatusOK, response)
 }
 
-// PatchWorkExperience partially updates the work experience of the authenticated user
+
 func (h *WorkExperienceHandler) PatchWorkExperience(c *gin.Context) {
 	userID := c.MustGet("userID").(uuid.UUID)
 	id := c.Param("id")
 
-	var workExp models.WorkExperience
-	if err := h.DB.Where("id = ? AND auth_user_id = ?", id, userID).First(&workExp).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Work experience not found"})
-		return
-	}
-
-	var updates map[string]interface{}
-	if err := c.ShouldBindJSON(&updates); err != nil {
+	var updateFields map[string]interface{}
+	if err := c.ShouldBindJSON(&updateFields); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
 		return
 	}
 
-	if err := h.DB.Model(&workExp).Updates(updates).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update work experience", "details": err.Error()})
+	var seeker models.Seeker
+	if err := h.DB.First(&seeker, "auth_user_id = ?", userID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Seeker not found"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Work experience updated"})
+	var workExperiences []map[string]interface{}
+	if err := json.Unmarshal(seeker.WorkExperiences, &workExperiences); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse work experiences"})
+		return
+	}
+
+	index, err := strconv.Atoi(id)
+	if err != nil || index <= 0 || index > len(workExperiences) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid work experience index"})
+		return
+	}
+
+	// Apply updates
+	entry := workExperiences[index-1]
+	for key, value := range updateFields {
+		if _, exists := entry[key]; exists {
+			entry[key] = value
+		} else {
+			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Invalid field: %s", key)})
+			return
+		}
+	}
+	workExperiences[index-1] = entry
+
+	updatedJSON, err := json.Marshal(workExperiences)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to marshal updated work experiences"})
+		return
+	}
+
+	seeker.WorkExperiences = updatedJSON
+	if err := h.DB.Save(&seeker).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update seeker"})
+		return
+	}
+
+	// Parse StartDate and EndDate (ensure both are valid)
+	startDate, err := time.Parse("2006-01-02", entry["startDate"].(string))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid start date format"})
+		return
+	}
+
+	// EndDate is required, so parse it directly without nil checks
+	endDate, err := time.Parse("2006-01-02", entry["endDate"].(string))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid end date format"})
+		return
+	}
+
+	// Create and return response with updated data
+	response := dto.WorkExperienceResponse{
+		ID:                  uint(index),
+		AuthUserID:          userID,
+		JobTitle:            entry["jobTitle"].(string),
+		CompanyName:         entry["companyName"].(string),
+		EmploymentType:      entry["employmentType"].(string),
+		StartDate:           startDate,
+		EndDate:             endDate,
+		KeyResponsibilities: entry["keyResponsibilities"].(string),
+	}
+
+	c.JSON(http.StatusOK, response)
 }
 
-// DeleteWorkExperience deletes the work experience of the authenticated user
 func (h *WorkExperienceHandler) DeleteWorkExperience(c *gin.Context) {
 	userID := c.MustGet("userID").(uuid.UUID)
 	id := c.Param("id")
 
-	if err := h.DB.Where("id = ? AND auth_user_id = ?", id, userID).Delete(&models.WorkExperience{}).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete work experience", "details": err.Error()})
+	var seeker models.Seeker
+	if err := h.DB.First(&seeker, "auth_user_id = ?", userID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Seeker not found"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Work experience deleted"})
+	var workExperiences []map[string]interface{}
+	if err := json.Unmarshal(seeker.WorkExperiences, &workExperiences); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse work experiences"})
+		return
+	}
+
+	index, err := strconv.Atoi(id)
+	if err != nil || index <= 0 || index > len(workExperiences) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid work experience index"})
+		return
+	}
+
+	// Remove the work experience at the specified index (index - 1 since it's 1-based in API)
+	workExperiences = append(workExperiences[:index-1], workExperiences[index:]...)
+
+	updatedJSON, err := json.Marshal(workExperiences)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to marshal updated work experiences"})
+		return
+	}
+
+	seeker.WorkExperiences = updatedJSON
+	if err := h.DB.Save(&seeker).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update seeker"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Work experience deleted successfully"})
 }
+
+
+

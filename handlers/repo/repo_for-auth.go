@@ -61,8 +61,7 @@ func (r *UserRepo) CreateSeeker(input dto.SeekerSignUpInput, hashedPassword stri
 		// Initialize the JSON fields with empty objects if needed
 		PersonalInfo:        nil, // or initialize with an empty JSON object
 		ProfessionalSummary: nil, // or initialize with an empty JSON object
-		WorkExperiences:     nil, // or initialize with an empty JSON object
-		JobTitles:           nil, // or initialize with an empty JSON object
+		WorkExperiences:     nil, // or initialize with an empty JSON object // or initialize with an empty JSON object
 		PrimaryTitle:        "",  // You can leave it empty initially
 		SecondaryTitle:      nil, // You can leave it nil initially
 		TertiaryTitle:       nil, // You can leave it nil initially

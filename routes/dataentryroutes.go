@@ -48,7 +48,7 @@ func SetupDataEntryRoutes(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
 	workExperienceRoutes.Use(middleware.AuthMiddleware())
 	{
 		workExperienceRoutes.POST("", workExperienceHandler.CreateWorkExperience)
-		workExperienceRoutes.GET("", workExperienceHandler.GetWorkExperience)
+		workExperienceRoutes.GET("", workExperienceHandler.GetWorkExperiences)
 		workExperienceRoutes.PATCH(":id", workExperienceHandler.PatchWorkExperience)
 		workExperienceRoutes.DELETE(":id", workExperienceHandler.DeleteWorkExperience)
 	}
