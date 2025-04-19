@@ -43,7 +43,7 @@ type Seeker struct {
     WorkExperiences datatypes.JSON `gorm:"type:json" json:"workExperiences"`
 	
     // Education
-    Education datatypes.JSON `gorm:"type:json" json:"education"`
+    Educations datatypes.JSON `gorm:"type:json" json:"education"`
 
     // Certificates
     Certificates datatypes.JSON `gorm:"type:json" json:"certificates"`

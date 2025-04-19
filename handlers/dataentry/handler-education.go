@@ -3,24 +3,24 @@ package dataentry
 import (
 	"RAAS/dto"
 	"RAAS/models"
-	"net/http"
-
+	"encoding/json"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"net/http"
+	"strconv"
+	"time"
 )
 
-// EducationHandler struct
 type EducationHandler struct {
 	DB *gorm.DB
 }
 
-// NewEducationHandler creates a new EducationHandler
 func NewEducationHandler(db *gorm.DB) *EducationHandler {
 	return &EducationHandler{DB: db}
 }
 
-// CreateEducation creates a new education record for the authenticated user
 func (h *EducationHandler) CreateEducation(c *gin.Context) {
 	userID := c.MustGet("userID").(uuid.UUID)
 
@@ -30,113 +30,238 @@ func (h *EducationHandler) CreateEducation(c *gin.Context) {
 		return
 	}
 
-	education := models.Education{
-		AuthUserID:   userID,
-		Degree:       input.Degree,
-		Institution:  input.Institution,
-		FieldOfStudy: input.FieldOfStudy,
-		StartDate:    input.StartDate,
-		EndDate:      input.EndDate,
-		Achievements: input.Achievements,
-	}
-
-	if err := h.DB.Create(&education).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create education", "details": err.Error()})
+	// Validate that none of the required fields are empty
+	if input.Degree == "" || input.Institution == "" || input.FieldOfStudy == "" || input.StartDate.IsZero() || input.Achievements == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "All fields are required"})
 		return
 	}
 
-	var timeline models.UserEntryTimeline
-    if err := h.DB.First(&timeline, "user_id = ?", userID).Error; err != nil {
-        c.JSON(http.StatusNotFound, gin.H{"error": "User entry timeline not found"})
-        return
-    }
+	// Fetch seeker from the database
+	var seeker models.Seeker
+	if err := h.DB.First(&seeker, "auth_user_id = ?", userID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Seeker not found"})
+		return
+	}
 
-    timeline.EducationsCompleted = true
+	// Check if Education is empty or null, and initialize it as an empty slice if necessary
+	var educations []map[string]interface{}
+	if len(seeker.Educations) > 0 {
+		if err := json.Unmarshal(seeker.Educations, &educations); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse educations", "details": err.Error()})
+			return
+		}
+	}
 
-    // Save the updated timeline
-    if err := h.DB.Save(&timeline).Error; err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update timeline", "details": err.Error()})
-        return
-    }
+	// Create a new education entry
+	newEducation := map[string]interface{}{
+		"degree":        input.Degree,
+		"institution":   input.Institution,
+		"fieldOfStudy":  input.FieldOfStudy,
+		"startDate":     input.StartDate.Format("2006-01-02"),
+		"endDate":       input.EndDate.Format("2006-01-02"),
+		"achievements":  input.Achievements,
+	}
 
-	c.JSON(http.StatusCreated, dto.EducationResponse{
-		ID:           education.ID,
-		AuthUserID:   userID,
-		Degree:       education.Degree,
-		Institution:  education.Institution,
-		FieldOfStudy: education.FieldOfStudy,
-		StartDate:    education.StartDate,
-		EndDate:      education.EndDate,
-		Achievements: education.Achievements,
-	})
+	// Append the new education entry
+	educations = append(educations, newEducation)
+
+	// Convert the updated education data back to JSON
+	updatedEducationsJSON, err := json.Marshal(educations)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to marshal updated educations", "details": err.Error()})
+		return
+	}
+
+	// Update the educations in the database
+	seeker.Educations = updatedEducationsJSON
+	if err := h.DB.Save(&seeker).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update educations", "details": err.Error()})
+		return
+	}
+
+	// Create a response object for the new education
+	response := dto.EducationResponse{
+		ID:             uint(len(educations)), // Dynamically generate ID
+		AuthUserID:     userID,
+		Degree:         input.Degree,
+		Institution:    input.Institution,
+		FieldOfStudy:   input.FieldOfStudy,
+		StartDate:      input.StartDate,
+		EndDate:        input.EndDate,
+		Achievements:   input.Achievements,
+	}
+
+	// Return the response with the new education
+	c.JSON(http.StatusCreated, response)
 }
 
-// GetEducation retrieves all education records for the authenticated user
-func (h *EducationHandler) GetEducation(c *gin.Context) {
+func (h *EducationHandler) GetEducations(c *gin.Context) {
 	userID := c.MustGet("userID").(uuid.UUID)
 
-	var records []models.Education
-	if err := h.DB.Where("auth_user_id = ?", userID).Find(&records).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch education records", "details": err.Error()})
+	var seeker models.Seeker
+	if err := h.DB.First(&seeker, "auth_user_id = ?", userID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Seeker not found"})
+		return
+	}
+
+	if len(seeker.Educations) == 0 || string(seeker.Educations) == "null" {
+		c.JSON(http.StatusNotFound, gin.H{"error": "No education records found"})
+		return
+	}
+
+	var educations []map[string]interface{}
+	if err := json.Unmarshal(seeker.Educations, &educations); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse education records"})
 		return
 	}
 
 	var response []dto.EducationResponse
-	for _, ed := range records {
+	for idx, edu := range educations {
+		startDate, err := time.Parse("2006-01-02", edu["startDate"].(string))
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid start date format"})
+			return
+		}
+
+		// Parse EndDate directly as it's now required
+		endDate, err := time.Parse("2006-01-02", edu["endDate"].(string))
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid end date format"})
+			return
+		}
+
 		response = append(response, dto.EducationResponse{
-			ID:           ed.ID,
-			AuthUserID:   ed.AuthUserID,
-			Degree:       ed.Degree,
-			Institution:  ed.Institution,
-			FieldOfStudy: ed.FieldOfStudy,
-			StartDate:    ed.StartDate,
-			EndDate:      ed.EndDate,
-			Achievements: ed.Achievements,
+			ID:             uint(idx + 1),
+			AuthUserID:     userID,
+			Degree:         edu["degree"].(string),
+			Institution:    edu["institution"].(string),
+			FieldOfStudy:   edu["fieldOfStudy"].(string),
+			StartDate:      startDate,
+			EndDate:        endDate,
+			Achievements:   edu["achievements"].(string),
 		})
 	}
 
 	c.JSON(http.StatusOK, response)
 }
 
-// PutEducation updates an existing education record for the authenticated user
-func (h *EducationHandler) PutEducation(c *gin.Context) {
+func (h *EducationHandler) PatchEducation(c *gin.Context) {
 	userID := c.MustGet("userID").(uuid.UUID)
 	id := c.Param("id")
 
-	var existing models.Education
-	if err := h.DB.Where("id = ? AND auth_user_id = ?", id, userID).First(&existing).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Education record not found"})
-		return
-	}
-
-	var updated models.Education
-	if err := c.ShouldBindJSON(&updated); err != nil {
+	var updateFields map[string]interface{}
+	if err := c.ShouldBindJSON(&updateFields); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
 		return
 	}
 
-	// Ensure these values stay correct regardless of input
-	updated.ID = existing.ID
-	updated.AuthUserID = userID
-	updated.CreatedAt = existing.CreatedAt
-
-	if err := h.DB.Save(&updated).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update education", "details": err.Error()})
+	var seeker models.Seeker
+	if err := h.DB.First(&seeker, "auth_user_id = ?", userID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Seeker not found"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Education updated"})
+	var educations []map[string]interface{}
+	if err := json.Unmarshal(seeker.Educations, &educations); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse educations"})
+		return
+	}
+
+	index, err := strconv.Atoi(id)
+	if err != nil || index <= 0 || index > len(educations) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid education index"})
+		return
+	}
+
+	// Apply updates
+	entry := educations[index-1]
+	for key, value := range updateFields {
+		if _, exists := entry[key]; exists {
+			entry[key] = value
+		} else {
+			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Invalid field: %s", key)})
+			return
+		}
+	}
+	educations[index-1] = entry
+
+	updatedJSON, err := json.Marshal(educations)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to marshal updated educations"})
+		return
+	}
+
+	seeker.Educations = updatedJSON
+	if err := h.DB.Save(&seeker).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update seeker"})
+		return
+	}
+
+	// Parse StartDate and EndDate (ensure both are valid)
+	startDate, err := time.Parse("2006-01-02", entry["startDate"].(string))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid start date format"})
+		return
+	}
+
+	// EndDate is required, so parse it directly without nil checks
+	endDate, err := time.Parse("2006-01-02", entry["endDate"].(string))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid end date format"})
+		return
+	}
+
+	// Create and return response with updated data
+	response := dto.EducationResponse{
+		ID:             uint(index),
+		AuthUserID:     userID,
+		Degree:         entry["degree"].(string),
+		Institution:    entry["institution"].(string),
+		FieldOfStudy:   entry["fieldOfStudy"].(string),
+		StartDate:      startDate,
+		EndDate:        endDate,
+		Achievements:   entry["achievements"].(string),
+	}
+
+	c.JSON(http.StatusOK, response)
 }
 
-// DeleteEducation deletes an existing education record for the authenticated user
 func (h *EducationHandler) DeleteEducation(c *gin.Context) {
 	userID := c.MustGet("userID").(uuid.UUID)
 	id := c.Param("id")
 
-	if err := h.DB.Where("id = ? AND auth_user_id = ?", id, userID).Delete(&models.Education{}).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete education", "details": err.Error()})
+	var seeker models.Seeker
+	if err := h.DB.First(&seeker, "auth_user_id = ?", userID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Seeker not found"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Education deleted"})
+	var educations []map[string]interface{}
+	if err := json.Unmarshal(seeker.Educations, &educations); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse educations"})
+		return
+	}
+
+	index, err := strconv.Atoi(id)
+	if err != nil || index <= 0 || index > len(educations) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid education index"})
+		return
+	}
+
+	// Remove the education at the specified index (index - 1 since it's 1-based in API)
+	educations = append(educations[:index-1], educations[index:]...)
+
+	updatedJSON, err := json.Marshal(educations)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to marshal updated educations"})
+		return
+	}
+
+	seeker.Educations = updatedJSON
+	if err := h.DB.Save(&seeker).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update seeker"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Education deleted successfully"})
 }

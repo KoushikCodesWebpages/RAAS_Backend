@@ -73,7 +73,7 @@ type EducationRequest struct {
 	Institution  string     `json:"institution" binding:"required"`
 	FieldOfStudy string     `json:"fieldOfStudy" binding:"required"`
 	StartDate    time.Time  `json:"startDate" binding:"required"`
-	EndDate      *time.Time `json:"endDate,omitempty"`
+	EndDate      time.Time `json:"endDate,omitempty"`
 	Achievements string     `json:"achievements,omitempty"`
 }
 
@@ -85,7 +85,7 @@ type EducationResponse struct {
 	Institution  string     `json:"institution"`
 	FieldOfStudy string     `json:"fieldOfStudy"`
 	StartDate    time.Time  `json:"startDate"`
-	EndDate      *time.Time `json:"endDate,omitempty"`
+	EndDate      time.Time `json:"endDate,omitempty"`
 	Achievements string     `json:"achievements,omitempty"`
 }
 

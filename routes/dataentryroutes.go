@@ -59,8 +59,8 @@ func SetupDataEntryRoutes(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
 	educationRoutes.Use(middleware.AuthMiddleware())
 	{
 		educationRoutes.POST("", educationHandler.CreateEducation)
-		educationRoutes.GET("", educationHandler.GetEducation)
-		educationRoutes.PUT(":id", educationHandler.PutEducation)
+		educationRoutes.GET("", educationHandler.GetEducations)
+		educationRoutes.PUT(":id", educationHandler.PatchEducation)
 		educationRoutes.DELETE(":id", educationHandler.DeleteEducation)
 	}
 
