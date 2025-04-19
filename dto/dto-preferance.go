@@ -104,19 +104,17 @@ type CertificateResponse struct {
 }
 
 //LANGUAGES
-// LanguageRequest represents input for creating/updating a language entry
 type LanguageRequest struct {
-	LanguageName     string  `json:"language" binding:"required"`
-	CertificateFile  *string `json:"certificateFile,omitempty"` // Optional file path or URL
-	ProficiencyLevel string  `json:"proficiency" binding:"required"` // e.g., "Fluent", "Basic"
+	LanguageName     string `json:"language" binding:"required"`
+	CertificateFile  string `json:"certificateFile"`
+	ProficiencyLevel string `json:"proficiency" binding:"required"`
 }
 
-// LanguageResponse represents the output sent back to client
+// LanguageResponse is the DTO used for returning language details
 type LanguageResponse struct {
 	ID               uint      `json:"id"`
 	AuthUserID       uuid.UUID `json:"authUserId"`
 	LanguageName     string    `json:"language"`
-	CertificateFile  *string   `json:"certificateFile,omitempty"`
+	CertificateFile  string    `json:"certificateFile"`
 	ProficiencyLevel string    `json:"proficiency"`
 }
-

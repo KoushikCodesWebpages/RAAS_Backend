@@ -64,7 +64,7 @@ func SetupDataEntryRoutes(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
 		educationRoutes.DELETE(":id", educationHandler.DeleteEducation)
 	}
 
-	
+
 	// CERTIFICATES routes
 	certificateHandler := dataentry.NewCertificateHandler(db)
 	certificateRoutes := r.Group("/certificates")
@@ -83,7 +83,7 @@ func SetupDataEntryRoutes(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
 	{
 		languageRoutes.POST("", languageHandler.CreateLanguage)
 		languageRoutes.GET("", languageHandler.GetLanguages)
-		languageRoutes.PUT(":id", languageHandler.PutLanguage)
+		languageRoutes.PUT(":id", languageHandler.UpdateLanguage)
 		languageRoutes.DELETE(":id", languageHandler.DeleteLanguage)
 	}
 
