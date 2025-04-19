@@ -16,6 +16,7 @@ import (
 
 	"time"
 	"RAAS/handlers/repo"
+	"log"
 	// "bytes"
 	// "log"
 )
@@ -316,34 +317,108 @@ for _, edu := range educations {
 	contact := fmt.Sprintf("Email: %s\nPhone: %s\nAddress: %s\nLinkedIn: %s", email, phone, address, linkedin)
 
 	cvInput := repo.CVInput{
-		Name:             fullName,
-		Designation:      jobTitle,
-		Contact:          contact,
-		ProfileSummary:   profile_summary,
-		SkillsAndTools:   skills,
-		Education:        educationData,
-		ExperienceSummary: experienceSummaryData,
-		Languages:        languageData,
-	}
-	cvData, err := repo.GenerateCVDocx(cvInput)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate CV document", "details": err.Error()})
-		return
-	}
-	
-	result := h.db.Model(&models.SelectedJobApplication{}).Where("auth_user_id = ? AND job_id = ?", userID, jobID).Update("cv_generated", true)
-	if result.Error != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update CvGenerated field"})
-		return
-	}
-	
+        Name:             fullName,
+        Designation:      jobTitle,
+        Contact:          contact,
+        ProfileSummary:   profile_summary,
+        SkillsAndTools:   skills,
+        Education:        educationData,
+        ExperienceSummary: experienceSummaryData,
+        Languages:        languageData,
+    }
+    
+    // Generate CV (docx)
+    cvData, err := repo.GenerateCVDocx(cvInput)
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate CV document", "details": err.Error()})
+        return
+    }
 
-	c.Header("Content-Disposition", "attachment; filename=cv.docx")
-	c.Data(http.StatusOK, "application/vnd.openxmlformats-officedocument.wordprocessingml.document", cvData)
+    // Initialize the media upload handler with the Azure Blob Storage service client
+    mediaUploadHandler := NewMediaUploadHandler(GetBlobServiceClient())
 
+    // Upload the CV document (cvData) directly to Azure Blob Storage
+    cvFileURL, err := mediaUploadHandler.UploadGeneratedFile(c, "cv-container", "cv.docx", cvData)
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to upload CV to Azure", "details": err.Error()})
+        return
+    }
+    // Update the job application record to mark CV as generated
+    result := h.db.Model(&models.SelectedJobApplication{}).Where("auth_user_id = ? AND job_id = ?", userID, jobID).Update("cv_generated", true)
+    if result.Error != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update CvGenerated field"})
+        return
+    }
+
+    // Now, send the CV file as an attachment
+    c.Header("Content-Disposition", "attachment; filename=cv.docx")
+    c.Data(http.StatusOK, "application/vnd.openxmlformats-officedocument.wordprocessingml.document", cvData)
+
+    // Optionally, you can also update the database model with cv_url (in case you want to store the link)
+    cvRecord := models.CV{
+        AuthUserID: userID,
+        JobID:      jobID,
+        CVUrl:      cvFileURL, // URL of the uploaded CV
+    }
+
+    if err := h.db.Create(&cvRecord).Error; err != nil {
+        log.Printf("[ERROR] Failed to create CV record: %v", err)
+    }
 }
 
+func (h *CVHandler) GetCV(c *gin.Context) {
+    // Retrieve the user ID from the context
+    userID := c.MustGet("userID").(uuid.UUID)
 
+    // Retrieve the Job ID from the query parameters (or you could use c.PostForm if it's a POST request)
+    jobID := c.DefaultQuery("jobID", "") // If it's a query parameter, use c.DefaultQuery to get the jobID
+
+    if jobID == "" {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Job ID is required"})
+        return
+    }
+
+    var cv models.CV
+
+    // Query the CV table for the specified AuthUserID and JobID
+    if err := h.db.Where("auth_user_id = ? AND job_id = ?", userID, jobID).First(&cv).Error; err != nil {
+        // Return error if no CV is found
+        c.JSON(http.StatusNotFound, gin.H{"error": "CV not found"})
+        return
+    }
+
+    // Check if the CV URL exists
+    if cv.CVUrl == "" {
+        c.JSON(http.StatusNotFound, gin.H{"error": "CV file URL not found"})
+        return
+    }
+
+    // Attempt to download the CV from the provided URL
+    fileURL := cv.CVUrl
+    response, err := http.Get(fileURL)
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to download the file", "details": err.Error()})
+        return
+    }
+    defer response.Body.Close()
+
+    // Check if the file was successfully fetched
+    if response.StatusCode != http.StatusOK {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to download the file, received status: " + response.Status})
+        return
+    }
+
+    // Set headers to indicate a file download response
+    c.Header("Content-Disposition", "attachment; filename=cv.docx")
+    
+    // Custom headers map (optional)
+    headers := map[string]string{
+        "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    }
+
+    // Send the file to the user with the required headers
+    c.DataFromReader(http.StatusOK, response.ContentLength, "application/vnd.openxmlformats-officedocument.wordprocessingml.document", response.Body, headers)
+}
 
 
 func removeEmptyStrings(s []string) []string {

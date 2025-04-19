@@ -70,6 +70,9 @@ func SetupFeatureRoutes(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
 		coverLetterRoutes.POST("",CoverLetterHandler.PostCoverLetter)
 	}
 
+
+
+
 	cvHandler := features.NewCVHandler(db, cfg)
 	// CV generation route (authenticated)
 	cvRoutes := r.Group("/generate-cv")
@@ -77,6 +80,22 @@ func SetupFeatureRoutes(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
 	{
 		cvRoutes.POST("", cvHandler.PostCV)
 	}
+
+	CVHandler := features.NewCVDownloadHandler(db) // assuming constructor exists like NewCVHandler(db)
+
+	downloadCVRoutes := r.Group("/download-cv")
+	downloadCVRoutes.Use(middleware.AuthMiddleware())
+	{
+		downloadCVRoutes.POST("", CVHandler.DownloadCV)
+	}
+
+	cvMetaHandler := features.NewCVDownloadHandler(db)
+	cvMetaRoutes := r.Group("/get-cv")
+	cvMetaRoutes.Use(middleware.AuthMiddleware())
+	{
+		cvRoutes.GET("", cvMetaHandler.GetCVMetadata)
+	}
+
 
 	LinkProviderHandler := features.NewLinkProviderHandler(db)
 

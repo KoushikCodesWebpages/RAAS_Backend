@@ -89,6 +89,8 @@ func AutoMigrate() {
 		&UserEntryTimeline{},
 		&Job{},
 		&MatchScore{},
+		&CoverLetter{},
+		&CV{},
 		// Foreign Key Dependent Table
 		&SelectedJobApplication{},
 	)

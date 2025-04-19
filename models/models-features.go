@@ -78,17 +78,15 @@ type MatchScore struct {
 
 
 type CV struct {
-	gorm.Model
-	AuthUserID  uuid.UUID `gorm:"type:uuid;not null"`
-	JobID       uuid.UUID `gorm:"type:uuid;not null"`
-	CVUrl       string    `gorm:"type:varchar(255);not null"` // Path/URL to the CV document
+    gorm.Model
+    AuthUserID  uuid.UUID `gorm:"type:char(36);uniqueIndex;not null;constraint:OnDelete:CASCADE,OnUpdate:CASCADE" json:"authUserId"`
+    JobID       string    `gorm:"unique;type:varchar(191)"`
+    CVUrl       string    `gorm:"type:varchar(255);not null"` // Path/URL to the CV document
 }
-
 
 func (CV) TableName() string {
-	return "cv" // Specify the table name (optional, default is the plural form of the struct name)
+    return "cv" // Specify the table name (optional, default is the plural form of the struct name)
 }
-
 
 // models/cover_letter.go
 
@@ -96,12 +94,12 @@ func (CV) TableName() string {
 
 
 type CoverLetter struct {
-	gorm.Model
-	AuthUserID     uuid.UUID `gorm:"type:uuid;not null"`
-	JobID          uuid.UUID `gorm:"type:uuid;not null"`
-	CoverLetterURL string    `gorm:"type:varchar(255);not null"` // URL for the cover letter
+    gorm.Model
+    AuthUserID  uuid.UUID `gorm:"type:char(36);uniqueIndex;not null;constraint:OnDelete:CASCADE,OnUpdate:CASCADE" json:"authUserId"`
+    JobID       string    `gorm:"unique;type:varchar(191)"`
+    CoverLetterURL string  `gorm:"type:varchar(255);not null"` // URL for the cover letter
 }
 
 func (CoverLetter) TableName() string {
-	return "cover_letters" // Specify the table name (optional, default is the plural form of the struct name)
+    return "cover_letters" // Specify the table name (optional, default is the plural form of the struct name)
 }

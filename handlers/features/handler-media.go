@@ -8,6 +8,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/url"
+	"bytes"
 	"path/filepath"
 
 	"github.com/Azure/azure-storage-blob-go/azblob"
@@ -27,7 +28,6 @@ func NewMediaUploadHandler(blobServiceClient *azblob.ServiceURL) *MediaUploadHan
 	}
 }
 
-// UploadMedia uploads a file to the specified Azure Blob container
 // UploadMedia uploads a file to the specified Azure Blob container
 func (h *MediaUploadHandler) UploadMedia(c *gin.Context, containerName string) (string, error) {
     // Get the file from the form data
@@ -67,6 +67,37 @@ func (h *MediaUploadHandler) UploadMedia(c *gin.Context, containerName string) (
     return fileURL, nil
 }
 
+func (h *MediaUploadHandler) UploadGeneratedFile(c *gin.Context, containerName string, fileName string, fileData []byte) (string, error) {
+    containerURL := h.blobServiceClient.NewContainerURL(containerName)
+
+    // Create the container if it doesn't exist
+    _, err := containerURL.Create(context.Background(), azblob.Metadata{}, azblob.PublicAccessNone)
+    if err != nil {
+        if stgErr, ok := err.(azblob.StorageError); ok {
+            if stgErr.ServiceCode() != azblob.ServiceCodeContainerAlreadyExists {
+                return "", err
+            }
+        } else {
+            return "", err
+        }
+    }
+
+    // Get the blob URL
+    blobURL := containerURL.NewBlockBlobURL(fileName)
+
+    // Convert the byte slice to a reader
+    byteReader := bytes.NewReader(fileData)
+
+    // Upload the file data to Azure Blob Storage
+    _, err = azblob.UploadStreamToBlockBlob(context.Background(), byteReader, blobURL, azblob.UploadStreamToBlockBlobOptions{})
+    if err != nil {
+        return "", err
+    }
+
+    // Construct the file URL for the uploaded file
+    fileURL := fmt.Sprintf("https://%s.blob.core.windows.net/%s/%s", config.Cfg.AzureStorageAccount, containerName, fileName)
+    return fileURL, nil
+}
 
 // ValidateFileType checks if the uploaded file has a valid extension
 func (h *MediaUploadHandler) ValidateFileType(fileHeader *multipart.FileHeader) bool {
