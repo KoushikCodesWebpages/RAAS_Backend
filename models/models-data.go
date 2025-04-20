@@ -6,6 +6,7 @@ import (
 	"github.com/google/uuid"
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
+	"time"
 )
 
 // AUTH MODELS
@@ -13,14 +14,16 @@ import (
 type AuthUser struct {
 	gorm.Model
 	ID                uuid.UUID `gorm:"type:char(36);primaryKey" json:"id"`
-	Email             string    `gorm:"unique;not null"`
-	Phone             string    `gorm:"not null"`
-	Password          string
-	Role              string
-	VerificationToken string
-	EmailVerified     bool
-	Provider          string `gorm:"default:'local'"`
+	Email             string    `gorm:"unique;not null" json:"email"`
+	Phone             string    `gorm:"not null" json:"phone"`
+	Password          string    `json:"password"`
+	Role              string    `json:"role"`
+	VerificationToken string    `json:"verification_token"`
+	EmailVerified     bool      `json:"email_verified"`
+	Provider          string    `gorm:"default:'local'" json:"provider"`
+	ResetTokenExpiry  *time.Time `json:"reset_token_expiry"` // New field to store token expiration time
 }
+
 
 // Seeker represents a user who is seeking a job.
 type Seeker struct {

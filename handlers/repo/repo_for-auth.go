@@ -1,15 +1,18 @@
 package repo
 
 import (
-	"RAAS/dto"
-	"RAAS/models"
+
 	"fmt"
 	"gorm.io/gorm"
-	"RAAS/utils"
+
 	"errors"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
+
 	"RAAS/config"
+	"RAAS/utils"
+	"RAAS/dto"
+	"RAAS/models"
 )
 
 type UserRepo struct {
@@ -131,3 +134,4 @@ func (r *UserRepo) AuthenticateUser(email, password string) (*models.AuthUser, e
 
     return &user, nil
 }
+
