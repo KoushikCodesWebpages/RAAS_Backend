@@ -51,7 +51,7 @@ func SeekerSignUp(c *gin.Context) {
 
 		// If email is not verified, resend the verification email
 		token := user.VerificationToken
-		verificationLink := fmt.Sprintf("%s/verify-email?token=%s", config.Cfg.FrontendBaseUrl, token)
+		verificationLink := fmt.Sprintf("%s/verify-email?token=%s", config.Cfg.Project.FrontendBaseUrl, token)
 		emailBody := fmt.Sprintf(`
 			<p>Hello %s,</p>
 			<p>Thanks for signing up! Please verify your email by clicking the link below:</p>
@@ -64,12 +64,12 @@ func SeekerSignUp(c *gin.Context) {
 
 		// Send the verification email again
 		emailCfg := utils.EmailConfig{
-			Host:     config.Cfg.EmailHost,
-			Port:     config.Cfg.EmailPort,
-			Username: config.Cfg.EmailHostUser,
-			Password: config.Cfg.EmailHostPassword,
-			From:     config.Cfg.DefaultFromEmail,
-			UseTLS:   config.Cfg.EmailUseTLS,
+			Host:     config.Cfg.Cloud.EmailHost,
+			Port:     config.Cfg.Cloud.EmailPort,
+			Username: config.Cfg.Cloud.EmailHostUser,
+			Password: config.Cfg.Cloud.EmailHostPassword,
+			From:     config.Cfg.Cloud.DefaultFromEmail,
+			UseTLS:   config.Cfg.Cloud.EmailUseTLS,
 		}
 
 		if err := utils.SendEmail(emailCfg, input.Email, "Verify your email", emailBody); err != nil {

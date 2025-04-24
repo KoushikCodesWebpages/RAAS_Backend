@@ -35,11 +35,11 @@ func GenerateVerificationToken() string {
 
 func GetEmailConfig() EmailConfig {
     return EmailConfig{
-        Host:     config.Cfg.EmailHost,
-        Port:     config.Cfg.EmailPort,
-        Username: config.Cfg.EmailHostUser,
-        Password: config.Cfg.EmailHostPassword,
-        From:     config.Cfg.DefaultFromEmail,
-        UseTLS:   config.Cfg.EmailUseTLS,
+        Host:     config.Cfg.Cloud.EmailHost,
+        Port:     config.Cfg.Cloud.EmailPort,
+        Username: config.Cfg.Cloud.EmailHostUser,
+        Password: config.Cfg.Cloud.EmailHostPassword,
+        From:     config.Cfg.Cloud.DefaultFromEmail,
+        UseTLS:   config.Cfg.Cloud.EmailUseTLS,
     }
 }

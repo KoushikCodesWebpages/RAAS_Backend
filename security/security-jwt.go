@@ -14,7 +14,7 @@ var jwtSecret []byte
 
 func getJWTSecret() []byte {
 	if jwtSecret == nil {
-		jwtSecret = []byte(config.Cfg.JWTSecretKey)
+		jwtSecret = []byte(config.Cfg.Project.JWTSecretKey)
 	}
 	return jwtSecret
 }
@@ -37,7 +37,7 @@ func GenerateJWT(userID uuid.UUID, email, role string) (string, error) {
         Email:  email,
         Role:   role,
         RegisteredClaims: jwt.RegisteredClaims{
-            ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute * time.Duration(config.Cfg.AccessTokenLifetime))),
+            ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute * time.Duration(config.Cfg.Project.AccessTokenLifetime))),
         },
     }
 

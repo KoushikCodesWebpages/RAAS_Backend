@@ -12,6 +12,7 @@ require (
 	github.com/spf13/viper v1.20.0
 	github.com/ulule/limiter/v3 v3.11.2
 	golang.org/x/crypto v0.36.0
+	golang.org/x/oauth2 v0.29.0
 	gopkg.in/mail.v2 v2.3.1
 	gorm.io/datatypes v1.2.5
 	gorm.io/driver/mysql v1.5.7
@@ -19,6 +20,7 @@ require (
 )
 
 require (
+	cloud.google.com/go/compute/metadata v0.6.0 // indirect
 	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/Azure/azure-pipeline-go v0.2.3 // indirect
 	github.com/bytedance/sonic v1.13.2 // indirect

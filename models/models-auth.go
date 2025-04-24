@@ -18,13 +18,13 @@ type AuthUser struct {
     Phone                string     `gorm:"not null" json:"phone"`
     Password             string     `json:"password"`
     Role                 string     `json:"role"`
-    VerificationToken    string     `json:"verification_token"`
     EmailVerified        bool       `json:"email_verified"`
     Provider             string     `gorm:"default:'local'" json:"provider"`
     ResetTokenExpiry     *time.Time `json:"reset_token_expiry"` 
 
     IsActive             bool       `gorm:"default:true" json:"is_active"`
-
+	VerificationToken    string     `json:"verification_token"`
+	
     CreatedBy            uuid.UUID `json:"created_by"`
     UpdatedBy            uuid.UUID `json:"updated_by"`
     DeletedAt            *time.Time `json:"deleted_at,omitempty"`
@@ -34,7 +34,6 @@ type AuthUser struct {
     PasswordLastUpdated  *time.Time `json:"password_last_updated,omitempty"`
     TwoFactorEnabled     bool       `gorm:"default:false" json:"two_factor_enabled"`
     TwoFactorSecret      *string    `json:"two_factor_secret,omitempty"`
-
 }
 
 
@@ -47,8 +46,8 @@ type Seeker struct {
     //SERVICE
 	SubscriptionTier           string         `gorm:"default:'free'" json:"subscriptionTier"`
 	DailySelectableJobsCount   int            `gorm:"default:5" json:"dailySelectableJobsCount"`
-	DailyGeneratableCV         int            `gorm:"default:100" json:"dailyGeneratableCv"`
-	DailyGeneratableCoverletter int           `gorm:"default:100" json:"dailyGeneratableCoverletter"`
+	DailyGeneratableCV         int            `gorm:"default:10" json:"dailyGeneratableCv"`
+	DailyGeneratableCoverletter int           `gorm:"default:10" json:"dailyGeneratableCoverletter"`
 	TotalApplications          int            `gorm:"default:0" json:"totalApplications"`
 
 	//DATA

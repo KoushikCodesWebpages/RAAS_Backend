@@ -63,7 +63,7 @@ func (h *MediaUploadHandler) UploadMedia(c *gin.Context, containerName string) (
     }
 
     // Construct the file URL for the uploaded file
-    fileURL := fmt.Sprintf("https://%s.blob.core.windows.net/%s/%s", config.Cfg.AzureStorageAccount, containerName, header.Filename)
+    fileURL := fmt.Sprintf("https://%s.blob.core.windows.net/%s/%s", config.Cfg.Cloud.AzureStorageAccount, containerName, header.Filename)
     return fileURL, nil
 }
 
@@ -95,7 +95,7 @@ func (h *MediaUploadHandler) UploadGeneratedFile(c *gin.Context, containerName s
     }
 
     // Construct the file URL for the uploaded file
-    fileURL := fmt.Sprintf("https://%s.blob.core.windows.net/%s/%s", config.Cfg.AzureStorageAccount, containerName, fileName)
+    fileURL := fmt.Sprintf("https://%s.blob.core.windows.net/%s/%s", config.Cfg.Cloud.AzureStorageAccount, containerName, fileName)
     return fileURL, nil
 }
 
@@ -142,15 +142,15 @@ func (h *MediaUploadHandler) HandleUpload(c *gin.Context) {
 
 // GetBlobServiceClient creates a new Azure Blob service client using credentials
 func GetBlobServiceClient() *azblob.ServiceURL {
-	if config.Cfg.AzureStorageAccount == "" || config.Cfg.AzureStorageKey == "" {
+	if config.Cfg.Cloud.AzureStorageAccount == "" || config.Cfg.Cloud.AzureStorageKey == "" {
 		log.Fatal("Azure storage account or key is not set")
 	}
-	credential, err := azblob.NewSharedKeyCredential(config.Cfg.AzureStorageAccount, config.Cfg.AzureStorageKey)
+	credential, err := azblob.NewSharedKeyCredential(config.Cfg.Cloud.AzureStorageAccount, config.Cfg.Cloud.AzureStorageKey)
 	if err != nil {
 		log.Fatal("Invalid credentials")
 	}
 	p := azblob.NewPipeline(credential, azblob.PipelineOptions{})
-	serviceURL := fmt.Sprintf("https://%s.blob.core.windows.net", config.Cfg.AzureStorageAccount)
+	serviceURL := fmt.Sprintf("https://%s.blob.core.windows.net", config.Cfg.Cloud.AzureStorageAccount)
 	u, err := url.Parse(serviceURL)
 	if err != nil {
 		log.Fatal("Invalid service URL")

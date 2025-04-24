@@ -194,30 +194,6 @@ func getStr(value interface{}) string {
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 // Global variables
 var (
 	RoundRobinModelIndex int
@@ -228,16 +204,16 @@ var (
 
 func LoadHFModels() ([]string, error) {
 	models := []string{
-		config.Cfg.HFModelForCL1,
-		config.Cfg.HFModelForCL2,
-		config.Cfg.HFModelForCL3,
-		config.Cfg.HFModelForCL4,
-		config.Cfg.HFModelForCL5,
-		config.Cfg.HFModelForCL6,
-		config.Cfg.HFModelForCL7,
-		config.Cfg.HFModelForCL8,
-		config.Cfg.HFModelForCL9,
-		config.Cfg.HFModelForCL10,
+		config.Cfg.HuggingFace.HFModelForCL1,
+		config.Cfg.HuggingFace.HFModelForCL2,
+		config.Cfg.HuggingFace.HFModelForCL3,
+		config.Cfg.HuggingFace.HFModelForCL4,
+		config.Cfg.HuggingFace.HFModelForCL5,
+		config.Cfg.HuggingFace.HFModelForCL6,
+		config.Cfg.HuggingFace.HFModelForCL7,
+		config.Cfg.HuggingFace.HFModelForCL8,
+		config.Cfg.HuggingFace.HFModelForCL9,
+		config.Cfg.HuggingFace.HFModelForCL10,
 	}
 
 	for _, model := range models {
@@ -276,11 +252,11 @@ func prepareCoverLetterPrompt(name, education, experience, skills, company, role
 	modelToUse := HFModels[RoundRobinModelIndex]
 	//log.Printf("Selected model: %s", modelToUse)
 
-	if config.Cfg.HFBaseAPIUrl == "" {
+	if config.Cfg.HuggingFace.HFBaseAPIUrl == "" {
 		//log.Println("Error: Hugging Face base API URL is not set")
 		return "", "", fmt.Errorf("error: Hugging Face base API URL is not set")
 	}
-	apiURL := fmt.Sprintf("%s/%s", config.Cfg.HFBaseAPIUrl, modelToUse)
+	apiURL := fmt.Sprintf("%s/%s", config.Cfg.HuggingFace.HFBaseAPIUrl, modelToUse)
 
 	RoundRobinModelIndex = (RoundRobinModelIndex + 1) % len(HFModels)
 	prompt := fmt.Sprintf(`
@@ -315,7 +291,7 @@ func callHuggingFaceAPI(prompt, apiURL string) (string, error) {
         return "", fmt.Errorf("error: Failed to create API request")
     }
 
-    req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", config.Cfg.HFAPIKey))
+    req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", config.Cfg.HuggingFace.HFAPIKey))
     req.Header.Set("Content-Type", "application/json")
 
     client := &http.Client{}

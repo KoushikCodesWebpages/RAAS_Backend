@@ -27,8 +27,8 @@ type CoverLetterInput struct {
 // GenerateCoverLetterDocx generates a cover letter document using input data
 func GenerateCoverLetterDocx(input CoverLetterInput, config *config.Config) ([]byte, error) {
     // Get the API URL and Key from the config
-    apiURL := config.CL_Url
-    apiKey := config.GEN_API_KEY
+    apiURL := config.Cloud.CL_Url
+    apiKey := config.Cloud.GEN_API_KEY
 
     // Check if the required fields are present
     if apiURL == "" || apiKey == "" {

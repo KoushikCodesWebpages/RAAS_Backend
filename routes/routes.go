@@ -15,7 +15,7 @@ import (
 )
 
 func SetupRoutes(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
-	origins := strings.Split(cfg.CORSAllowedOrigins, ",")
+	origins := strings.Split(cfg.Project.CORSAllowedOrigins, ",")
 	for i, origin := range origins {
 		origins[i] = strings.TrimSpace(origin)
 	}

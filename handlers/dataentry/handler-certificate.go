@@ -47,7 +47,7 @@ func (h *CertificateHandler) CreateCertificate(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid file type"})
 			return
 		}
-		fileURL, err = mediaUploadHandler.UploadMedia(c, config.Cfg.AzureCertificatesContainer)
+		fileURL, err = mediaUploadHandler.UploadMedia(c, config.Cfg.Cloud.AzureCertificatesContainer)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to upload file", "details": err.Error()})
 			return

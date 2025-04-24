@@ -71,5 +71,5 @@ func DecryptData(encryptedData string) ([]byte, error) {
 // getSecretKey retrieves the SecretKey from the global config.
 // getSecretKey retrieves the SecretKey from the global config.
 func getSecretKey() string {
-    return config.Cfg.SecretKey
+    return config.Cfg.Project.SecretKey
 }

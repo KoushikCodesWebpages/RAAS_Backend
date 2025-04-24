@@ -82,7 +82,7 @@ func (r *UserRepo) CreateSeeker(input dto.SeekerSignUpInput, hashedPassword stri
 	}
 
 	// Construct email verification link
-	verificationLink := fmt.Sprintf("%s/verify-email?token=%s", config.Cfg.FrontendBaseUrl, token)
+	verificationLink := fmt.Sprintf("%s/verify-email?token=%s", config.Cfg.Project.FrontendBaseUrl, token)
 
 	// Create email body
 	emailBody := fmt.Sprintf(`
@@ -94,12 +94,12 @@ func (r *UserRepo) CreateSeeker(input dto.SeekerSignUpInput, hashedPassword stri
 
 	// Prepare email config from loaded app config
 	emailCfg := utils.EmailConfig{
-		Host:     config.Cfg.EmailHost,
-		Port:     config.Cfg.EmailPort,
-		Username: config.Cfg.EmailHostUser,
-		Password: config.Cfg.EmailHostPassword,
-		From:     config.Cfg.DefaultFromEmail,
-		UseTLS:   config.Cfg.EmailUseTLS,
+		Host:     config.Cfg.Cloud.EmailHost,
+		Port:     config.Cfg.Cloud.EmailPort,
+		Username: config.Cfg.Cloud.EmailHostUser,
+		Password: config.Cfg.Cloud.EmailHostPassword,
+		From:     config.Cfg.Cloud.DefaultFromEmail,
+		UseTLS:   config.Cfg.Cloud.EmailUseTLS,
 	}
 
 	// Send the verification email

@@ -54,7 +54,7 @@ func (h *LanguageHandler) CreateLanguage(c *gin.Context) {
 			return
 		}
 
-		fileURL, err = mediaUploadHandler.UploadMedia(c, config.Cfg.AzureLanguagesContainer)
+		fileURL, err = mediaUploadHandler.UploadMedia(c, config.Cfg.Cloud.AzureLanguagesContainer)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to upload file", "details": err.Error()})
 			return
