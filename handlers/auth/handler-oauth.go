@@ -17,7 +17,7 @@ import (
 	"RAAS/config"
 	"RAAS/models"
 	"RAAS/security"
-	"RAAS/handlers/repo"
+
 )
 
 // Google OAuth Config
@@ -70,7 +70,7 @@ func GoogleCallbackHandler(c *gin.Context) {
 
 	// Step 4: Check if the user already exists in the database
 	db := c.MustGet("db").(*gorm.DB)
-	userRepo := repo.NewUserRepo(db, config.Cfg)
+
 
 	var user models.AuthUser
 	if err := db.Where("email = ?", userInfo.Email).First(&user).Error; err != nil {
