@@ -57,7 +57,7 @@ func InitDB(cfg *config.Config) *gorm.DB {
 	// 	"seekers",
 	// 	"admins",
 
-	// 	"job_match_scores",
+	// 	"match_scores",
 	// 	"user_entry_timelines",
 	// 	"selected_job_applications",
 	// 	"cover_letters",

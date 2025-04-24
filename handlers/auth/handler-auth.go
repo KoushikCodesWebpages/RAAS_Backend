@@ -51,7 +51,7 @@ func SeekerSignUp(c *gin.Context) {
 
 		// If email is not verified, resend the verification email
 		token := user.VerificationToken
-		verificationLink := fmt.Sprintf("%s/verify-email?token=%s", config.Cfg.Project.FrontendBaseUrl, token)
+		verificationLink := fmt.Sprintf("%s/auth/verify-email?token=%s", config.Cfg.Project.FrontendBaseUrl, token)
 		emailBody := fmt.Sprintf(`
 			<p>Hello %s,</p>
 			<p>Thanks for signing up! Please verify your email by clicking the link below:</p>

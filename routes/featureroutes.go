@@ -25,12 +25,14 @@ func SetupFeatureRoutes(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
 
 	// Define the route for getting seeker profile
 	r.GET("/seeker/profile", middleware.AuthMiddleware(), seekerHandler.GetSeeker)
+	r.GET("/seeker",middleware.AuthMiddleware(),seekerHandler.GetAllSeekers)
 
 	// JOB DATA routes
 	jobRetrievalRoutes := r.Group("/api/jobs")
 	jobRetrievalRoutes.Use(middleware.AuthMiddleware())
 	{
 		jobRetrievalRoutes.GET("", features.JobRetrievalHandler)
+		
 	}
 
 	// JOB METADATA routes

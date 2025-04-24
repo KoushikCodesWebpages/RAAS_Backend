@@ -82,7 +82,7 @@ func (r *UserRepo) CreateSeeker(input dto.SeekerSignUpInput, hashedPassword stri
 	}
 
 	// Construct email verification link
-	verificationLink := fmt.Sprintf("%s/verify-email?token=%s", config.Cfg.Project.FrontendBaseUrl, token)
+	verificationLink := fmt.Sprintf("%s/auth/verify-email?token=%s", config.Cfg.Project.FrontendBaseUrl, token)
 
 	// Create email body
 	emailBody := fmt.Sprintf(`

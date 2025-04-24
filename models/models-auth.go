@@ -43,6 +43,7 @@ type Seeker struct {
 	AuthUserID uuid.UUID `gorm:"type:char(36);uniqueIndex;not null;constraint:OnDelete:CASCADE,OnUpdate:CASCADE" json:"authUserId"`
 
 
+	
     //SERVICE
 	SubscriptionTier           string         `gorm:"default:'free'" json:"subscriptionTier"`
 	DailySelectableJobsCount   int            `gorm:"default:5" json:"dailySelectableJobsCount"`
