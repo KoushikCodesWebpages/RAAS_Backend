@@ -27,7 +27,7 @@ func (h *MatchScoreHandler) GetAllMatchScores(c *gin.Context) {
 	var matchScoreResponses []dto.MatchScoreResponse
 	for _, matchScore := range matchScores {
 		matchScoreResponses = append(matchScoreResponses, dto.MatchScoreResponse{
-			SeekerID:   matchScore.SeekerID,
+			SeekerID:   matchScore.AuthUserID,
 			JobID:      matchScore.JobID,
 			MatchScore: matchScore.MatchScore,
 		})

@@ -44,7 +44,7 @@ func (w *MatchScoreWorker) calculateAndStoreMatchScore(seekerAuthUserID uuid.UUI
 
 	// Create and save match score
 	matchScoreEntry := models.MatchScore{
-		SeekerID:   seeker.AuthUserID,
+		AuthUserID:   seeker.AuthUserID,
 		JobID:      jobID,
 		MatchScore: matchScore,
 	}

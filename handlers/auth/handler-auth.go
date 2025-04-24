@@ -15,7 +15,6 @@ import (
 	"RAAS/handlers/repo"
 	"RAAS/utils"
 )
-
 func SeekerSignUp(c *gin.Context) {
 	var input dto.SeekerSignUpInput
 
@@ -50,7 +49,6 @@ func SeekerSignUp(c *gin.Context) {
 			return
 		}
 
-
 		// If email is not verified, resend the verification email
 		token := user.VerificationToken
 		verificationLink := fmt.Sprintf("%s/verify-email?token=%s", config.Cfg.FrontendBaseUrl, token)
@@ -62,7 +60,7 @@ func SeekerSignUp(c *gin.Context) {
 		`, input.Email, verificationLink)
 
 		// Log for debugging email sending
-		fmt.Printf("Resending verification email to: %s\n", input.Email)
+		// c.Logger().Infof("Resending verification email to: %s", input.Email)
 
 		// Send the verification email again
 		emailCfg := utils.EmailConfig{
@@ -80,14 +78,14 @@ func SeekerSignUp(c *gin.Context) {
 		}
 
 		// Log after successful email sending
-		fmt.Println("Verification email resent successfully.")
+		// c.Logger().Info("Verification email resent successfully.")
 
 		c.JSON(http.StatusOK, gin.H{"message": "Please check your email to verify your account. Email resent."})
 		return
 	}
 
 	// Log before hashing the password
-	fmt.Println("Hashing password for user:", input.Email)
+	// c.Logger().Infof("Hashing password for user: %s", input.Email)
 
 	// Hash the password
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
@@ -97,18 +95,19 @@ func SeekerSignUp(c *gin.Context) {
 	}
 
 	// Create the user and send the verification email
-	fmt.Printf("Creating user with email: %s\n", input.Email)
+	// c.Logger().Infof("Creating user with email: %s", input.Email)
 	if err := userRepo.CreateSeeker(input, string(hashedPassword)); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not create Seeker", "details": err.Error()})
 		return
 	}
 
 	// Log successful user creation
-	fmt.Printf("User created successfully. Email verification sent to: %s\n", input.Email)
+	// c.Logger().Infof("User created successfully. Email verification sent to: %s", input.Email)
 
 	// Final response
 	c.JSON(http.StatusCreated, gin.H{"message": "Seeker registered successfully. Please check your email to verify."})
 }
+
 
 
 func VerifyEmail(c *gin.Context) {

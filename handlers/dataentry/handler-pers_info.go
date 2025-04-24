@@ -1,13 +1,17 @@
 package dataentry
 
 import (
+
+	"encoding/json"
+
+	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
+	"gorm.io/gorm"
+	"net/http"
+
 	"RAAS/models"
 	"RAAS/dto"
-	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
-	"github.com/google/uuid"
-	"net/http"
-	"encoding/json"
+	"RAAS/handlers"
 )
 
 // PersonalInfoHandler struct
@@ -50,25 +54,12 @@ func (h *PersonalInfoHandler) CreatePersonalInfo(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Date of birth cannot be empty"})
 		return
 	}
-	
-	// Prepare the personal info map
-	personalInfo := map[string]interface{}{
-		"firstName":       input.FirstName,
-		"secondName":      input.SecondName,
-		"dateOfBirth":     input.DateOfBirth,
-		"address":         input.Address,
-		"linkedInProfile": input.LinkedInProfile,
-	}
 
-	// Marshal the personal info into JSON
-	personalInfoJSON, err := json.Marshal(personalInfo)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to marshal personal info", "details": err.Error()})
+	// Use SetPersonalInfo utility function
+	if err := handlers.SetPersonalInfo(&seeker, &input); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to set personal info", "details": err.Error()})
 		return
 	}
-
-	// Update Seeker's PersonalInfo field
-	seeker.PersonalInfo = personalInfoJSON
 
 	// Save the updated Seeker record
 	if err := h.DB.Save(&seeker).Error; err != nil {
@@ -76,22 +67,7 @@ func (h *PersonalInfoHandler) CreatePersonalInfo(c *gin.Context) {
 		return
 	}
 
-	// Update the UserEntryTimeline - set PersonalInfosCompleted to true
-	var timeline models.UserEntryTimeline
-	if err := h.DB.First(&timeline, "user_id = ?", userID).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "User entry timeline not found"})
-		return
-	}
-
-	timeline.PersonalInfosCompleted = true
-
-	// Save the updated timeline
-	if err := h.DB.Save(&timeline).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update timeline", "details": err.Error()})
-		return
-	}
-
-	// Return only the PersonalInfoResponse
+	// Return the PersonalInfoResponse
 	personalInfoResponse := dto.PersonalInfoResponse{
 		AuthUserID:      seeker.AuthUserID,
 		FirstName:       input.FirstName,
@@ -105,7 +81,6 @@ func (h *PersonalInfoHandler) CreatePersonalInfo(c *gin.Context) {
 }
 
 // GetPersonalInfo retrieves personal info of the authenticated user
-// GetPersonalInfo retrieves the personal information of the authenticated user
 func (h *PersonalInfoHandler) GetPersonalInfo(c *gin.Context) {
 	userID := c.MustGet("userID").(uuid.UUID)
 
@@ -120,48 +95,17 @@ func (h *PersonalInfoHandler) GetPersonalInfo(c *gin.Context) {
 		return
 	}
 
-	var personalInfo map[string]interface{}
-	if err := json.Unmarshal(seeker.PersonalInfo, &personalInfo); err != nil {
+	// Use GetPersonalInfo utility function
+	personalInfo, err := handlers.GetPersonalInfo(&seeker)
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse personal info", "details": err.Error()})
 		return
 	}
 
-	firstName, firstNameOk := personalInfo["firstName"].(string)
-	dateOfBirth, dateOfBirthOk := personalInfo["dateOfBirth"].(string)
-	address, addressOk := personalInfo["address"].(string)
-	
-	var secondName *string
-	if val, ok := personalInfo["secondName"].(string); ok {
-		secondName = &val
-	}
-	
-	var linkedinProfile *string
-	if val, ok := personalInfo["linkedinProfile"].(string); ok {
-		linkedinProfile = &val
-	}
-	
-
-	if !firstNameOk || !dateOfBirthOk || !addressOk {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":   "Invalid personal info data",
-			"details": "Expected 'first_name', 'date_of_birth', and 'address' to be strings",
-		})
-		return
-	}
-
-	response := dto.PersonalInfoResponse{
-		AuthUserID:      seeker.AuthUserID,
-		FirstName:       firstName,
-		SecondName:      secondName,
-		DateOfBirth:     dateOfBirth,
-		Address:         address,
-		LinkedInProfile: linkedinProfile,
-	}
-
-	c.JSON(http.StatusOK, response)
+	c.JSON(http.StatusOK, personalInfo)
 }
 
-// UpdatePersonalInfo performs full update on personal info within Seeker model
+// UpdatePersonalInfo handles the update of personal info for Seeker model
 func (h *PersonalInfoHandler) UpdatePersonalInfo(c *gin.Context) {
 	userID := c.MustGet("userID").(uuid.UUID)
 
@@ -171,101 +115,104 @@ func (h *PersonalInfoHandler) UpdatePersonalInfo(c *gin.Context) {
 		return
 	}
 
+	// Find Seeker for the given user
 	var seeker models.Seeker
 	if err := h.DB.First(&seeker, "auth_user_id = ?", userID).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Seeker not found"})
 		return
 	}
 
-	// Prepare the personal info map
-	personalInfo := map[string]interface{}{
-		"firstName":       input.FirstName,
-		"secondName":      input.SecondName,
-		"dateOfBirth":     input.DateOfBirth,
-		"address":         input.Address,
-		"linkedInProfile": input.LinkedInProfile,
-	}
-
-	// Marshal the personal info into JSON
-	personalInfoJSON, err := json.Marshal(personalInfo)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to marshal personal info", "details": err.Error()})
-		return
-	}
-
-	// Update Seeker's PersonalInfo field
-	seeker.PersonalInfo = personalInfoJSON
-
-	if err := h.DB.Save(&seeker).Error; err != nil {
+	// Use SetPersonalInfo utility function to update
+	if err := handlers.SetPersonalInfo(&seeker, &input); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update personal info", "details": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, seeker)
+	// Save the updated Seeker record
+	if err := h.DB.Save(&seeker).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save updated personal info", "details": err.Error()})
+		return
+	}
+
+	// Return the updated PersonalInfoResponse
+	personalInfoResponse := dto.PersonalInfoResponse{
+		AuthUserID:      seeker.AuthUserID,
+		FirstName:       input.FirstName,
+		SecondName:      input.SecondName,
+		DateOfBirth:     input.DateOfBirth,
+		Address:         input.Address,
+		LinkedInProfile: input.LinkedInProfile,
+	}
+
+	c.JSON(http.StatusOK, personalInfoResponse)
 }
 
-// PatchPersonalInfo handles partial updates to personal info within Seeker model
+// PatchPersonalInfo handles patching personal info for Seeker model
 func (h *PersonalInfoHandler) PatchPersonalInfo(c *gin.Context) {
 	userID := c.MustGet("userID").(uuid.UUID)
 
-	var updates map[string]interface{}
-	if err := c.ShouldBindJSON(&updates); err != nil {
+	var input dto.PersonalInfoRequest
+	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
 		return
 	}
 
-	// Only allow specific fields
-	allowedFields := map[string]string{
-		"firstName":       "first_name",
-		"secondName":      "second_name",
-		"dob":             "date_of_birth",
-		"address":         "address",
-		"linkedinProfile": "linked_in_profile",
-	}
-
-	validUpdates := make(map[string]interface{})
-	for k, v := range updates {
-		if dbField, ok := allowedFields[k]; ok {
-			validUpdates[dbField] = v
-		}
-	}
-
-	if len(validUpdates) == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "No valid fields to update"})
-		return
-	}
-
+	// Find Seeker for the given user
 	var seeker models.Seeker
 	if err := h.DB.First(&seeker, "auth_user_id = ?", userID).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Seeker not found"})
 		return
 	}
 
-	// Convert the PersonalInfo field back to a map (deserialize)
-	var personalInfo map[string]interface{}
-	if err := json.Unmarshal(seeker.PersonalInfo, &personalInfo); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to unmarshal personal info", "details": err.Error()})
+	// Get the current personal info
+	personalInfo, err := handlers.GetPersonalInfo(&seeker)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse personal info", "details": err.Error()})
 		return
 	}
 
-	// Update the map with the valid updates	
-	for key, value := range validUpdates {
-		personalInfo[key] = value
+	// Check if DateOfBirth or Address are being updated and return an error if so
+	if input.DateOfBirth != "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Updating DateOfBirth is not allowed"})
+		return
+	}
+	if input.Address != "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Updating Address is not allowed"})
+		return
 	}
 
-	// Marshal the updated personal info back to JSON
-	updatedPersonalInfoJSON, err := json.Marshal(personalInfo)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to marshal updated personal info", "details": err.Error()})
+	// Update only the allowed fields
+	if input.FirstName != "" {
+		personalInfo.FirstName = input.FirstName
+	}
+	if input.SecondName != nil {
+		personalInfo.SecondName = input.SecondName
+	}
+	if input.LinkedInProfile != nil {
+		personalInfo.LinkedInProfile = input.LinkedInProfile
+	}
+
+	// Use SetPersonalInfo utility function to update the personal info
+	if err := handlers.SetPersonalInfo(&seeker, personalInfo); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update personal info", "details": err.Error()})
 		return
 	}
 
 	// Save the updated Seeker record
-	seeker.PersonalInfo = updatedPersonalInfoJSON
 	if err := h.DB.Save(&seeker).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to patch personal info", "details": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save updated personal info", "details": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Personal info updated"})
+	// Return the updated PersonalInfoResponse
+	personalInfoResponse := dto.PersonalInfoResponse{
+		AuthUserID:      seeker.AuthUserID,
+		FirstName:       personalInfo.FirstName,
+		SecondName:      personalInfo.SecondName,  // Nullable, so it could be null
+		DateOfBirth:     personalInfo.DateOfBirth, // Unchanged
+		Address:         personalInfo.Address,     // Unchanged
+		LinkedInProfile: personalInfo.LinkedInProfile,  // Nullable, so it could be null
+	}
+
+	c.JSON(http.StatusOK, personalInfoResponse)
 }

@@ -32,7 +32,6 @@ func (r *UserRepo) ValidateSeekerSignUpInput(input dto.SeekerSignUpInput) error 
     }
     return nil
 }
-
 func (r *UserRepo) CreateSeeker(input dto.SeekerSignUpInput, hashedPassword string) error {
 	// Generate a verification token (UUID)
 	token := uuid.New().String()
@@ -42,7 +41,7 @@ func (r *UserRepo) CreateSeeker(input dto.SeekerSignUpInput, hashedPassword stri
 		ID:                uuid.New(), // Generate UUID for AuthUser
 		Email:             input.Email,
 		Password:          hashedPassword,
-		Phone:			   input.Number,
+		Phone:             input.Number,
 		Role:              "seeker",
 		VerificationToken: token,
 		EmailVerified:     false, // Assume false until verified
@@ -50,41 +49,42 @@ func (r *UserRepo) CreateSeeker(input dto.SeekerSignUpInput, hashedPassword stri
 
 	// Save AuthUser to the database
 	if err := r.DB.Create(&authUser).Error; err != nil {
-		return fmt.Errorf("failed to create auth user: %v", err)
+		return fmt.Errorf("failed to create auth user: %w", err)
 	}
 
-	// Create associated Seeker profile
+	// Create associated Seeker profile with default values
 	seeker := models.Seeker{
-		AuthUserID:       authUser.ID,
-		SubscriptionTier: "free",  // Default value for subscription tier
-		DailySelectableJobsCount: 5, // Default value
-		DailyGeneratableCV: 100,  // Default value
-		DailyGeneratableCoverletter: 100,  // Default value
-		TotalApplications: 0,  // Default value
-		// Initialize the JSON fields with empty objects if needed
-		PersonalInfo:        nil, // or initialize with an empty JSON object
-		ProfessionalSummary: nil, // or initialize with an empty JSON object
-		WorkExperiences:     nil, // or initialize with an empty JSON object // or initialize with an empty JSON object
-		PrimaryTitle:        "",  // You can leave it empty initially
-		SecondaryTitle:      nil, // You can leave it nil initially
-		TertiaryTitle:       nil, // You can leave it nil initially
+		AuthUserID:                authUser.ID,
+		SubscriptionTier:          "free", // Default value for subscription tier
+		DailySelectableJobsCount:  5,     // Default value
+		DailyGeneratableCV:       100,    // Default value
+		DailyGeneratableCoverletter: 100, // Default value
+		TotalApplications:        0,      // Default value
+		PersonalInfo:             nil,    // or initialize with an empty JSON object
+		ProfessionalSummary:      nil,    // or initialize with an empty JSON object
+		WorkExperiences:          nil,    // or initialize with an empty JSON object
+		PrimaryTitle:             "",     // You can leave it empty initially
+		SecondaryTitle:           nil,    // You can leave it nil initially
+		TertiaryTitle:            nil,    // You can leave it nil initially
 	}
+
 	// Save Seeker to the database
 	if err := r.DB.Create(&seeker).Error; err != nil {
-		return fmt.Errorf("failed to create seeker profile: %v", err)
+		return fmt.Errorf("failed to create seeker profile: %w", err)
 	}
 
 	// Create UserEntryTimeline for the new user
 	timeline := models.UserEntryTimeline{
-		UserID:                         authUser.ID,
+		AuthUserID: authUser.ID,
 	}
 	if err := r.DB.Create(&timeline).Error; err != nil {
-		return fmt.Errorf("user created but failed to create entry timeline: %v", err)
+		return fmt.Errorf("user created but failed to create entry timeline: %w", err)
 	}
 
-	// Construct email verification link (optional)
+	// Construct email verification link
 	verificationLink := fmt.Sprintf("%s/verify-email?token=%s", config.Cfg.FrontendBaseUrl, token)
 
+	// Create email body
 	emailBody := fmt.Sprintf(`
 		<p>Hello %s,</p>
 		<p>Thanks for signing up! Please verify your email by clicking the link below:</p>
@@ -104,11 +104,12 @@ func (r *UserRepo) CreateSeeker(input dto.SeekerSignUpInput, hashedPassword stri
 
 	// Send the verification email
 	if err := utils.SendEmail(emailCfg, input.Email, "Verify your email", emailBody); err != nil {
-		return fmt.Errorf("user created but failed to send verification email: %v", err)
+		return fmt.Errorf("user created but failed to send verification email: %w", err)
 	}
 
 	return nil
 }
+
 
 
 func (r *UserRepo) AuthenticateUser(email, password string) (*models.AuthUser, error) {

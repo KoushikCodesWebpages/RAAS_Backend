@@ -5,13 +5,17 @@ import (
 	"log"
 	"net/http"
 	"RAAS/models"
+	"gorm.io/gorm"
 )
+
 
 const resetPasskey = "reset@arshan.de" // Change this to your actual passkey
 
 type ResetRequest struct {
 	Passkey string `json:"passkey"`
+	Email   string `json:"email"` // Added email field to request
 }
+
 
 func ResetDBHandler(c *gin.Context) {
 	var req ResetRequest
@@ -21,27 +25,42 @@ func ResetDBHandler(c *gin.Context) {
 		return
 	}
 
-	log.Println("🔄 ResetDBHandler triggered with valid passkey...")
+		// Get auth_user_id by email
+		var authUser models.AuthUser
+		if err := models.DB.Where("email = ?", req.Email).First(&authUser).Error; err != nil {
+			if err == gorm.ErrRecordNotFound {
+				c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+			} else {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve user"})
+			}
+			return
+		}
+	
+		// Log user id
+		log.Printf("🔄 ResetDBHandler triggered for user: %s (ID: %d)", req.Email, authUser.ID)
+	
 
 	tables := []string{
 		"auth_users",
 		"seekers",
 		"admins",
 
-		"personal_infos",
-		"professional_summaries",
-		"work_experiences",
-		"educations",
-		"languages",
-		"certificates",
-		"preferred_job_titles",
-
 		"job_match_scores",
+		"user_entry_timelines",
+		"selected_job_applications",
+		"cover_letters",
+		"cv",
+
+
 	}
 
-	models.ResetDB(models.DB, tables)
-	models.AutoMigrate()
-	models.SeedJobs(models.DB)
+	for _, table := range tables {
+		if err := models.DB.Exec("DELETE FROM "+table+" WHERE auth_user_id = ?", authUser.ID).Error; err != nil {
+			log.Printf("❌ Failed to delete records from table %s: %v", table, err)
+		} else {
+			log.Printf("✅ Deleted records from table %s for user ID %d", table, authUser.ID)
+		}
+	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "✅ MySQL DB reset and seeded"})
 }

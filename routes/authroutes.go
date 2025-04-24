@@ -1,25 +1,29 @@
+// routes/auth_routes.go
 package routes
 
 import (
-	"RAAS/handlers/auth"
 	"RAAS/config"
-	
+	"RAAS/handlers/auth"
+	"RAAS/middlewares"
+	"time"
+
 	"github.com/gin-gonic/gin"
 )
 
 func SetupAuthRoutes(r *gin.Engine, cfg *config.Config) {
-	// AUTH ROUTES
-	r.POST("/signup", auth.SeekerSignUp)
-	r.GET("/verify-email", auth.VerifyEmail)
-	r.POST("/login", auth.Login)
-	r.POST("/auth/forgot-password", auth.ForgotPasswordHandler)
-	r.POST("/auth/admin-reset-token", auth.SystemInitiatedResetTokenHandler) // no email
-	
-	// Define the route for the reset password page
-	r.GET("/reset-password", auth.ResetPasswordPage) // This should match the route you're using for the password reset page
+	// Rate limit settings
+	signupLimiter := middleware.RateLimiterMiddleware(5,time.Minute)
+	loginLimiter := middleware.RateLimiterMiddleware(10,time.Minute)
+	forgotPassLimiter := middleware.RateLimiterMiddleware(3,time.Minute)
+	resetPassLimiter := middleware.RateLimiterMiddleware(3,time.Minute)
+	verifyEmailLimiter := middleware.RateLimiterMiddleware(10,time.Minute)
 
-	// Define the route for the actual password reset submission
-	r.POST("/reset-password", auth.ResetPasswordHandler)
-
-		
+	// AUTH ROUTES with rate limits
+	r.POST("/signup", signupLimiter, auth.SeekerSignUp)
+	r.GET("/verify-email", verifyEmailLimiter, auth.VerifyEmail)
+	r.POST("/login", loginLimiter, auth.Login)
+	r.POST("/auth/forgot-password", forgotPassLimiter, auth.ForgotPasswordHandler)
+	r.POST("/auth/admin-reset-token", auth.SystemInitiatedResetTokenHandler) // (no limiter here)
+	r.GET("/reset-password", auth.ResetPasswordPage)                         // (optional)
+	r.POST("/reset-password", resetPassLimiter, auth.ResetPasswordHandler)
 }

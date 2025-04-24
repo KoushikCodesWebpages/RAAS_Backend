@@ -29,7 +29,7 @@ func main() {
     db := models.InitDB(config.Cfg)
 
     // ✅ Start the match score worker properly
-    startMatchScoreWorker(db)
+    // startMatchScoreWorker(db)
 
     r := gin.Default()
     routes.SetupRoutes(r, db, config.Cfg)

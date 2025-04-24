@@ -9,6 +9,7 @@ import (
     "strings"
     "log"
 )
+
 func AuthMiddleware() gin.HandlerFunc {
     return func(c *gin.Context) {
         // log.Println("AuthHeaderTypes:", config.Cfg.AuthHeaderTypes)

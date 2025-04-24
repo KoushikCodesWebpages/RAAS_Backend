@@ -9,7 +9,7 @@ import (
 
 type UserEntryTimeline struct {
     ID                              uuid.UUID  `gorm:"type:char(36);primaryKey" json:"id"`
-    UserID                          uuid.UUID  `gorm:"type:char(36);uniqueIndex;not null" json:"user_id"`
+    AuthUserID uuid.UUID `gorm:"type:char(36);uniqueIndex;not null;constraint:OnDelete:CASCADE,OnUpdate:CASCADE" json:"authUserId"`
 
     PersonalInfosCompleted          bool       `gorm:"default:false" json:"personal_infos_completed"`
     PersonalInfosRequired           bool       `gorm:"default:true" json:"personal_infos_required"`
@@ -24,10 +24,10 @@ type UserEntryTimeline struct {
     EducationsRequired              bool       `gorm:"default:true" json:"educations_required"`
 
     CertificatesCompleted           bool       `gorm:"default:false" json:"certificates_completed"`
-    CertificatesRequired            bool       `gorm:"default:false" json:"certificates_required"`
+    CertificatesRequired            bool       `gorm:"default:true" json:"certificates_required"`
 
     LanguagesCompleted              bool       `gorm:"default:false" json:"languages_completed"`
-    LanguagesRequired               bool       `gorm:"default:false" json:"languages_required"`
+    LanguagesRequired               bool       `gorm:"default:true" json:"languages_required"`
 
     PreferredJobTitlesCompleted     bool       `gorm:"default:false" json:"preferred_job_titles_completed"`
     PreferredJobTitlesRequired      bool       `gorm:"default:true" json:"preferred_job_titles_required"`
@@ -74,7 +74,7 @@ type SelectedJobApplication struct {
 
 type CV struct {
     gorm.Model
-    AuthUserID  uuid.UUID `gorm:"type:char(36);uniqueIndex;not null;constraint:OnDelete:CASCADE,OnUpdate:CASCADE" json:"authUserId"`
+    AuthUserID uuid.UUID `gorm:"type:char(36);not null;constraint:OnDelete:CASCADE,OnUpdate:CASCADE" json:"authUserId"` // Seeker ID (foreign key reference)
     JobID       string    `gorm:"unique;type:varchar(191)"`
     CVUrl       string    `gorm:"type:varchar(255);not null"` // Path/URL to the CV document
 }
@@ -90,7 +90,7 @@ func (CV) TableName() string {
 
 type CoverLetter struct {
     gorm.Model
-    AuthUserID  uuid.UUID `gorm:"type:char(36);uniqueIndex;not null;constraint:OnDelete:CASCADE,OnUpdate:CASCADE" json:"authUserId"`
+    AuthUserID  uuid.UUID `gorm:"type:char(36);not null;constraint:OnDelete:CASCADE,OnUpdate:CASCADE" json:"authUserId"`
     JobID       string    `gorm:"unique;type:varchar(191)"`
     CoverLetterURL string  `gorm:"type:varchar(255);not null"` // URL for the cover letter
 }

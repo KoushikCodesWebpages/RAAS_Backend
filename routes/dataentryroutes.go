@@ -42,27 +42,27 @@ func SetupDataEntryRoutes(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
 		professionalSummaryRoutes.PUT("", professionalSummaryHandler.UpdateProfessionalSummary)
 	}
 	
-	// WORK EXPERIENCE routes
-	workExperienceHandler := dataentry.NewWorkExperienceHandler(db)
-	workExperienceRoutes := r.Group("/work-experience")
-	workExperienceRoutes.Use(middleware.AuthMiddleware())
-	{
-		workExperienceRoutes.POST("", workExperienceHandler.CreateWorkExperience)
-		workExperienceRoutes.GET("", workExperienceHandler.GetWorkExperiences)
-		workExperienceRoutes.PATCH(":id", workExperienceHandler.PatchWorkExperience)
-		workExperienceRoutes.DELETE(":id", workExperienceHandler.DeleteWorkExperience)
-	}
+	// // WORK EXPERIENCE routes
+	// workExperienceHandler := dataentry.NewWorkExperienceHandler(db)
+	// workExperienceRoutes := r.Group("/work-experience")
+	// workExperienceRoutes.Use(middleware.AuthMiddleware())
+	// {
+	// 	workExperienceRoutes.POST("", workExperienceHandler.CreateWorkExperience)
+	// 	workExperienceRoutes.GET("", workExperienceHandler.GetWorkExperiences)
+	// 	workExperienceRoutes.PATCH(":id", workExperienceHandler.PatchWorkExperience)
+	// 	workExperienceRoutes.DELETE(":id", workExperienceHandler.DeleteWorkExperience)
+	// }
 
 	// EDUCATION routes
-	educationHandler := dataentry.NewEducationHandler(db)
-	educationRoutes := r.Group("/education")
-	educationRoutes.Use(middleware.AuthMiddleware())
-	{
-		educationRoutes.POST("", educationHandler.CreateEducation)
-		educationRoutes.GET("", educationHandler.GetEducations)
-		educationRoutes.PUT(":id", educationHandler.PatchEducation)
-		educationRoutes.DELETE(":id", educationHandler.DeleteEducation)
-	}
+	// educationHandler := dataentry.NewEducationHandler(db)
+	// educationRoutes := r.Group("/education")
+	// educationRoutes.Use(middleware.AuthMiddleware())
+	// {
+	// 	educationRoutes.POST("", educationHandler.CreateEducation)
+	// 	educationRoutes.GET("", educationHandler.GetEducations)
+	// 	educationRoutes.PUT(":id", educationHandler.PatchEducation)
+	// 	educationRoutes.DELETE(":id", educationHandler.DeleteEducation)
+	// }
 
 
 	// CERTIFICATES routes

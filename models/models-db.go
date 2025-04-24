@@ -56,8 +56,12 @@ func InitDB(cfg *config.Config) *gorm.DB {
 	// 	"auth_users",
 	// 	"seekers",
 	// 	"admins",
+
 	// 	"job_match_scores",
-	// 	"jobs", // 👈 ADD THIS
+	// 	"user_entry_timelines",
+	// 	"selected_job_applications",
+	// 	"cover_letters",
+	// 	"cv",
 	// }
 	// ResetDB(DB,tables)
 	AutoMigrate()
