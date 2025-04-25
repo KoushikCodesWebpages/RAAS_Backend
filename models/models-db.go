@@ -1,192 +1,73 @@
 package models
 
 import (
-	"fmt"
+	"context"
 	"log"
 	"RAAS/config"
-	"gorm.io/driver/mysql"
-	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
-	"os"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-// DB is the global database variable
-var DB *gorm.DB
+var MongoDB *mongo.Database
 
-func InitDB(cfg *config.Config) *gorm.DB {
-	var err error
-
-
-
-	// Set the GORM logger to silent or info level as needed
-	gormLogger := logger.New(
-		log.New(os.Stdout, "", log.LstdFlags), // Output, Prefix, and Flags
-		logger.Config{
-			LogLevel: logger.Silent, // Change to logger.Info to show logs, logger.Silent to hide
-			Colorful: true,
-		},
-	)
-	// log.Println("Using Remote MySQL database")
-
-	// // remote MySQL connection:
-	// dsn := fmt.Sprintf(
-	// 	"%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local",
-	// 	cfg.DBUser,
-	// 	cfg.DBPassword,
-	// 	cfg.DBServer,
-	// 	cfg.DBPort,
-	// 	cfg.DBName,
-	// )
-
-	// ** Hardcoded local MySQL connection details **
-	// Open the DB with the custom logger
-
-	log.Println("Using Local MySQL database")
-	dsn := "koushik:Koushik2025!babu@tcp(127.0.0.1:3306)/localraas?charset=utf8mb4&parseTime=True&loc=Local"
-
-	DB, err = gorm.Open(mysql.Open(dsn), &gorm.Config{
-		Logger: gormLogger,
-	})
+// InitDB initializes the MongoDB connection and returns the client and database instances
+func InitDB(cfg *config.Config) (*mongo.Client, *mongo.Database) {
+	clientOptions := options.Client().ApplyURI(cfg.Cloud.MongoDBUri)
+	client, err := mongo.Connect(context.TODO(), clientOptions)
 	if err != nil {
-		log.Fatalf("❌ Error connecting to MySQL: %v", err)
+		log.Fatalf("❌ Error connecting to MongoDB: %v", err)
 	}
 
-	log.Println("✅ MySQL connection established")
-	// tables := []string{
-	// 	"auth_users",
-	// 	"seekers",
-	// 	"admins",
+	// Check the connection
+	err = client.Ping(context.TODO(), nil)
+	if err != nil {
+		log.Fatalf("❌ Error pinging MongoDB: %v", err)
+	}
 
-	// 	"match_scores",
-	// 	"user_entry_timelines",
-	// 	"selected_job_applications",
-	// 	"cover_letters",
-	// 	"cv",
-	// }
-	// ResetDB(DB,tables)
-	AutoMigrate()
-	SeedJobs(DB)
-	// PrintAllTables(DB, cfg.DBName)
-	PrintAllTables(DB, "localraas")
-	return DB
+	MongoDB = client.Database(cfg.Cloud.MongoDBName)
+	log.Println("✅ MongoDB connection established")
+	PrintAllCollections()
+
+	// Optionally reset collections
+	resetCollections()
+
+
+	return client, MongoDB
 }
 
-// AutoMigrate will automatically migrate all models to the database
-func AutoMigrate() {
-	// Phase 1: Create Major Tables
-	err := DB.AutoMigrate(
-		// Major Tables (without foreign key dependencies)
-		&AuthUser{},
-		&Seeker{},
-		&Admin{},
-
-	)
-
-	if err != nil {
-		log.Fatalf("Error creating major tables: %v", err)
+// Reset collections if necessary
+func resetCollections() {
+	collections := []string{
+		"auth_users",
+		"seekers",
+		"admins",
+		"match_scores",
+		"user_entry_timelines",
+		"selected_job_applications",
+		"cover_letters",
+		"cv",
 	}
-	log.Println("Major tables migration completed successfully")
 
-	// Phase 2: Create Foreign Key Related Tables
-	err = DB.AutoMigrate(
-		// Job-related tables
-		&UserEntryTimeline{},
-		&Job{},
-		&MatchScore{},
-		&CoverLetter{},
-		&CV{},
-		// Foreign Key Dependent Table
-		&SelectedJobApplication{},
-	)
-
-	if err != nil {
-		log.Fatalf("Error creating foreign key related tables: %v", err)
+	for _, col := range collections {
+		err := MongoDB.Collection(col).Drop(context.TODO())
+		if err != nil {
+			log.Printf("⚠️ Error resetting collection %s: %v", col, err)
+		} else {
+			log.Printf("✅ Collection %s reset", col)
+		}
 	}
-	log.Println("Foreign key related tables migration completed successfully")
 }
 
-func ResetDB(DB *gorm.DB, tablesToDrop []string) {
-	log.Println("Resetting selected tables...")
-
-	// Get the dialect (MySQL, SQLServer, SQLite)
-	dialect := DB.Dialector.Name()
-
-	// Fetch foreign key constraints for tables in the drop list
-	var constraints []struct {
-		TableName      string
-		ConstraintName string
-	}
-
-	// Get foreign key constraints from the information schema
-	DB.Raw(`
-		SELECT TABLE_NAME, CONSTRAINT_NAME
-		FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS
-		WHERE CONSTRAINT_TYPE = 'FOREIGN KEY'
-	`).Scan(&constraints)
-
-	// Drop foreign key constraints before dropping tables
-	for _, c := range constraints {
-		if contains(tablesToDrop, c.TableName) {
-			var query string
-			switch dialect {
-			case "mysql", "sqlite":
-				// MySQL/SQLite: Drop foreign key constraint
-				query = fmt.Sprintf("ALTER TABLE `%s` DROP FOREIGN KEY `%s`;", c.TableName, c.ConstraintName)
-			case "sqlserver":
-				// SQLServer: Drop foreign key constraint
-				query = fmt.Sprintf("ALTER TABLE %s DROP CONSTRAINT %s;", c.TableName, c.ConstraintName)
-			default:
-				log.Printf("⚠️ Unknown dialect: %s, skipping foreign key removal.", dialect)
-				continue
-			}
-
-			if err := DB.Exec(query).Error; err != nil {
-				log.Printf("⚠️ Error dropping FK %s on table %s: %v", c.ConstraintName, c.TableName, err)
-			}
-		}
-	}
-
-	// Now, drop the selected tables
-	for _, table := range tablesToDrop {
-		var query string
-		switch dialect {
-		case "mysql", "sqlite":
-			// MySQL/SQLite: Drop tables
-			query = fmt.Sprintf("DROP TABLE IF EXISTS `%s`;", table)
-		case "sqlserver":
-			// SQLServer: Drop tables (without IF EXISTS)
-			query = fmt.Sprintf("DROP TABLE %s;", table)
-		default:
-			log.Printf("⚠️ Unknown dialect: %s, skipping table drop.", dialect)
-			continue
-		}
-
-		if err := DB.Exec(query).Error; err != nil {
-			log.Printf("⚠️ Error dropping table %s: %v", table, err)
-		}
-	}
-
-	log.Println("✅ Tables reset")
-}
-
-// contains checks if a string exists in a slice.
-func contains(list []string, val string) bool {
-	for _, item := range list {
-		if item == val {
-			return true
-		}
-	}
-	return false
-}
-
-func PrintAllTables(db *gorm.DB, dbName string) {
-	var tables []string
-	err := db.Raw("SELECT table_name FROM information_schema.tables WHERE table_schema = ?", dbName).Scan(&tables).Error
+// Print all collections
+func PrintAllCollections() {
+	collections, err := MongoDB.ListCollectionNames(context.TODO(), bson.M{})
 	if err != nil {
-		log.Fatalf("❌ Error fetching table names: %v", err)
+		log.Fatalf("❌ Error fetching collection names: %v", err)
 	}
-	log.Println("📦 Tables in the database:")
-	for _, table := range tables {
-		log.Println(" -", table)
+
+	log.Println("📦 Collections in the database:")
+	for _, col := range collections {
+		log.Println(" -", col)
 	}
 }

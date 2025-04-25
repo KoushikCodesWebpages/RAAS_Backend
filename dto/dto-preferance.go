@@ -2,6 +2,7 @@ package dto
 
 import (
 	"github.com/google/uuid"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"time"
 )
 
@@ -10,16 +11,16 @@ import (
 // =======================
 
 type JobTitleInput struct {
-	PrimaryTitle   string  `json:"primaryTitle"`
-	SecondaryTitle *string `json:"secondaryTitle,omitempty"`
-	TertiaryTitle  *string `json:"tertiaryTitle,omitempty"`
+	PrimaryTitle   string  `json:"primaryTitle" bson:"primaryTitle"`
+	SecondaryTitle *string `json:"secondaryTitle,omitempty" bson:"secondaryTitle,omitempty"`
+	TertiaryTitle  *string `json:"tertiaryTitle,omitempty" bson:"tertiaryTitle,omitempty"`
 }
 
 type JobTitleResponse struct {
-	AuthUserID     uuid.UUID `json:"authUserId"`
-	PrimaryTitle   string    `json:"primaryTitle"`
-	SecondaryTitle *string   `json:"secondaryTitle,omitempty"`
-	TertiaryTitle  *string   `json:"tertiaryTitle,omitempty"`
+	AuthUserID     uuid.UUID `json:"authUserId" bson:"authUserId"`
+	PrimaryTitle   string    `json:"primaryTitle" bson:"primaryTitle"`
+	SecondaryTitle *string   `json:"secondaryTitle,omitempty" bson:"secondaryTitle,omitempty"`
+	TertiaryTitle  *string   `json:"tertiaryTitle,omitempty" bson:"tertiaryTitle,omitempty"`
 }
 
 // =======================
@@ -27,20 +28,20 @@ type JobTitleResponse struct {
 // =======================
 
 type PersonalInfoRequest struct {
-	FirstName       string  `json:"firstName" binding:"required"`
-	SecondName      *string `json:"secondName,omitempty"`
-	DateOfBirth     string  `json:"dateOfBirth" binding:"required"`
-	Address         string  `json:"address" binding:"required"`
-	LinkedInProfile *string `json:"linkedinProfile,omitempty"`
+	FirstName       string  `json:"firstName" binding:"required" bson:"firstName"`
+	SecondName      *string `json:"secondName,omitempty" bson:"secondName,omitempty"`
+	DateOfBirth     string  `json:"dateOfBirth" binding:"required" bson:"dateOfBirth"`
+	Address         string  `json:"address" binding:"required" bson:"address"`
+	LinkedInProfile *string `json:"linkedinProfile,omitempty" bson:"linkedinProfile,omitempty"`
 }
 
 type PersonalInfoResponse struct {
-	AuthUserID      uuid.UUID `json:"authUserId"`
-	FirstName       string    `json:"firstName"`
-	SecondName      *string   `json:"secondName,omitempty"`
-	DateOfBirth     string    `json:"dateOfBirth"`
-	Address         string    `json:"address"`
-	LinkedInProfile *string   `json:"linkedinProfile,omitempty"`
+	AuthUserID      uuid.UUID `json:"authUserId" bson:"authUserId"`
+	FirstName       string    `json:"firstName" bson:"firstName"`
+	SecondName      *string   `json:"secondName,omitempty" bson:"secondName,omitempty"`
+	DateOfBirth     string    `json:"dateOfBirth" bson:"dateOfBirth"`
+	Address         string    `json:"address" bson:"address"`
+	LinkedInProfile *string   `json:"linkedinProfile,omitempty" bson:"linkedinProfile,omitempty"`
 }
 
 // =======================
@@ -48,16 +49,16 @@ type PersonalInfoResponse struct {
 // =======================
 
 type ProfessionalSummaryRequest struct {
-	About        string   `json:"about" binding:"required"`
-	Skills       []string `json:"skills" binding:"required"`
-	AnnualIncome float64  `json:"annualIncome" binding:"required"`
+	About        string   `json:"about" binding:"required" bson:"about"`
+	Skills       []string `json:"skills" binding:"required" bson:"skills"`
+	AnnualIncome float64  `json:"annualIncome" binding:"required" bson:"annualIncome"`
 }
 
 type ProfessionalSummaryResponse struct {
-	AuthUserID   uuid.UUID `json:"authUserId"`
-	About        string    `json:"about"`
-	Skills       []string  `json:"skills"`
-	AnnualIncome float64   `json:"annualIncome"`
+	AuthUserID   uuid.UUID `json:"authUserId" bson:"authUserId"`
+	About        string    `json:"about" bson:"about"`
+	Skills       []string  `json:"skills" bson:"skills"`
+	AnnualIncome float64   `json:"annualIncome" bson:"annualIncome"`
 }
 
 // =======================
@@ -65,23 +66,23 @@ type ProfessionalSummaryResponse struct {
 // =======================
 
 type WorkExperienceRequest struct {
-	JobTitle            string    `json:"jobTitle" binding:"required"`
-	CompanyName         string    `json:"companyName" binding:"required"`
-	EmploymentType      string    `json:"employmentType" binding:"required"` // e.g., Full-time, Contract
-	StartDate           time.Time `json:"startDate" binding:"required"`       // Format: YYYY-MM-DD
-	EndDate             *time.Time `json:"endDate"`                           // Optional for ongoing jobs
-	KeyResponsibilities string    `json:"keyResponsibilities" binding:"required"`
+	JobTitle            string    `json:"jobTitle" binding:"required" bson:"jobTitle"`
+	CompanyName         string    `json:"companyName" binding:"required" bson:"companyName"`
+	EmploymentType      string    `json:"employmentType" binding:"required" bson:"employmentType"`
+	StartDate           time.Time `json:"startDate" binding:"required" bson:"startDate"` // Format: YYYY-MM-DD
+	EndDate             *time.Time `json:"endDate,omitempty" bson:"endDate,omitempty"`    // Optional for ongoing jobs
+	KeyResponsibilities string    `json:"keyResponsibilities" binding:"required" bson:"keyResponsibilities"`
 }
 
 type WorkExperienceResponse struct {
-	ID                  uint       `json:"id"`
-	AuthUserID          uuid.UUID  `json:"authUserId"`
-	JobTitle            string     `json:"jobTitle"`
-	CompanyName         string     `json:"companyName"`
-	EmploymentType      string     `json:"employmentType"`
-	StartDate           time.Time  `json:"startDate"`
-	EndDate             *time.Time `json:"endDate,omitempty"`
-	KeyResponsibilities string     `json:"keyResponsibilities"`
+	ID                  primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+	AuthUserID          uuid.UUID          `json:"authUserId" bson:"authUserId"`
+	JobTitle            string             `json:"jobTitle" bson:"jobTitle"`
+	CompanyName         string             `json:"companyName" bson:"companyName"`
+	EmploymentType      string             `json:"employmentType" bson:"employmentType"`
+	StartDate           time.Time          `json:"startDate" bson:"startDate"`
+	EndDate             *time.Time         `json:"endDate,omitempty" bson:"endDate,omitempty"`
+	KeyResponsibilities string             `json:"keyResponsibilities" bson:"keyResponsibilities"`
 }
 
 // =======================
@@ -89,23 +90,23 @@ type WorkExperienceResponse struct {
 // =======================
 
 type EducationRequest struct {
-	Degree       string     `json:"degree" binding:"required"`
-	Institution  string     `json:"institution" binding:"required"`
-	FieldOfStudy string     `json:"fieldOfStudy" binding:"required"`
-	StartDate    time.Time  `json:"startDate" binding:"required"`
-	EndDate      *time.Time `json:"endDate,omitempty"`
-	Achievements string     `json:"achievements,omitempty"`
+	Degree       string     `json:"degree" binding:"required" bson:"degree"`
+	Institution  string     `json:"institution" binding:"required" bson:"institution"`
+	FieldOfStudy string     `json:"fieldOfStudy" binding:"required" bson:"fieldOfStudy"`
+	StartDate    time.Time  `json:"startDate" binding:"required" bson:"startDate"`
+	EndDate      *time.Time `json:"endDate,omitempty" bson:"endDate,omitempty"`
+	Achievements string     `json:"achievements,omitempty" bson:"achievements,omitempty"`
 }
 
 type EducationResponse struct {
-	ID           uint       `json:"id"`
-	AuthUserID   uuid.UUID  `json:"authUserId"`
-	Degree       string     `json:"degree"`
-	Institution  string     `json:"institution"`
-	FieldOfStudy string     `json:"fieldOfStudy"`
-	StartDate    time.Time  `json:"startDate"`
-	EndDate      *time.Time `json:"endDate,omitempty"`
-	Achievements string     `json:"achievements,omitempty"`
+	ID           primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+	AuthUserID   uuid.UUID          `json:"authUserId" bson:"authUserId"`
+	Degree       string             `json:"degree" bson:"degree"`
+	Institution  string             `json:"institution" bson:"institution"`
+	FieldOfStudy string             `json:"fieldOfStudy" bson:"fieldOfStudy"`
+	StartDate    time.Time          `json:"startDate" bson:"startDate"`
+	EndDate      *time.Time         `json:"endDate,omitempty" bson:"endDate,omitempty"`
+	Achievements string             `json:"achievements,omitempty" bson:"achievements,omitempty"`
 }
 
 // =======================
@@ -113,16 +114,16 @@ type EducationResponse struct {
 // =======================
 
 type CertificateRequest struct {
-	CertificateName   string  `form:"certificateName" json:"certificateName"`
-	CertificateNumber *string `form:"certificateNumber" json:"certificateNumber"`
+	CertificateName   string  `form:"certificateName" json:"certificateName" bson:"certificateName"`
+	CertificateNumber *string `form:"certificateNumber" json:"certificateNumber,omitempty" bson:"certificateNumber,omitempty"`
 }
 
 type CertificateResponse struct {
-	ID                uint      `json:"id"`
-	AuthUserID        uuid.UUID `json:"authUserId"`
-	CertificateName   string    `json:"certificateName"`
-	CertificateFile   string    `json:"certificateFile"`
-	CertificateNumber *string   `json:"certificateNumber,omitempty"`
+	ID                primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+	AuthUserID        uuid.UUID          `json:"authUserId" bson:"authUserId"`
+	CertificateName   string             `json:"certificateName" bson:"certificateName"`
+	CertificateFile   string             `json:"certificateFile" bson:"certificateFile"`
+	CertificateNumber *string            `json:"certificateNumber,omitempty" bson:"certificateNumber,omitempty"`
 }
 
 // =======================
@@ -130,15 +131,15 @@ type CertificateResponse struct {
 // =======================
 
 type LanguageRequest struct {
-	LanguageName     string `json:"language" binding:"required"`
-	CertificateFile  string `json:"certificateFile"`
-	ProficiencyLevel string `json:"proficiency" binding:"required"`
+	LanguageName     string `json:"language" binding:"required" bson:"language"`
+	CertificateFile  string `json:"certificateFile" bson:"certificateFile"`
+	ProficiencyLevel string `json:"proficiency" binding:"required" bson:"proficiency"`
 }
 
 type LanguageResponse struct {
-	ID               uint      `json:"id"`
-	AuthUserID       uuid.UUID `json:"authUserId"`
-	LanguageName     string    `json:"language"`
-	CertificateFile  string    `json:"certificateFile"`
-	ProficiencyLevel string    `json:"proficiency"`
+	ID               primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+	AuthUserID       uuid.UUID          `json:"authUserId" bson:"authUserId"`
+	LanguageName     string             `json:"language" bson:"language"`
+	CertificateFile  string             `json:"certificateFile" bson:"certificateFile"`
+	ProficiencyLevel string             `json:"proficiency" bson:"proficiency"`
 }

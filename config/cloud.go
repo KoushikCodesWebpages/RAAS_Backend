@@ -27,12 +27,16 @@ type CloudConfig struct {
     DefaultFromEmail          string
     StaticURL                 string
 
-    DBType                    string
-    DBServer                  string
-    DBPort                    int
-    DBUser                    string
-    DBPassword                string
-    DBName                    string
+    MongoDBUri              string
+    MongoDBName             string
+
+
+    // DBType                    string
+    // DBServer                  string
+    // DBPort                    int
+    // DBUser                    string
+    // DBPassword                string
+    // DBName                    string
 
     CL_Url                    string
     CV_Url                    string
@@ -61,13 +65,18 @@ func LoadCloudConfig() (*CloudConfig, error) {
         EmailHostUser:            viper.GetString("EMAIL_HOST_USER"),
         EmailHostPassword:        viper.GetString("EMAIL_HOST_PASSWORD"),
         DefaultFromEmail:         viper.GetString("DEFAULT_FROM_EMAIL"),
+        
 
-        DBType:                   viper.GetString("DB_TYPE"),
-        DBServer:                 viper.GetString("DB_SERVER"),
-        DBPort:                   viper.GetInt("DB_PORT"),
-        DBUser:                   viper.GetString("DB_USER"),
-        DBPassword:               viper.GetString("DB_PASSWORD"),
-        DBName:                   viper.GetString("DB_NAME"),
+
+        MongoDBUri:               viper.GetString("MONGO_DB_URI"),
+        MongoDBName:                viper.GetString("MONGO_DB_NAME"),
+        
+        // DBType:                   viper.GetString("DB_TYPE"),
+        // DBServer:                 viper.GetString("DB_SERVER"),
+        // DBPort:                   viper.GetInt("DB_PORT"),
+        // DBUser:                   viper.GetString("DB_USER"),
+        // DBPassword:               viper.GetString("DB_PASSWORD"),
+        // DBName:                   viper.GetString("DB_NAME"),
 
         CL_Url:                   viper.GetString("COVER_LETTER_API_URL"),
         CV_Url:                   viper.GetString("CV_RESUME_API_URL"),
@@ -81,12 +90,12 @@ func LoadCloudConfig() (*CloudConfig, error) {
     if dbConfig.GoogleClientId == "" {
         return nil, fmt.Errorf("GoogleClientId is required but not set")
     }
-    if dbConfig.DBServer == "" {
-        return nil, fmt.Errorf("DBServer is required but not set")
-    }
-    if dbConfig.DBPassword == "" {
-        return nil, fmt.Errorf("DBPassword is required but not set")
-    }
+    // if dbConfig.DBServer == "" {
+    //     return nil, fmt.Errorf("DBServer is required but not set")
+    // }
+    // if dbConfig.DBPassword == "" {
+    //     return nil, fmt.Errorf("DBPassword is required but not set")
+    // }
 
     return dbConfig, nil
 }

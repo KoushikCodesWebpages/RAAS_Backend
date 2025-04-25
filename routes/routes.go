@@ -2,24 +2,21 @@ package routes
 
 import (
 	"RAAS/config"
-	"gorm.io/gorm"
-	"github.com/gin-gonic/gin"
 	"RAAS/middlewares"
-	"RAAS/handlers/repo"
-
+	// "RAAS/handlers/repo"
+	"github.com/gin-gonic/gin"
 	"github.com/gin-contrib/cors"
-   	"time"
-	//"log"
-    "strings"
-
+	"go.mongodb.org/mongo-driver/mongo"
+	"time"
+	"strings"
 )
 
-func SetupRoutes(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
+func SetupRoutes(r *gin.Engine, client *mongo.Client, cfg *config.Config) {
+	// Set up allowed CORS origins
 	origins := strings.Split(cfg.Project.CORSAllowedOrigins, ",")
 	for i, origin := range origins {
 		origins[i] = strings.TrimSpace(origin)
 	}
-	//log.Println("Allowed CORS Origins:", origins)
 
 	corsConfig := cors.Config{
 		AllowOrigins:  origins,
@@ -29,12 +26,15 @@ func SetupRoutes(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
 		MaxAge: 12 * time.Hour,
 	}
 
+	// Apply CORS middleware
 	r.Use(cors.New(corsConfig))
-	// Middleware: Inject DB into context
-	r.Use(middleware.InjectDB(db))
+
+	// Middleware: Inject MongoDB client into context (adjusted for MongoDB)
+	r.Use(middleware.InjectDB(client))
 
 	// Serve static files from the dist folder
 	r.Static("/assets", "./public/dist/assets")
+
 	// Serve React app's index.html
 	r.GET("/", func(c *gin.Context) {
 		c.File("./public/dist/index.html")
@@ -47,9 +47,9 @@ func SetupRoutes(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
 
 	// Call SetupAuthRoutes, SetupDataEntryRoutes, SetupFeatureRoutes
 	SetupAuthRoutes(r, cfg)
-	SetupDataEntryRoutes(r, db, cfg)
-	SetupFeatureRoutes(r, db, cfg)
+	// SetupDataEntryRoutes(r, client, cfg)
+	// SetupFeatureRoutes(r, client, cfg)
 
-	// Reset DB route
-	r.POST("/api/reset-db", repo.ResetDBHandler)
+	// Reset DB route (update the handler to work with MongoDB)
+	// r.POST("/api/reset-db", repo.ResetDBHandler)
 }

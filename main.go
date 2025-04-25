@@ -1,57 +1,79 @@
 package main
 
 import (
-    "fmt"
-    "log"
+	"fmt"
+	"log"
+	"os"
+	"os/signal"
+	"syscall"
+	"context"
 
-    "os"
+	"github.com/gin-gonic/gin"
+	"RAAS/config"
+	"RAAS/routes"
+	// "RAAS/workers"
+	"RAAS/models" // Import the models package to use InitDB
 
-    "github.com/gin-gonic/gin"
-
-   
-
-   "RAAS/config"
-   "RAAS/models"
-   "RAAS/routes"
-
-
-    "gorm.io/gorm"
-    "RAAS/workers"
+	// "go.mongodb.org/mongo-driver/mongo"
 )
+
 func main() {
-    gin.SetMode(gin.ReleaseMode)
+	gin.SetMode(gin.ReleaseMode)
 
-    err := config.InitConfig()
-    if err != nil {
-        log.Fatalf("Error initializing config: %v", err)
-    }
+	// Initialize the configuration
+	err := config.InitConfig()
+	if err != nil {
+		log.Fatalf("Error initializing config: %v", err)
+	}
 
-    db := models.InitDB(config.Cfg)
+	// Initialize MongoDB client and database using models.InitDB
+	client, _ := models.InitDB(config.Cfg) // Get both client and database
 
-    // ✅ Start the match score worker properly
-    // startMatchScoreWorker(db)
+	// ✅ Start the match score worker properly
+	// startMatchScoreWorker(client)
 
-    r := gin.Default()
-    routes.SetupRoutes(r, db, config.Cfg)
+	// Set up the Gin router
+	r := gin.Default()
+	routes.SetupRoutes(r, client, config.Cfg) // Pass client (mongo.Client) to SetupRoutes
 
-    port := os.Getenv("PORT")
-    if port == "" {
-        port = fmt.Sprintf("%d", config.Cfg.Server.ServerPort)
-        log.Printf("Starting server on dev port: http://localhost:%s", port)
-    } else {
-        log.Printf("Starting server on prod port: %s", port)
-    }
+	// Get the server port from config or environment variable
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = fmt.Sprintf("%d", config.Cfg.Server.ServerPort)
+		log.Printf("Starting server on dev port: http://localhost:%s", port)
+	} else {
+		log.Printf("Starting server on prod port: %s", port)
+	}
 
-    err = r.Run(":" + port)
-    if err != nil {
-        log.Fatalf("Failed to start server: %v", err)
-    }
+	// Run the Gin server
+	go func() {
+		err = r.Run(":" + port)
+		if err != nil {
+			log.Fatalf("Failed to start server: %v", err)
+		}
+	}()
+
+	// Graceful shutdown handling for server and MongoDB connection
+	shutdownSignal := make(chan os.Signal, 1)
+	signal.Notify(shutdownSignal, syscall.SIGINT, syscall.SIGTERM)
+
+	<-shutdownSignal
+
+	log.Println("Shutting down server...")
+
+	// Close MongoDB client gracefully
+	err = client.Disconnect(context.TODO()) // Disconnect the client
+	if err != nil {
+		log.Fatalf("Error disconnecting MongoDB: %v", err)
+	}
+
+	log.Println("MongoDB connection closed gracefully")
 }
 
-// ✅ move this outside main
-func startMatchScoreWorker(db *gorm.DB) {
-    worker := &workers.MatchScoreWorker{
-        DB: db,
-    }
-    go worker.Run()
-}
+// // startMatchScoreWorker starts the match score worker as a goroutine
+// func startMatchScoreWorker(client *mongo.Client) {
+// 	worker := &workers.MatchScoreWorker{
+// 		Client: client,
+// 	}
+// 	go worker.Run()
+// }

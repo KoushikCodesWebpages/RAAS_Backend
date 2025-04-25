@@ -2,13 +2,13 @@ package dto
 
 import (
     "RAAS/models"
-	"github.com/google/uuid"
+    "go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type SeekerSignUpInput struct {
     Email     string `json:"email" binding:"required,email"`
     Password  string `json:"password" binding:"required,min=8"`
-	Number string `json:"number" binding:"required,len=10"`
+	Number    string `json:"number" binding:"required,len=10"`
 }
 
 type LoginInput struct {
@@ -21,25 +21,24 @@ type AuthUserMinimal struct {
 	Email         string `json:"email"`
 	EmailVerified bool   `json:"emailVerified"`
 	Provider      string `json:"provider"`
-	Number string `json:"number" binding:"required,len=10"`
+	Number        string `json:"number" binding:"required,len=10"`
 }
 
 // SeekerResponse represents the response structure for Seeker details
 type SeekerResponse struct {
-	ID         uint            `json:"id"`       // Use uuid.UUID for Seeker ID
-	AuthUserID uuid.UUID       `json:"authUserId"`  // Use uuid.UUID for AuthUserID
-	AuthUser   AuthUserMinimal `json:"authUser"`
-	SubscriptionTier string    `json:"subscriptionTier"`
-	
-	//SubscriptionTier string
+	ID               primitive.ObjectID `json:"id"`        // Use primitive.ObjectID for Seeker ID in MongoDB
+	AuthUserID       primitive.ObjectID `json:"authUserId"` // Use primitive.ObjectID for AuthUserID in MongoDB
+	AuthUser         AuthUserMinimal    `json:"authUser"`
+	SubscriptionTier string              `json:"subscriptionTier"`
 }
 
-// NewSeekerResponse creates a new SeekerResponse from a Seeker model
 func SeekerProfileResponse(seeker models.Seeker) SeekerResponse {
-	return SeekerResponse{
-		ID:         seeker.ID,  // ID as uuid.UUID
-		AuthUserID: seeker.AuthUserID,  // AuthUserID as uuid.UUID
-		SubscriptionTier: seeker.SubscriptionTier,
+	// Convert uuid.UUID to primitive.ObjectID
+	authUserID, _ := primitive.ObjectIDFromHex(seeker.AuthUserID.String())
 
+	return SeekerResponse{
+		ID:               seeker.ID,             // ID as primitive.ObjectID
+		AuthUserID:       authUserID,            // AuthUserID as primitive.ObjectID
+		SubscriptionTier: seeker.SubscriptionTier,
 	}
 }

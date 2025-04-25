@@ -1,113 +1,102 @@
 package routes
 
-import (
-	"RAAS/config"
-	"RAAS/handlers/features"
-	"RAAS/handlers/repo"
-	"RAAS/middlewares"
+// import (
+// 	"RAAS/config"
+// 	"RAAS/handlers/features"
+// 	"RAAS/handlers/repo"
+// 	"RAAS/middlewares"
 
-	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
-	//"os"
-)
+// 	"github.com/gin-gonic/gin"
+// 	"go.mongodb.org/mongo-driver/mongo"
+// )
 
-func SetupFeatureRoutes(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
-	// PROFILE routes
-	seekerProfileHandler := features.NewSeekerProfileHandler(db)
-	seekerProfileRoutes := r.Group("/profile")
-	seekerProfileRoutes.Use(middleware.AuthMiddleware())
-	{
-		seekerProfileRoutes.GET("", seekerProfileHandler.GetSeekerProfile)
-	}
+// func SetupFeatureRoutes(r *gin.Engine, client *mongo.Client, cfg *config.Config) {
+// 	// PROFILE routes
+// 	seekerProfileHandler := features.NewSeekerProfileHandler(client)
+// 	seekerProfileRoutes := r.Group("/profile")
+// 	seekerProfileRoutes.Use(middleware.AuthMiddleware())
+// 	{
+// 		seekerProfileRoutes.GET("", seekerProfileHandler.GetSeekerProfile)
+// 	}
 
-		// Initialize the SeekerHandler
-	seekerHandler := repo.NewSeekerHandler(db)
+// 	// Initialize the SeekerHandler
+// 	seekerHandler := repo.NewSeekerHandler(client)
 
-	// Define the route for getting seeker profile
-	r.GET("/seeker/profile", middleware.AuthMiddleware(), seekerHandler.GetSeeker)
-	r.GET("/seeker",middleware.AuthMiddleware(),seekerHandler.GetAllSeekers)
+// 	// Define the route for getting seeker profile
+// 	r.GET("/seeker/profile", middleware.AuthMiddleware(), seekerHandler.GetSeeker)
+// 	r.GET("/seeker", middleware.AuthMiddleware(), seekerHandler.GetAllSeekers)
 
-	// JOB DATA routes
-	jobRetrievalRoutes := r.Group("/api/jobs")
-	jobRetrievalRoutes.Use(middleware.AuthMiddleware())
-	{
-		jobRetrievalRoutes.GET("", features.JobRetrievalHandler)
-		
-	}
+// 	// JOB DATA routes
+// 	jobRetrievalRoutes := r.Group("/api/jobs")
+// 	jobRetrievalRoutes.Use(middleware.AuthMiddleware())
+// 	{
+// 		jobRetrievalRoutes.GET("", features.JobRetrievalHandler)
+// 	}
 
-	// JOB METADATA routes
-	jobDataHandler := features.NewJobDataHandler(db)
-	jobMetaRoutes := r.Group("/api/job-data")
-	jobMetaRoutes.Use(middleware.AuthMiddleware())
-	{
-		jobMetaRoutes.GET("", jobDataHandler.GetAllJobs)
-	}
+// 	// JOB METADATA routes
+// 	jobDataHandler := features.NewJobDataHandler(client)
+// 	jobMetaRoutes := r.Group("/api/job-data")
+// 	jobMetaRoutes.Use(middleware.AuthMiddleware())
+// 	{
+// 		jobMetaRoutes.GET("", jobDataHandler.GetAllJobs)
+// 	}
 
-	selectedJobsHandler := features.NewSelectedJobsHandler(db)
-	selectedJobsRoutes := r.Group("/selected-jobs")
-	selectedJobsRoutes.Use(middleware.AuthMiddleware())
-	{
-		selectedJobsRoutes.POST("", selectedJobsHandler.PostSelectedJob)
-		selectedJobsRoutes.GET("", selectedJobsHandler.GetSelectedJobs)
-		selectedJobsRoutes.PUT(":id", selectedJobsHandler.UpdateSelectedJob)
-		selectedJobsRoutes.DELETE(":id", selectedJobsHandler.DeleteSelectedJob)
-	}
+// 	selectedJobsHandler := features.NewSelectedJobsHandler(client)
+// 	selectedJobsRoutes := r.Group("/selected-jobs")
+// 	selectedJobsRoutes.Use(middleware.AuthMiddleware())
+// 	{
+// 		selectedJobsRoutes.POST("", selectedJobsHandler.PostSelectedJob)
+// 		selectedJobsRoutes.GET("", selectedJobsHandler.GetSelectedJobs)
+// 		selectedJobsRoutes.PUT(":id", selectedJobsHandler.UpdateSelectedJob)
+// 		selectedJobsRoutes.DELETE(":id", selectedJobsHandler.DeleteSelectedJob)
+// 	}
 
+// 	matchScoreHandler := features.MatchScoreHandler{Client: client}
+// 	// Define the route group for match scores
+// 	matchScoreRoutes := r.Group("/matchscores")
+// 	matchScoreRoutes.Use(middleware.AuthMiddleware()) // If you want to secure it with authentication
+// 	{
+// 		// Route to get all match scores
+// 		matchScoreRoutes.GET("", matchScoreHandler.GetAllMatchScores)
+// 	}
 
+// 	CoverLetterHandler := features.NewCoverLetterHandler(client, cfg)
+// 	// CoverLetter generation route (authenticated)
+// 	coverLetterRoutes := r.Group("/generate-cover-letter")
+// 	coverLetterRoutes.Use(middleware.AuthMiddleware())
+// 	{
+// 		coverLetterRoutes.POST("", CoverLetterHandler.PostCoverLetter)
+// 	}
 
-	matchScoreHandler := features.MatchScoreHandler{DB: db}
-	// Define the route group for match scores
-	matchScoreRoutes := r.Group("/matchscores")
-	matchScoreRoutes.Use(middleware.AuthMiddleware()) // If you want to secure it with authentication
-	{
-		// Route to get all match scores
-		matchScoreRoutes.GET("", matchScoreHandler.GetAllMatchScores)
-	}
-	
-	CoverLetterHandler := features.NewCoverLetterHandler(db, cfg)
-	// CoverLetter  generation route (authenticated)
-	coverLetterRoutes := r.Group("/generate-cover-letter")
-	coverLetterRoutes.Use(middleware.AuthMiddleware())
-	{
-		coverLetterRoutes.POST("",CoverLetterHandler.PostCoverLetter)
-	}
+// 	cvHandler := features.NewCVHandler(client, cfg)
+// 	// CV generation route (authenticated)
+// 	cvRoutes := r.Group("/generate-cv")
+// 	cvRoutes.Use(middleware.AuthMiddleware())
+// 	{
+// 		cvRoutes.POST("", cvHandler.PostCV)
+// 	}
 
+// 	CVHandler := features.NewCVDownloadHandler(client) // assuming constructor exists like NewCVHandler(client)
 
+// 	downloadCVRoutes := r.Group("/download-cv")
+// 	downloadCVRoutes.Use(middleware.AuthMiddleware())
+// 	{
+// 		downloadCVRoutes.POST("", CVHandler.DownloadCV)
+// 	}
 
+// 	cvMetaHandler := features.NewCVDownloadHandler(client)
+// 	cvMetaRoutes := r.Group("/get-cv")
+// 	cvMetaRoutes.Use(middleware.AuthMiddleware())
+// 	{
+// 		cvRoutes.GET("", cvMetaHandler.GetCVMetadata)
+// 	}
 
-	cvHandler := features.NewCVHandler(db, cfg)
-	// CV generation route (authenticated)
-	cvRoutes := r.Group("/generate-cv")
-	cvRoutes.Use(middleware.AuthMiddleware())
-	{
-		cvRoutes.POST("", cvHandler.PostCV)
-	}
+// 	LinkProviderHandler := features.NewLinkProviderHandler(client)
 
-	CVHandler := features.NewCVDownloadHandler(db) // assuming constructor exists like NewCVHandler(db)
-
-	downloadCVRoutes := r.Group("/download-cv")
-	downloadCVRoutes.Use(middleware.AuthMiddleware())
-	{
-		downloadCVRoutes.POST("", CVHandler.DownloadCV)
-	}
-
-	cvMetaHandler := features.NewCVDownloadHandler(db)
-	cvMetaRoutes := r.Group("/get-cv")
-	cvMetaRoutes.Use(middleware.AuthMiddleware())
-	{
-		cvRoutes.GET("", cvMetaHandler.GetCVMetadata)
-	}
-
-
-	LinkProviderHandler := features.NewLinkProviderHandler(db)
-
-	// Link provider route (authenticated)
-	linkProviderRoutes := r.Group("/provide-link")
-	linkProviderRoutes.Use(middleware.AuthMiddleware())
-	{
-		linkProviderRoutes.POST("", LinkProviderHandler.PostAndGetLink)
-	}
-
-
-}
-
+// 	// Link provider route (authenticated)
+// 	linkProviderRoutes := r.Group("/provide-link")
+// 	linkProviderRoutes.Use(middleware.AuthMiddleware())
+// 	{
+// 		linkProviderRoutes.POST("", LinkProviderHandler.PostAndGetLink)
+// 	}
+// }

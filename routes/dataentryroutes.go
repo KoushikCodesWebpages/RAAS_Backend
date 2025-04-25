@@ -1,100 +1,74 @@
 package routes
 
-import (
-	"RAAS/config"
-	"RAAS/handlers/dataentry"
-	"RAAS/handlers/features"
-	"RAAS/middlewares"
+// import (
+// 	"RAAS/config"
+// 	"RAAS/handlers/dataentry"
+// 	"RAAS/handlers/features"
+// 	"RAAS/middlewares"
+// 	"github.com/gin-gonic/gin"
+// 	"go.mongodb.org/mongo-driver/mongo"
+// )
 
-	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
-)
+// func SetupDataEntryRoutes(r *gin.Engine, client *mongo.Client, cfg *config.Config) {
 
-func SetupDataEntryRoutes(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
+// 	// TIMELINE
+// 	timeline := r.Group("/user/entry-progress")
+// 	timeline.Use(middleware.AuthMiddleware()) // Middleware to authenticate JWT
 
+// 	// Define the route for getting the next entry step
+// 	timeline.GET("", features.GetNextEntryStep(client))
 
-	//TIMELINE 
+// 	// PERSONAL INFO routes
+// 	personalInfoHandler := dataentry.NewPersonalInfoHandler(client)
+// 	personalInfoRoutes := r.Group("/personal-info")
+// 	personalInfoRoutes.Use(middleware.AuthMiddleware())
+// 	{
+// 		personalInfoRoutes.POST("", personalInfoHandler.CreatePersonalInfo)  // Create Personal Info
+// 		personalInfoRoutes.GET("", personalInfoHandler.GetPersonalInfo)      // Get Personal Info
+// 		personalInfoRoutes.PUT("", personalInfoHandler.UpdatePersonalInfo)   // Update Personal Info
+// 		personalInfoRoutes.PATCH("", personalInfoHandler.PatchPersonalInfo)  // Partial Update Personal Info
+// 	}
 
-	timeline := r.Group("/user/entry-progress")
-    timeline.Use(middleware.AuthMiddleware()) // Middleware to authenticate JWT
+// 	// PROFESSIONAL SUMMARY routes
+// 	professionalSummaryHandler := dataentry.NewProfessionalSummaryHandler(client)
+// 	professionalSummaryRoutes := r.Group("/professional-summary")
+// 	professionalSummaryRoutes.Use(middleware.AuthMiddleware())
+// 	{
+// 		professionalSummaryRoutes.POST("", professionalSummaryHandler.CreateProfessionalSummary)
+// 		professionalSummaryRoutes.GET("", professionalSummaryHandler.GetProfessionalSummary)
+// 		professionalSummaryRoutes.PUT("", professionalSummaryHandler.UpdateProfessionalSummary)
+// 	}
 
-    // Define the route for getting the next entry step
-    timeline.GET("", features.GetNextEntryStep(db))
-	// PERSONAL INFO routes
+// 	// CERTIFICATES routes
+// 	certificateHandler := dataentry.NewCertificateHandler(client)
+// 	certificateRoutes := r.Group("/certificates")
+// 	certificateRoutes.Use(middleware.AuthMiddleware())
+// 	{
+// 		certificateRoutes.POST("", certificateHandler.CreateCertificate)
+// 		certificateRoutes.GET("", certificateHandler.GetCertificates)
+// 		certificateRoutes.PUT(":id", certificateHandler.PatchCertificate)
+// 		certificateRoutes.DELETE(":id", certificateHandler.DeleteCertificate)
+// 	}
 
-	personalInfoHandler := dataentry.NewPersonalInfoHandler(db)
-	personalInfoRoutes := r.Group("/personal-info")
-	personalInfoRoutes.Use(middleware.AuthMiddleware())
-	{
-		personalInfoRoutes.POST("", personalInfoHandler.CreatePersonalInfo)  // Create Personal Info
-		personalInfoRoutes.GET("", personalInfoHandler.GetPersonalInfo)      // Get Personal Info
-		personalInfoRoutes.PUT("", personalInfoHandler.UpdatePersonalInfo)   // Update Personal Info
-		personalInfoRoutes.PATCH("", personalInfoHandler.PatchPersonalInfo)  // Partial Update Personal Info
-	}
-	
-	// PROFESSIONAL SUMMARY routes
-	professionalSummaryHandler := dataentry.NewProfessionalSummaryHandler(db)
-	professionalSummaryRoutes := r.Group("/professional-summary")
-	professionalSummaryRoutes.Use(middleware.AuthMiddleware())
-	{
-		professionalSummaryRoutes.POST("", professionalSummaryHandler.CreateProfessionalSummary)
-		professionalSummaryRoutes.GET("", professionalSummaryHandler.GetProfessionalSummary)
-		professionalSummaryRoutes.PUT("", professionalSummaryHandler.UpdateProfessionalSummary)
-	}
-	
-	// // WORK EXPERIENCE routes
-	// workExperienceHandler := dataentry.NewWorkExperienceHandler(db)
-	// workExperienceRoutes := r.Group("/work-experience")
-	// workExperienceRoutes.Use(middleware.AuthMiddleware())
-	// {
-	// 	workExperienceRoutes.POST("", workExperienceHandler.CreateWorkExperience)
-	// 	workExperienceRoutes.GET("", workExperienceHandler.GetWorkExperiences)
-	// 	workExperienceRoutes.PATCH(":id", workExperienceHandler.PatchWorkExperience)
-	// 	workExperienceRoutes.DELETE(":id", workExperienceHandler.DeleteWorkExperience)
-	// }
+// 	// LANGUAGES routes	
+// 	languageHandler := dataentry.NewLanguageHandler(client)
+// 	languageRoutes := r.Group("/languages")
+// 	languageRoutes.Use(middleware.AuthMiddleware())
+// 	{
+// 		languageRoutes.POST("", languageHandler.CreateLanguage)
+// 		languageRoutes.GET("", languageHandler.GetLanguages)
+// 		languageRoutes.PUT(":id", languageHandler.PatchLanguage)
+// 		languageRoutes.DELETE(":id", languageHandler.DeleteLanguage)
+// 	}
 
-	// EDUCATION routes
-	// educationHandler := dataentry.NewEducationHandler(db)
-	// educationRoutes := r.Group("/education")
-	// educationRoutes.Use(middleware.AuthMiddleware())
-	// {
-	// 	educationRoutes.POST("", educationHandler.CreateEducation)
-	// 	educationRoutes.GET("", educationHandler.GetEducations)
-	// 	educationRoutes.PUT(":id", educationHandler.PatchEducation)
-	// 	educationRoutes.DELETE(":id", educationHandler.DeleteEducation)
-	// }
-
-
-	// CERTIFICATES routes
-	certificateHandler := dataentry.NewCertificateHandler(db)
-	certificateRoutes := r.Group("/certificates")
-	certificateRoutes.Use(middleware.AuthMiddleware())
-	{
-		certificateRoutes.POST("", certificateHandler.CreateCertificate)
-		certificateRoutes.GET("", certificateHandler.GetCertificates)
-		certificateRoutes.PUT(":id", certificateHandler.PatchCertificate)
-		certificateRoutes.DELETE(":id", certificateHandler.DeleteCertificate)
-	}
-
-	// LANGUAGES routes	
-	languageHandler := dataentry.NewLanguageHandler(db)
-	languageRoutes := r.Group("/languages")
-	languageRoutes.Use(middleware.AuthMiddleware())
-	{
-		languageRoutes.POST("", languageHandler.CreateLanguage)
-		languageRoutes.GET("", languageHandler.GetLanguages)
-		languageRoutes.PUT(":id", languageHandler.PatchLanguage)
-		languageRoutes.DELETE(":id", languageHandler.DeleteLanguage)
-	}
-
-	// JOB TITLES routes
-	jobTitleHandler := dataentry.NewJobTitleHandler(db)
-	jobTitleRoutes := r.Group("/jobtitles")
-	jobTitleRoutes.Use(middleware.AuthMiddleware())
-	{
-		jobTitleRoutes.POST("", jobTitleHandler.CreateJobTitle)
-		jobTitleRoutes.GET("", jobTitleHandler.GetJobTitle)
-		jobTitleRoutes.PUT("", jobTitleHandler.UpdateJobTitle)
-		jobTitleRoutes.PATCH("", jobTitleHandler.PatchJobTitle)
-	}
-}
+// 	// JOB TITLES routes
+// 	jobTitleHandler := dataentry.NewJobTitleHandler(client)
+// 	jobTitleRoutes := r.Group("/jobtitles")
+// 	jobTitleRoutes.Use(middleware.AuthMiddleware())
+// 	{
+// 		jobTitleRoutes.POST("", jobTitleHandler.CreateJobTitle)
+// 		jobTitleRoutes.GET("", jobTitleHandler.GetJobTitle)
+// 		jobTitleRoutes.PUT("", jobTitleHandler.UpdateJobTitle)
+// 		jobTitleRoutes.PATCH("", jobTitleHandler.PatchJobTitle)
+// 	}
+// }

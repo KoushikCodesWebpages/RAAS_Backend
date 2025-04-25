@@ -4,70 +4,62 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"gorm.io/datatypes"
-	"gorm.io/gorm"
-
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
+
 
 // AUTH MODELS
 
 type AuthUser struct {
-    gorm.Model
-    ID                   uuid.UUID  `gorm:"type:char(36);primaryKey" json:"id"`
-    Email                string     `gorm:"unique;not null" json:"email"`
-    Phone                string     `gorm:"not null" json:"phone"`
-    Password             string     `json:"password"`
-    Role                 string     `json:"role"`
-    EmailVerified        bool       `json:"email_verified"`
-    Provider             string     `gorm:"default:'local'" json:"provider"`
-    ResetTokenExpiry     *time.Time `json:"reset_token_expiry"` 
+	ID                   uuid.UUID  `json:"id" bson:"id,omitempty"`
+	Email                string     `json:"email" bson:"email"`
+	Phone                string     `json:"phone" bson:"phone"`
+	Password             string     `json:"password" bson:"password"`
+	Role                 string     `json:"role" bson:"role"`
+	EmailVerified        bool       `json:"email_verified" bson:"email_verified"`
+	Provider             string     `json:"provider" bson:"provider,omitempty"`
+	ResetTokenExpiry     *time.Time `json:"reset_token_expiry" bson:"reset_token_expiry"`
 
-    IsActive             bool       `gorm:"default:true" json:"is_active"`
-	VerificationToken    string     `json:"verification_token"`
-	
-    CreatedBy            uuid.UUID `json:"created_by"`
-    UpdatedBy            uuid.UUID `json:"updated_by"`
-    DeletedAt            *time.Time `json:"deleted_at,omitempty"`
 
-	
-    LastLoginAt          *time.Time `json:"last_login_at,omitempty"`
-    PasswordLastUpdated  *time.Time `json:"password_last_updated,omitempty"`
-    TwoFactorEnabled     bool       `gorm:"default:false" json:"two_factor_enabled"`
-    TwoFactorSecret      *string    `json:"two_factor_secret,omitempty"`
+	IsActive             bool       `json:"is_active" bson:"is_active"`
+	VerificationToken    string     `json:"verification_token" bson:"verification_token"`
+
+	CreatedBy            uuid.UUID `json:"created_by" bson:"created_by"`
+	UpdatedBy            uuid.UUID `json:"updated_by" bson:"updated_by"`
+
+	LastLoginAt          *time.Time `json:"last_login_at,omitempty" bson:"last_login_at,omitempty"`
+	PasswordLastUpdated  *time.Time `json:"password_last_updated,omitempty" bson:"password_last_updated,omitempty"`
+	TwoFactorEnabled     bool       `json:"two_factor_enabled" bson:"two_factor_enabled"`
+	TwoFactorSecret      *string    `json:"two_factor_secret,omitempty" bson:"two_factor_secret,omitempty"`
 }
-
 
 // SEEKER
 type Seeker struct {
-	gorm.Model
-	AuthUserID uuid.UUID `gorm:"type:char(36);uniqueIndex;not null;constraint:OnDelete:CASCADE,OnUpdate:CASCADE" json:"authUserId"`
+	ID                      primitive.ObjectID `json:"_id,omitempty" bson:"_id,omitempty"`
+	AuthUserID              uuid.UUID         `json:"authUserId" bson:"auth_user_id"`
+	SubscriptionTier        string            `json:"subscriptionTier" bson:"subscription_tier"`
+	DailySelectableJobsCount int               `json:"dailySelectableJobsCount" bson:"daily_selectable_jobs_count"`
+	DailyGeneratableCV      int               `json:"dailyGeneratableCv" bson:"daily_generatable_cv"`
+	DailyGeneratableCoverletter int           `json:"dailyGeneratableCoverletter" bson:"daily_generatable_coverletter"`
+	TotalApplications       int               `json:"totalApplications" bson:"total_applications"`
 
+	// Embedded documents
+	PersonalInfo            interface{}       `json:"personalInfo" bson:"personal_info"`
+	ProfessionalSummary     interface{}       `json:"professionalSummary" bson:"professional_summary"`
+	WorkExperiences         interface{}       `json:"workExperiences" bson:"work_experiences"`
+	Educations              interface{}       `json:"education" bson:"education"`
+	Certificates            interface{}       `json:"certificates" bson:"certificates"`
+	Languages               interface{}       `json:"languages" bson:"languages"`
 
-	
-    //SERVICE
-	SubscriptionTier           string         `gorm:"default:'free'" json:"subscriptionTier"`
-	DailySelectableJobsCount   int            `gorm:"default:5" json:"dailySelectableJobsCount"`
-	DailyGeneratableCV         int            `gorm:"default:10" json:"dailyGeneratableCv"`
-	DailyGeneratableCoverletter int           `gorm:"default:10" json:"dailyGeneratableCoverletter"`
-	TotalApplications          int            `gorm:"default:0" json:"totalApplications"`
-
-	//DATA
-	PersonalInfo         datatypes.JSON `gorm:"type:json" json:"personalInfo"`
-	ProfessionalSummary  datatypes.JSON `gorm:"type:json" json:"professionalSummary"`
-	WorkExperiences      datatypes.JSON `gorm:"type:json" json:"workExperiences"`
-	Educations           datatypes.JSON `gorm:"type:json" json:"education"`
-	Certificates         datatypes.JSON `gorm:"type:json" json:"certificates"`
-	Languages            datatypes.JSON `gorm:"type:json" json:"languages"`
-
-	// JOB TITLES
-	PrimaryTitle   string  `gorm:"type:varchar(255);" json:"primaryTitle"`
-	SecondaryTitle *string `gorm:"type:varchar(255);" json:"secondaryTitle"`
-	TertiaryTitle  *string `gorm:"type:varchar(255);" json:"tertiaryTitle"`
+	// Job Titles
+	PrimaryTitle           string            `json:"primaryTitle" bson:"primary_title"`
+	SecondaryTitle         *string           `json:"secondaryTitle,omitempty" bson:"secondary_title,omitempty"`
+	TertiaryTitle          *string           `json:"tertiaryTitle,omitempty" bson:"tertiary_title,omitempty"`
 }
 
 // ADMIN
 
 type Admin struct {
-	gorm.Model
-	AuthUserID uuid.UUID `gorm:"type:char(36);unique;not null;constraint:OnDelete:CASCADE,OnUpdate:CASCADE" json:"authUserId"`
+	ID         primitive.ObjectID `json:"_id,omitempty" bson:"_id,omitempty"`
+	AuthUserID uuid.UUID         `json:"authUserId" bson:"auth_user_id"`
 }

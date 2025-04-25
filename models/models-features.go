@@ -1,100 +1,85 @@
 package models
 
 import (
-    "github.com/google/uuid"
-	//"gorm.io/datatypes"
-    "gorm.io/gorm"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"time"
 )
 
+// UserEntryTimeline for MongoDB
 type UserEntryTimeline struct {
-    ID                              uuid.UUID  `gorm:"type:char(36);primaryKey" json:"id"`
-    AuthUserID uuid.UUID `gorm:"type:char(36);uniqueIndex;not null;constraint:OnDelete:CASCADE,OnUpdate:CASCADE" json:"authUserId"`
+	ID                              primitive.ObjectID `bson:"_id,omitempty" json:"id"`  // MongoDB ID
+	AuthUserID                       primitive.ObjectID `bson:"authUserId" json:"authUserId"`
 
-    PersonalInfosCompleted          bool       `gorm:"default:false" json:"personal_infos_completed"`
-    PersonalInfosRequired           bool       `gorm:"default:true" json:"personal_infos_required"`
+	PersonalInfosCompleted          bool       `bson:"personalInfosCompleted" json:"personalInfosCompleted"`
+	PersonalInfosRequired           bool       `bson:"personalInfosRequired" json:"personalInfosRequired"`
 
-    ProfessionalSummariesCompleted  bool       `gorm:"default:false" json:"professional_summaries_completed"`
-    ProfessionalSummariesRequired   bool       `gorm:"default:true" json:"professional_summaries_required"`
+	ProfessionalSummariesCompleted  bool       `bson:"professionalSummariesCompleted" json:"professionalSummariesCompleted"`
+	ProfessionalSummariesRequired   bool       `bson:"professionalSummariesRequired" json:"professionalSummariesRequired"`
 
-    WorkExperiencesCompleted        bool       `gorm:"default:false" json:"work_experiences_completed"`
-    WorkExperiencesRequired         bool       `gorm:"default:true" json:"work_experiences_required"`
+	WorkExperiencesCompleted        bool       `bson:"workExperiencesCompleted" json:"workExperiencesCompleted"`
+	WorkExperiencesRequired         bool       `bson:"workExperiencesRequired" json:"workExperiencesRequired"`
 
-    EducationsCompleted             bool       `gorm:"default:false" json:"educations_completed"`
-    EducationsRequired              bool       `gorm:"default:true" json:"educations_required"`
+	EducationsCompleted             bool       `bson:"educationsCompleted" json:"educationsCompleted"`
+	EducationsRequired              bool       `bson:"educationsRequired" json:"educationsRequired"`
 
-    CertificatesCompleted           bool       `gorm:"default:false" json:"certificates_completed"`
-    CertificatesRequired            bool       `gorm:"default:true" json:"certificates_required"`
+	CertificatesCompleted           bool       `bson:"certificatesCompleted" json:"certificatesCompleted"`
+	CertificatesRequired            bool       `bson:"certificatesRequired" json:"certificatesRequired"`
 
-    LanguagesCompleted              bool       `gorm:"default:false" json:"languages_completed"`
-    LanguagesRequired               bool       `gorm:"default:true" json:"languages_required"`
+	LanguagesCompleted              bool       `bson:"languagesCompleted" json:"languagesCompleted"`
+	LanguagesRequired               bool       `bson:"languagesRequired" json:"languagesRequired"`
 
-    PreferredJobTitlesCompleted     bool       `gorm:"default:false" json:"preferred_job_titles_completed"`
-    PreferredJobTitlesRequired      bool       `gorm:"default:true" json:"preferred_job_titles_required"`
+	PreferredJobTitlesCompleted     bool       `bson:"preferredJobTitlesCompleted" json:"preferredJobTitlesCompleted"`
+	PreferredJobTitlesRequired      bool       `bson:"preferredJobTitlesRequired" json:"preferredJobTitlesRequired"`
 
-    Completed                       bool       `gorm:"default:false" json:"completed"` // ✅ New Field
+	Completed                       bool       `bson:"completed" json:"completed"`
 
-    CreatedAt time.Time  `json:"created_at"`
-    UpdatedAt time.Time  `json:"updated_at"`
+	CreatedAt                       time.Time  `bson:"createdAt" json:"createdAt"`
+	UpdatedAt                       time.Time  `bson:"updatedAt" json:"updatedAt"`
 }
 
-
+// SalaryRange for MongoDB
 type SalaryRange struct {
-    Min int `json:"min"`
-    Max int `json:"max"`
+	Min int `bson:"min" json:"min"`
+	Max int `bson:"max" json:"max"`
 }
 
-
+// SelectedJobApplication for MongoDB
 type SelectedJobApplication struct {
-	gorm.Model
-	AuthUserID uuid.UUID `gorm:"type:char(36);not null;index;constraint:OnUpdate:CASCADE,OnDelete:CASCADE" json:"authUserId"`    // Foreign key to Seeker
-	Source                string    `gorm:"type:varchar(20);not null" json:"source"`        // "linkedin" or "xing"
-	JobID                 string    `gorm:"type:varchar(100);not null" json:"job_id"`       // Platform-specific job ID
-	Title                 string    `gorm:"type:varchar(255);not null" json:"title"`
-	Company               string    `gorm:"type:varchar(255)" json:"company"`
-	Location              string    `gorm:"type:varchar(255)" json:"location"`
-	PostedDate            string    `gorm:"type:varchar(50)" json:"posted_date"`
-	Processed             bool      `json:"processed"`
-	JobType               string    `gorm:"type:varchar(50)" json:"job_type"`
-	Skills                string    `gorm:"type:text" json:"skills"`                        // Comma-separated
-	UserSkills            string    `gorm:"type:text" json:"user_skills"`                   // Comma-separated
-	MinSalary             int       `json:"min_salary"`
-	MaxSalary             int       `json:"max_salary"`
-	MatchScore            float64   `json:"match_score"`
-	Description           string    `gorm:"type:longtext" json:"description"`
+	ID                     primitive.ObjectID `bson:"_id,omitempty" json:"id"`
+	AuthUserID             primitive.ObjectID `bson:"authUserId" json:"authUserId"`
+	Source                 string             `bson:"source" json:"source"`
+	JobID                  string             `bson:"jobId" json:"jobId"`
+	Title                 string             `bson:"title" json:"title"`
+	Company               string             `bson:"company" json:"company"`
+	Location              string             `bson:"location" json:"location"`
+	PostedDate            string             `bson:"postedDate" json:"postedDate"`
+	Processed             bool               `bson:"processed" json:"processed"`
+	JobType               string             `bson:"jobType" json:"jobType"`
+	Skills                string             `bson:"skills" json:"skills"`
+	UserSkills            string             `bson:"userSkills" json:"userSkills"`
+	MinSalary             int                `bson:"minSalary" json:"minSalary"`
+	MaxSalary             int                `bson:"maxSalary" json:"maxSalary"`
+	MatchScore            float64            `bson:"matchScore" json:"matchScore"`
+	Description           string             `bson:"description" json:"description"`
 
-	Selected              bool      `gorm:"default:false" json:"selected"`
-	CvGenerated           bool      `gorm:"default:false" json:"cv_generated"`
-	CoverLetterGenerated  bool      `gorm:"default:false" json:"cover_letter_generated"`
-	ViewLink              bool  	`gorm:"default:false" json:"view_link"`
-
+	Selected              bool               `bson:"selected" json:"selected"`
+	CvGenerated           bool               `bson:"cvGenerated" json:"cvGenerated"`
+	CoverLetterGenerated  bool               `bson:"coverLetterGenerated" json:"coverLetterGenerated"`
+	ViewLink              bool               `bson:"viewLink" json:"viewLink"`
 }
 
-
-
+// CV for MongoDB
 type CV struct {
-    gorm.Model
-    AuthUserID uuid.UUID `gorm:"type:char(36);not null;constraint:OnDelete:CASCADE,OnUpdate:CASCADE" json:"authUserId"` // Seeker ID (foreign key reference)
-    JobID       string    `gorm:"unique;type:varchar(191)"`
-    CVUrl       string    `gorm:"type:varchar(255);not null"` // Path/URL to the CV document
+	ID         primitive.ObjectID `bson:"_id,omitempty" json:"id"`
+	AuthUserID primitive.ObjectID `bson:"authUserId" json:"authUserId"`
+	JobID      string             `bson:"jobId" json:"jobId"`
+	CVUrl      string             `bson:"cvUrl" json:"cvUrl"`
 }
 
-func (CV) TableName() string {
-    return "cv" // Specify the table name (optional, default is the plural form of the struct name)
-}
-
-// models/cover_letter.go
-
-
-
-
+// CoverLetter for MongoDB
 type CoverLetter struct {
-    gorm.Model
-    AuthUserID  uuid.UUID `gorm:"type:char(36);not null;constraint:OnDelete:CASCADE,OnUpdate:CASCADE" json:"authUserId"`
-    JobID       string    `gorm:"unique;type:varchar(191)"`
-    CoverLetterURL string  `gorm:"type:varchar(255);not null"` // URL for the cover letter
-}
-
-func (CoverLetter) TableName() string {
-    return "cover_letters" // Specify the table name (optional, default is the plural form of the struct name)
+	ID            primitive.ObjectID `bson:"_id,omitempty" json:"id"`
+	AuthUserID    primitive.ObjectID `bson:"authUserId" json:"authUserId"`
+	JobID         string             `bson:"jobId" json:"jobId"`
+	CoverLetterURL string            `bson:"coverLetterURL" json:"coverLetterURL"`
 }

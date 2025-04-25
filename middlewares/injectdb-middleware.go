@@ -1,14 +1,14 @@
 package middleware
 
-import(
+import (
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
-
-func InjectDB(db *gorm.DB) gin.HandlerFunc {
+func InjectDB(client *mongo.Client) gin.HandlerFunc {
     return func(c *gin.Context) {
-        c.Set("db", db)
+        // Inject the MongoDB client into the context
+        c.Set("db", client)
         c.Next()
     }
 }
