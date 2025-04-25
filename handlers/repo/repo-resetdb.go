@@ -1,102 +1,144 @@
 package repo
 
-// import (
-// 	"log"
-// 	"net/http"
+import (
+	"log"
+	"net/http"
+	"github.com/gin-gonic/gin"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+	"RAAS/models"
+	"RAAS/config"
+)
 
-// 	"github.com/gin-gonic/gin"
-// 	"gorm.io/gorm"
+const resetPasskey = "reset@arshan.de"
 
-// 	"RAAS/models"
-// )
+type ResetRequest struct {
+	Passkey string `json:"passkey"`
+	Email   string `json:"email"`
+}
 
-// const resetPasskey = "reset@arshan.de"
+func ResetDBHandler(c *gin.Context) {
+	var req ResetRequest
 
-// type ResetRequest struct {
-// 	Passkey string `json:"passkey"`
-// 	Email   string `json:"email"`
-// }
+	// Validate request
+	if err := c.ShouldBindJSON(&req); err != nil || req.Passkey != resetPasskey {
+		log.Println("❌ Invalid passkey or bad request")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid passkey or bad request"})
+		return
+	}
 
-// func ResetDBHandler(c *gin.Context) {
-// 	var req ResetRequest
+	// Fetch user by email from MongoDB
+	db := c.MustGet("db").(*mongo.Client)
+	var authUser models.AuthUser
+	log.Printf("🔄 Fetching user by email: %s", req.Email)
+	err := db.Database(config.Cfg.Cloud.MongoDBName).Collection("auth_users").FindOne(c, bson.M{"email": req.Email}).Decode(&authUser)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			log.Printf("❌ User not found: %s", req.Email)
+			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		} else {
+			log.Printf("❌ DB error retrieving user: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve user"})
+		}
+		return
+	}
 
-// 	// Validate request
-// 	if err := c.ShouldBindJSON(&req); err != nil || req.Passkey != resetPasskey {
-// 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid passkey or bad request"})
-// 		return
-// 	}
+	// Ensure UUID is converted to string
+	userID := authUser.AuthUserID.String() // Convert UUID to string
+	log.Printf("🔄 Reset triggered for user: %s (ID: %s)", req.Email, userID)
 
-// 	// Fetch user by email
-// 	var authUser models.AuthUser
-// 	if err := models.DB.Where("email = ?", req.Email).First(&authUser).Error; err != nil {
-// 		if err == gorm.ErrRecordNotFound {
-// 			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
-// 		} else {
-// 			log.Printf("❌ DB error retrieving user: %v", err)
-// 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve user"})
-// 		}
-// 		return
-// 	}
+	// Attempt to delete user by string ID
+	log.Printf("🔄 Attempting to delete user from auth_users with ID: %s", userID)
+	_, err = db.Database(config.Cfg.Cloud.MongoDBName).Collection("auth_users").DeleteOne(c, bson.M{"_id": authUser.AuthUserID})
+	if err != nil {
+		log.Printf("❌ Failed to delete user from auth_users: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete user"})
+		return
+	}
 
-// 	userID := authUser.ID
-// 	log.Printf("🔄 Reset triggered for user: %s (ID: %s)", req.Email, userID)
+	// Log the result
+	log.Printf("✅ Deleted user with ID: %s", userID)
 
-// 	if err := models.DB.Unscoped().Where("email = ?", req.Email).Delete(&models.AuthUser{}).Error; err != nil {
-// 		log.Printf("❌ Failed to delete user from auth_users: %v", err)
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete user"})
-// 		return
-// 	}
+	// Clean each collection where user data might exist
+	collections := []string{
+		"seekers", 
+		"user_entry_timelines", 
+		"cover_letters", 
+		"cv", 
+		"selected_job_applications", 
+		"jobs", 
+		"admins",
+		"match_scores", 
+		"auth_users",
+	}
 
-// 	// Tables to check
-// 	tables := []string{
-// 		"seekers",
-// 		"admins",
-// 		"match_scores",
-// 		"user_entry_timelines",
-// 		"selected_job_applications",
-// 		"cover_letters",
-// 		"cv",
-// 	}
+	// Delete user data from each collection
+	for _, collectionName := range collections {
+		// Check if the collection exists by querying for a document
+		
+		count, err := db.Database(config.Cfg.Cloud.MongoDBName).Collection(collectionName).CountDocuments(c, bson.M{"auth_user_id": authUser.AuthUserID})
+		if err != nil {
+			log.Printf("❌ Error checking collection '%s': %v", collectionName, err)
+			continue // Skip this collection if there is an error
+		}
 
-// 	leftovers := []string{}
+		if count > 0 {
+			// If the collection is 'user_entry_timelines', use the correct field for deletion
+			_, err := db.Database(config.Cfg.Cloud.MongoDBName).Collection(collectionName).DeleteMany(c, bson.M{"auth_user_id": authUser.AuthUserID})
+			if err != nil {
+				log.Printf("❌ Error deleting from %s: %v", collectionName, err)
+			} else {
+				log.Printf("✅ Deleted data from %s", collectionName)
+			}
+		} else {
+			log.Printf("🔄 No documents found in collection '%s', skipping deletion.", collectionName)
+		}
+	}
 
-// 	// Clean each table
-// 	for _, table := range tables {
-// 		var count int64
+	c.JSON(http.StatusOK, gin.H{"message": "User and associated data deleted successfully."})
+}
 
-// 		// Count records before deletion
-// 		if err := models.DB.Table(table).Where("auth_user_id = ?", userID).Count(&count).Error; err != nil {
-// 			log.Printf("⚠️ Error checking %s: %v", table, err)
-// 			continue
-// 		}
 
-// 		if count > 0 {
-// 			// Attempt deletion
-// 			if err := models.DB.Exec("DELETE FROM "+table+" WHERE auth_user_id = ?", userID).Error; err != nil {
-// 				log.Printf("❌ Error deleting from %s: %v", table, err)
-// 			} else {
-// 				log.Printf("✅ Deleted %d rows from %s", count, table)
-// 			}
-// 		}
+func PrintAllCollectionsHandler(c *gin.Context) {
+	// Get MongoDB client
+	db := c.MustGet("db").(*mongo.Client)
+	log.Println("🔄 Fetching all collections from the database")
 
-// 		// Re-check for leftovers
-// 		models.DB.Table(table).Where("auth_user_id = ?", userID).Count(&count)
-// 		if count > 0 {
-// 			leftovers = append(leftovers, table)
-// 		}
-// 	}
+	// List all collections in the database
+	collections, err := db.Database(config.Cfg.Cloud.MongoDBName).ListCollectionNames(c, bson.M{})
+	if err != nil {
+		log.Printf("❌ Error listing collections: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list collections"})
+		return
+	}
 
-// 	// Final response
-// 	if len(leftovers) > 0 {
-// 		log.Printf("⚠️ Leftover data found in: %v", leftovers)
-// 		c.JSON(http.StatusOK, gin.H{
-// 			"message":         "Partially deleted user data. Leftovers detected.",
-// 			"leftover_tables": leftovers,
-// 		})
-// 	} else {
-// 		log.Println("✅ All user data removed successfully.")
-// 		c.JSON(http.StatusOK, gin.H{
-// 			"message": "✅ User and all associated data deleted successfully.",
-// 		})
-// 	}
-// }
+	// Iterate over all collections and print their contents
+	for _, collectionName := range collections {
+		log.Printf("🔄 Fetching documents from collection: %s", collectionName)
+
+		// Fetch all documents from the collection
+		cursor, err := db.Database(config.Cfg.Cloud.MongoDBName).Collection(collectionName).Find(c, bson.M{})
+		if err != nil {
+			log.Printf("❌ Error fetching documents from collection %s: %v", collectionName, err)
+			continue
+		}
+
+		var documents []bson.M
+		if err := cursor.All(c, &documents); err != nil {
+			log.Printf("❌ Error reading documents from collection %s: %v", collectionName, err)
+			continue
+		}
+
+		// Print the content of the collection
+		log.Printf("✅ Retrieved documents from collection %s", collectionName)
+		for _, doc := range documents {
+			log.Printf("Document: %v", doc)
+		}
+
+		// You can also print this directly to the response if needed
+		c.JSON(http.StatusOK, gin.H{
+			"collection": collectionName,
+			"documents":  documents,
+		})
+	}
+}

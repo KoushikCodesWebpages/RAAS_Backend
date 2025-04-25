@@ -75,13 +75,13 @@ func (r *UserRepo) CreateSeeker(input dto.SeekerSignUpInput, hashedPassword stri
 
 	// Create AuthUser with verification fields
 	authUser := models.AuthUser{
-		ID:                uuid.New(), // Generate UUID for AuthUser
-		Email:             input.Email,
-		Password:          hashedPassword,
-		Phone:             input.Number,
-		Role:              "seeker",
-		VerificationToken: token,
-		EmailVerified:     false, // Assume false until verified
+		AuthUserID:                uuid.New(), // Generate UUID for AuthUser
+		Email:                     input.Email,
+		Password:                  hashedPassword,
+		Phone:                     input.Number,
+		Role:                      "seeker",
+		VerificationToken:         token,
+		EmailVerified:             false, // Assume false until verified
 	}
 
 	// Save AuthUser to the database
@@ -92,18 +92,18 @@ func (r *UserRepo) CreateSeeker(input dto.SeekerSignUpInput, hashedPassword stri
 
 	// Create associated Seeker profile with default values
 	seeker := models.Seeker{
-		AuthUserID:                authUser.ID,
+		AuthUserID:                authUser.AuthUserID,
 		SubscriptionTier:          "free", // Default value for subscription tier
 		DailySelectableJobsCount:  5,     // Default value
-		DailyGeneratableCV:       100,    // Default value
+		DailyGeneratableCV:        100,   // Default value
 		DailyGeneratableCoverletter: 100, // Default value
-		TotalApplications:        0,      // Default value
-		PersonalInfo:             nil,    // or initialize with an empty JSON object
-		ProfessionalSummary:      nil,    // or initialize with an empty JSON object
-		WorkExperiences:          nil,    // or initialize with an empty JSON object
-		PrimaryTitle:             "",     // You can leave it empty initially
-		SecondaryTitle:           nil,    // You can leave it nil initially
-		TertiaryTitle:            nil,    // You can leave it nil initially
+		TotalApplications:         0,     // Default value
+		PersonalInfo:              nil,   // or initialize with an empty JSON object
+		ProfessionalSummary:       nil,   // or initialize with an empty JSON object
+		WorkExperiences:           nil,   // or initialize with an empty JSON object
+		PrimaryTitle:              "",    // You can leave it empty initially
+		SecondaryTitle:            nil,   // You can leave it nil initially
+		TertiaryTitle:             nil,   // You can leave it nil initially
 	}
 
 	// Save Seeker to the database
@@ -112,10 +112,26 @@ func (r *UserRepo) CreateSeeker(input dto.SeekerSignUpInput, hashedPassword stri
 		return fmt.Errorf("failed to create seeker profile: %w", err)
 	}
 
+	// Create the user entry timeline with the correct AuthUserID
 	timeline := models.UserEntryTimeline{
-		AuthUserID: authUser.ID, // Convert UUID to string
+		AuthUserID:                 authUser.AuthUserID, // Ensure AuthUserID is set here
+		CertificatesCompleted:      false,
+		CertificatesRequired:       true,
+		EducationsCompleted:        false,
+		EducationsRequired:         true,
+		LanguagesCompleted:         false,
+		LanguagesRequired:          true,
+		PersonalInfosCompleted:     false,
+		PersonalInfosRequired:      true,
+		PreferredJobTitlesCompleted: false,
+		PreferredJobTitlesRequired: true,
+		ProfessionalSummariesCompleted: false,
+		ProfessionalSummariesRequired: true,
+		WorkExperiencesCompleted:    false,
+		WorkExperiencesRequired:     true,
 	}
-	
+
+	// Save UserEntryTimeline to the database
 	_, err = r.DB.Database(config.Cfg.Cloud.MongoDBName).Collection("user_entry_timelines").InsertOne(context.TODO(), timeline)
 	if err != nil {
 		return fmt.Errorf("user created but failed to create entry timeline: %w", err)
@@ -149,6 +165,7 @@ func (r *UserRepo) CreateSeeker(input dto.SeekerSignUpInput, hashedPassword stri
 
 	return nil
 }
+
 
 func (r *UserRepo) AuthenticateUser(email, password string) (*models.AuthUser, error) {
 	var user models.AuthUser

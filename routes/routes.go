@@ -3,7 +3,7 @@ package routes
 import (
 	"RAAS/config"
 	"RAAS/middlewares"
-	// "RAAS/handlers/repo"
+	"RAAS/handlers/repo"
 	"github.com/gin-gonic/gin"
 	"github.com/gin-contrib/cors"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -51,5 +51,6 @@ func SetupRoutes(r *gin.Engine, client *mongo.Client, cfg *config.Config) {
 	// SetupFeatureRoutes(r, client, cfg)
 
 	// Reset DB route (update the handler to work with MongoDB)
-	// r.POST("/api/reset-db", repo.ResetDBHandler)
+	r.POST("/api/reset-db", repo.ResetDBHandler)
+	r.POST("/api/print-all-collections", repo.PrintAllCollectionsHandler)
 }

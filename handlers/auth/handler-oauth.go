@@ -104,7 +104,7 @@ func GoogleCallbackHandler(c *gin.Context) {
 		// If user doesn't exist, create a new user with Google provider
 		log.Println("Creating new user with Google provider")
 		user = models.AuthUser{
-			ID:            uuid.New(),
+			AuthUserID:            uuid.New(),
 			Email:         userInfo.Email,
 			Phone:         "", // Optional: you can ask for a phone number later
 			Role:          "seeker", // Default role for new users
@@ -125,7 +125,7 @@ func GoogleCallbackHandler(c *gin.Context) {
 		// Create Seeker profile for new user
 		log.Println("Creating Seeker profile for new user")
 		seeker := models.Seeker{
-			AuthUserID:               user.ID,
+			AuthUserID:               user.AuthUserID,
 			SubscriptionTier:         "free", // Default value for subscription tier
 			DailySelectableJobsCount: 5,     // Default value
 			DailyGeneratableCV:       100,    // Default value
@@ -150,7 +150,7 @@ func GoogleCallbackHandler(c *gin.Context) {
 
 	// Step 5: Issue JWT token for authenticated user
 	log.Println("Issuing JWT token for authenticated user")
-	tokenString, err := security.GenerateJWT(user.ID, user.Email, user.Role)
+	tokenString, err := security.GenerateJWT(user.AuthUserID, user.Email, user.Role)
 	if err != nil {
 		log.Printf("Error generating JWT token: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate JWT", "details": err.Error()})

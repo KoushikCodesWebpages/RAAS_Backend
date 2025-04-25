@@ -12,7 +12,7 @@ import (
 
 // AUTH MODELS
 type AuthUser struct {
-	ID                   uuid.UUID  `json:"id" bson:"id,omitempty"`
+	AuthUserID           uuid.UUID  `json:"auth_user_id" bson:"auth_user_id,omitempty"`
 	Email                string     `json:"email" bson:"email"`
 	Phone                string     `json:"phone" bson:"phone"`
 	Password             string     `json:"password" bson:"password"`

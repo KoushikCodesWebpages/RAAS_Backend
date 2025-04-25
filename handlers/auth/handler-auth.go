@@ -114,6 +114,7 @@ func VerifyEmail(c *gin.Context) {
 		return
 	}
 
+
 	// If the token is valid, verify the email
 	if user.EmailVerified {
 		c.String(http.StatusOK, "Email already verified.")
@@ -127,7 +128,7 @@ func VerifyEmail(c *gin.Context) {
 	// Update user in the database
 	_, err = db.(*mongo.Client).Database(config.Cfg.Cloud.MongoDBName).Collection("auth_users").UpdateOne(
 		c,
-		bson.M{"_id": user.ID},
+		bson.M{"_id": user.AuthUserID},
 		bson.M{"$set": bson.M{"email_verified": true, "verification_token": ""}},
 	)
 
@@ -177,7 +178,7 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	token, err := security.GenerateJWT(user.ID, user.Email, user.Role)
+	token, err := security.GenerateJWT(user.AuthUserID, user.Email, user.Role)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not generate token"})
 		return

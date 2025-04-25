@@ -30,7 +30,7 @@ func InitDB(cfg *config.Config) (*mongo.Client, *mongo.Database) {
 	PrintAllCollections()
 
 	// Optionally reset collections
-	resetCollections()
+	// resetCollections()
 
 	// Call the CreateAllIndexes function to create the necessary indexes for all models
 	CreateAllIndexes()

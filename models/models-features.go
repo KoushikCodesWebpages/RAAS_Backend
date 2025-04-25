@@ -14,7 +14,7 @@ import (
 
 type UserEntryTimeline struct {
 	ID                              primitive.ObjectID `bson:"_id,omitempty" json:"id"`  // MongoDB ID
-	AuthUserID                       uuid.UUID         `bson:"authUserId" json:"authUserId"`
+	AuthUserID                       uuid.UUID         `bson:"auth_user_id" json:"auth_user_id"`
 
 	PersonalInfosCompleted          bool       `bson:"personalInfosCompleted" json:"personalInfosCompleted"`
 	PersonalInfosRequired           bool       `bson:"personalInfosRequired" json:"personalInfosRequired"`
