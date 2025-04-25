@@ -69,7 +69,7 @@ func CreateJobIndexes(collection *mongo.Collection) error {
 
 // MatchScore for job seeker match score
 type MatchScore struct {
-	AuthUserID uuid.UUID `bson:"authUserId" json:"authUserId"`
+	AuthUserID uuid.UUID `json:"auth_user_id" bson:"auth_user_id"`
 	JobID      string    `bson:"jobId" json:"jobId"`          
 	MatchScore float64   `bson:"matchScore" json:"matchScore"` 
 }

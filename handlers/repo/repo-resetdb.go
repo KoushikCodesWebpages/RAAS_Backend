@@ -7,7 +7,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"RAAS/models"
-	"RAAS/config"
 )
 
 const resetPasskey = "reset@arshan.de"
@@ -27,11 +26,11 @@ func ResetDBHandler(c *gin.Context) {
 		return
 	}
 
-	// Fetch user by email from MongoDB
-	db := c.MustGet("db").(*mongo.Client)
+	// Fetch user by email from MongoDB using the database object
+	db := c.MustGet("db").(*mongo.Database) // Changed to *mongo.Database
 	var authUser models.AuthUser
 	log.Printf("🔄 Fetching user by email: %s", req.Email)
-	err := db.Database(config.Cfg.Cloud.MongoDBName).Collection("auth_users").FindOne(c, bson.M{"email": req.Email}).Decode(&authUser)
+	err := db.Collection("auth_users").FindOne(c, bson.M{"email": req.Email}).Decode(&authUser)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 			log.Printf("❌ User not found: %s", req.Email)
@@ -49,7 +48,7 @@ func ResetDBHandler(c *gin.Context) {
 
 	// Attempt to delete user by string ID
 	log.Printf("🔄 Attempting to delete user from auth_users with ID: %s", userID)
-	_, err = db.Database(config.Cfg.Cloud.MongoDBName).Collection("auth_users").DeleteOne(c, bson.M{"_id": authUser.AuthUserID})
+	_, err = db.Collection("auth_users").DeleteOne(c, bson.M{"_id": authUser.AuthUserID})
 	if err != nil {
 		log.Printf("❌ Failed to delete user from auth_users: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete user"})
@@ -75,8 +74,7 @@ func ResetDBHandler(c *gin.Context) {
 	// Delete user data from each collection
 	for _, collectionName := range collections {
 		// Check if the collection exists by querying for a document
-		
-		count, err := db.Database(config.Cfg.Cloud.MongoDBName).Collection(collectionName).CountDocuments(c, bson.M{"auth_user_id": authUser.AuthUserID})
+		count, err := db.Collection(collectionName).CountDocuments(c, bson.M{"auth_user_id": authUser.AuthUserID})
 		if err != nil {
 			log.Printf("❌ Error checking collection '%s': %v", collectionName, err)
 			continue // Skip this collection if there is an error
@@ -84,7 +82,7 @@ func ResetDBHandler(c *gin.Context) {
 
 		if count > 0 {
 			// If the collection is 'user_entry_timelines', use the correct field for deletion
-			_, err := db.Database(config.Cfg.Cloud.MongoDBName).Collection(collectionName).DeleteMany(c, bson.M{"auth_user_id": authUser.AuthUserID})
+			_, err := db.Collection(collectionName).DeleteMany(c, bson.M{"auth_user_id": authUser.AuthUserID})
 			if err != nil {
 				log.Printf("❌ Error deleting from %s: %v", collectionName, err)
 			} else {
@@ -98,14 +96,13 @@ func ResetDBHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "User and associated data deleted successfully."})
 }
 
-
 func PrintAllCollectionsHandler(c *gin.Context) {
-	// Get MongoDB client
-	db := c.MustGet("db").(*mongo.Client)
+	// Get MongoDB database object
+	db := c.MustGet("db").(*mongo.Database) // Changed to *mongo.Database
 	log.Println("🔄 Fetching all collections from the database")
 
 	// List all collections in the database
-	collections, err := db.Database(config.Cfg.Cloud.MongoDBName).ListCollectionNames(c, bson.M{})
+	collections, err := db.ListCollectionNames(c, bson.M{})
 	if err != nil {
 		log.Printf("❌ Error listing collections: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list collections"})
@@ -117,7 +114,7 @@ func PrintAllCollectionsHandler(c *gin.Context) {
 		log.Printf("🔄 Fetching documents from collection: %s", collectionName)
 
 		// Fetch all documents from the collection
-		cursor, err := db.Database(config.Cfg.Cloud.MongoDBName).Collection(collectionName).Find(c, bson.M{})
+		cursor, err := db.Collection(collectionName).Find(c, bson.M{})
 		if err != nil {
 			log.Printf("❌ Error fetching documents from collection %s: %v", collectionName, err)
 			continue

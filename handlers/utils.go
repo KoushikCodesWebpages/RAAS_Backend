@@ -1,29 +1,30 @@
 package handlers
 
 import (
-	"RAAS/models"
-	"gorm.io/gorm"
+	"context"
+	"errors"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
 	"github.com/google/uuid"
-	"encoding/json"
+	"RAAS/models"
 )
 
-// FindSeekerByUserID is a global utility function to find a Seeker by userID
-func FindSeekerByUserID(db *gorm.DB, userID uuid.UUID) (*models.Seeker, error) {
+// FindSeekerByUserID is a global utility function to find a Seeker by userID in MongoDB
+func FindSeekerByUserID(collection *mongo.Collection, userID uuid.UUID) (*models.Seeker, error) {
 	var seeker models.Seeker
-	if err := db.First(&seeker, "auth_user_id = ?", userID).Error; err != nil {
+	filter := bson.M{"auth_user_id": userID}
+	err := collection.FindOne(context.Background(), filter).Decode(&seeker)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, errors.New("seeker not found")
+		}
 		return nil, err
 	}
 	return &seeker, nil
 }
 
-
-func IsFieldFilled(field []byte) (bool, error) {
-	if len(field) > 0 {
-		var existingField map[string]interface{}
-		if err := json.Unmarshal(field, &existingField); err == nil && len(existingField) > 0 {
-			return true, nil
-		}
-		return false, nil
-	}
-	return false, nil
+func IsFieldFilled(personalInfo bson.M) bool {
+	// Check if the bson.M map is empty
+	return len(personalInfo) > 0
 }
+

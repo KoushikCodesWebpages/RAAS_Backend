@@ -27,6 +27,7 @@ type JobTitleResponse struct {
 // PERSONAL INFO
 // =======================
 
+// PersonalInfoRequest is the payload to create or update seeker personal info
 type PersonalInfoRequest struct {
 	FirstName       string  `json:"firstName" binding:"required" bson:"firstName"`
 	SecondName      *string `json:"secondName,omitempty" bson:"secondName,omitempty"`
@@ -35,13 +36,15 @@ type PersonalInfoRequest struct {
 	LinkedInProfile *string `json:"linkedinProfile,omitempty" bson:"linkedinProfile,omitempty"`
 }
 
+// PersonalInfoResponse is the response structure with user ID included
 type PersonalInfoResponse struct {
-	AuthUserID      uuid.UUID `json:"authUserId" bson:"authUserId"`
-	FirstName       string    `json:"firstName" bson:"firstName"`
-	SecondName      *string   `json:"secondName,omitempty" bson:"secondName,omitempty"`
-	DateOfBirth     string    `json:"dateOfBirth" bson:"dateOfBirth"`
-	Address         string    `json:"address" bson:"address"`
-	LinkedInProfile *string   `json:"linkedinProfile,omitempty" bson:"linkedinProfile,omitempty"`
+	ID              primitive.ObjectID `json:"id" bson:"_id,omitempty"` // MongoDB document ID
+	AuthUserID      string             `json:"auth_user_id" bson:"auth_user_id"` // store UUID as string
+	FirstName       string             `json:"firstName" bson:"firstName"`
+	SecondName      *string            `json:"secondName,omitempty" bson:"secondName,omitempty"`
+	DateOfBirth     string             `json:"dateOfBirth" bson:"dateOfBirth"`
+	Address         string             `json:"address" bson:"address"`
+	LinkedInProfile *string            `json:"linkedinProfile,omitempty" bson:"linkedinProfile,omitempty"`
 }
 
 // =======================
@@ -55,7 +58,7 @@ type ProfessionalSummaryRequest struct {
 }
 
 type ProfessionalSummaryResponse struct {
-	AuthUserID   uuid.UUID `json:"authUserId" bson:"authUserId"`
+	AuthUserID   uuid.UUID `json:"auth_user_id" bson:"auth_user_id"`
 	About        string    `json:"about" bson:"about"`
 	Skills       []string  `json:"skills" bson:"skills"`
 	AnnualIncome float64   `json:"annualIncome" bson:"annualIncome"`
@@ -76,7 +79,7 @@ type WorkExperienceRequest struct {
 
 type WorkExperienceResponse struct {
 	ID                  primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	AuthUserID          uuid.UUID          `json:"authUserId" bson:"authUserId"`
+	AuthUserID          uuid.UUID          `json:"auth_user_id" bson:"auth_user_id"`
 	JobTitle            string             `json:"jobTitle" bson:"jobTitle"`
 	CompanyName         string             `json:"companyName" bson:"companyName"`
 	EmploymentType      string             `json:"employmentType" bson:"employmentType"`
@@ -100,7 +103,7 @@ type EducationRequest struct {
 
 type EducationResponse struct {
 	ID           primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	AuthUserID   uuid.UUID          `json:"authUserId" bson:"authUserId"`
+	AuthUserID   uuid.UUID          `json:"auth_user_id" bson:"auth_user_id"`
 	Degree       string             `json:"degree" bson:"degree"`
 	Institution  string             `json:"institution" bson:"institution"`
 	FieldOfStudy string             `json:"fieldOfStudy" bson:"fieldOfStudy"`
@@ -120,7 +123,7 @@ type CertificateRequest struct {
 
 type CertificateResponse struct {
 	ID                primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	AuthUserID        uuid.UUID          `json:"authUserId" bson:"authUserId"`
+	AuthUserID        uuid.UUID          `json:"auth_user_id" bson:"auth_user_id"`
 	CertificateName   string             `json:"certificateName" bson:"certificateName"`
 	CertificateFile   string             `json:"certificateFile" bson:"certificateFile"`
 	CertificateNumber *string            `json:"certificateNumber,omitempty" bson:"certificateNumber,omitempty"`
@@ -138,7 +141,7 @@ type LanguageRequest struct {
 
 type LanguageResponse struct {
 	ID               primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	AuthUserID       uuid.UUID          `json:"authUserId" bson:"authUserId"`
+	AuthUserID       uuid.UUID          `json:"auth_user_id" bson:"auth_user_id"`
 	LanguageName     string             `json:"language" bson:"language"`
 	CertificateFile  string             `json:"certificateFile" bson:"certificateFile"`
 	ProficiencyLevel string             `json:"proficiency" bson:"proficiency"`

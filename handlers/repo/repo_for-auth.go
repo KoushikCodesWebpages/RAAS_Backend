@@ -98,9 +98,12 @@ func (r *UserRepo) CreateSeeker(input dto.SeekerSignUpInput, hashedPassword stri
 		DailyGeneratableCV:        100,   // Default value
 		DailyGeneratableCoverletter: 100, // Default value
 		TotalApplications:         0,     // Default value
-		PersonalInfo:              nil,   // or initialize with an empty JSON object
-		ProfessionalSummary:       nil,   // or initialize with an empty JSON object
-		WorkExperiences:           nil,   // or initialize with an empty JSON object
+		PersonalInfo:              bson.M{},  // Initialize with an empty BSON object
+		ProfessionalSummary:       bson.M{},  // Initialize with an empty BSON object
+		WorkExperiences:           bson.M{},  // Initialize with an empty BSON object
+		Educations:                bson.M{},  // Initialize with an empty BSON object
+		Certificates:              bson.M{},  // Initialize with an empty BSON object
+		Languages:                 bson.M{},  // Initialize with an empty BSON object
 		PrimaryTitle:              "",    // You can leave it empty initially
 		SecondaryTitle:            nil,   // You can leave it nil initially
 		TertiaryTitle:             nil,   // You can leave it nil initially

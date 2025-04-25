@@ -63,7 +63,7 @@ type SalaryRange struct {
 }
 type SelectedJobApplication struct {
 	ID                     primitive.ObjectID `bson:"_id,omitempty" json:"id"`
-	AuthUserID             uuid.UUID         `bson:"authUserId" json:"authUserId"`
+	AuthUserID             uuid.UUID         `json:"auth_user_id" bson:"auth_user_id"`
 	Source                 string             `bson:"source" json:"source"`
 	JobID                  string             `bson:"jobId" json:"jobId"`
 	Title                 string             `bson:"title" json:"title"`
@@ -98,7 +98,7 @@ func CreateSelectedJobApplicationIndexes(collection *mongo.Collection) error {
 
 type CV struct {
 	ID         primitive.ObjectID `bson:"_id,omitempty" json:"id"`
-	AuthUserID uuid.UUID         `bson:"authUserId" json:"authUserId"`
+	AuthUserID uuid.UUID         `json:"auth_user_id" bson:"auth_user_id"`
 	JobID      string             `bson:"jobId" json:"jobId"`
 	CVUrl      string             `bson:"cvUrl" json:"cvUrl"`
 }
@@ -115,7 +115,7 @@ func CreateCVIndexes(collection *mongo.Collection) error {
 
 type CoverLetter struct {
 	ID            primitive.ObjectID `bson:"_id,omitempty" json:"id"`
-	AuthUserID    uuid.UUID         `bson:"authUserId" json:"authUserId"`
+	AuthUserID    uuid.UUID         `json:"auth_user_id" bson:"auth_user_id"`
 	JobID         string             `bson:"jobId" json:"jobId"`
 	CoverLetterURL string            `bson:"coverLetterURL" json:"coverLetterURL"`
 }

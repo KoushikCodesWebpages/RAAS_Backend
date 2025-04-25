@@ -54,10 +54,9 @@ func CreateAuthUserIndexes(collection *mongo.Collection) error {
 
 
 
-// SEEKER
 type Seeker struct {
 	ID                      primitive.ObjectID `json:"_id,omitempty" bson:"_id,omitempty"`
-	AuthUserID              uuid.UUID         `json:"authUserId" bson:"auth_user_id"`
+	AuthUserID              uuid.UUID         `json:"auth_user_id" bson:"auth_user_id"`
 	SubscriptionTier        string            `json:"subscriptionTier" bson:"subscription_tier"`
 	DailySelectableJobsCount int               `json:"dailySelectableJobsCount" bson:"daily_selectable_jobs_count"`
 	DailyGeneratableCV      int               `json:"dailyGeneratableCv" bson:"daily_generatable_cv"`
@@ -65,12 +64,12 @@ type Seeker struct {
 	TotalApplications       int               `json:"totalApplications" bson:"total_applications"`
 
 	// Embedded documents
-	PersonalInfo            interface{}       `json:"personalInfo" bson:"personal_info"`
-	ProfessionalSummary     interface{}       `json:"professionalSummary" bson:"professional_summary"`
-	WorkExperiences         interface{}       `json:"workExperiences" bson:"work_experiences"`
-	Educations              interface{}       `json:"education" bson:"education"`
-	Certificates            interface{}       `json:"certificates" bson:"certificates"`
-	Languages               interface{}       `json:"languages" bson:"languages"`
+	PersonalInfo            bson.M            `json:"personalInfo" bson:"personal_info"`
+	ProfessionalSummary     bson.M            `json:"professionalSummary" bson:"professional_summary"`
+	WorkExperiences         bson.M            `json:"workExperiences" bson:"work_experiences"`
+	Educations              bson.M            `json:"education" bson:"education"`
+	Certificates            bson.M            `json:"certificates" bson:"certificates"`
+	Languages               bson.M            `json:"languages" bson:"languages"`
 
 	// Job Titles
 	PrimaryTitle           string            `json:"primaryTitle" bson:"primary_title"`
@@ -90,7 +89,7 @@ func CreateSeekerIndexes(collection *mongo.Collection) error {
 
 type Admin struct {
 	ID         primitive.ObjectID `json:"_id,omitempty" bson:"_id,omitempty"`
-	AuthUserID uuid.UUID         `json:"authUserId" bson:"auth_user_id"`
+	AuthUserID uuid.UUID         `json:"auth_user_id" bson:"auth_user_id"`
 }
 
 func CreateAdminIndexes(collection *mongo.Collection) error {

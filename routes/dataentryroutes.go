@@ -2,7 +2,7 @@ package routes
 
 import (
 	"RAAS/config"
-	// "RAAS/handlers/dataentry"
+	"RAAS/handlers/dataentry"
 	"RAAS/handlers/features"
 	"RAAS/middlewares"
 	"github.com/gin-gonic/gin"
@@ -18,16 +18,16 @@ func SetupDataEntryRoutes(r *gin.Engine, client *mongo.Client, cfg *config.Confi
 	// Define the route for getting the next entry step
 	timeline.GET("", features.GetNextEntryStep())
 
-	// // PERSONAL INFO routes
-	// personalInfoHandler := dataentry.NewPersonalInfoHandler(client)
-	// personalInfoRoutes := r.Group("/personal-info")
-	// personalInfoRoutes.Use(middleware.AuthMiddleware())
-	// {
-	// 	personalInfoRoutes.POST("", personalInfoHandler.CreatePersonalInfo)  // Create Personal Info
-	// 	personalInfoRoutes.GET("", personalInfoHandler.GetPersonalInfo)      // Get Personal Info
-	// 	personalInfoRoutes.PUT("", personalInfoHandler.UpdatePersonalInfo)   // Update Personal Info
-	// 	personalInfoRoutes.PATCH("", personalInfoHandler.PatchPersonalInfo)  // Partial Update Personal Info
-	// }
+	// PERSONAL INFO routes
+	personalInfoHandler := dataentry.NewPersonalInfoHandler()
+	personalInfoRoutes := r.Group("/personal-info")
+	personalInfoRoutes.Use(middleware.AuthMiddleware())
+	{
+		personalInfoRoutes.POST("", personalInfoHandler.CreatePersonalInfo)  // Create Personal Info
+		personalInfoRoutes.GET("", personalInfoHandler.GetPersonalInfo)      // Get Personal Info
+		personalInfoRoutes.PUT("", personalInfoHandler.UpdatePersonalInfo)   // Update Personal Info
+		personalInfoRoutes.PATCH("", personalInfoHandler.PatchPersonalInfo)  // Partial Update Personal Info
+	}
 
 	// // PROFESSIONAL SUMMARY routes
 	// professionalSummaryHandler := dataentry.NewProfessionalSummaryHandler(client)

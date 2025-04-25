@@ -9,41 +9,38 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"RAAS/models"
-	"RAAS/config"
 )
-
 // GetNextEntryStep handles fetching the next incomplete step in the user entry timeline for MongoDB
 func GetNextEntryStep() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Get userID from context
 		userID := c.MustGet("userID").(uuid.UUID)
-		fmt.Println("UserID:", userID) // Debugging line to check userID
+		fmt.Println("UserID:", userID) // Debugging line
 
-		// Get MongoDB client from context
-		db := c.MustGet("db").(*mongo.Client)
+		// Get MongoDB database from context
+		db := c.MustGet("db").(*mongo.Database)
 		if db == nil {
-			fmt.Println("Error: MongoDB client is nil")
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Database client unavailable"})
+			fmt.Println("Error: MongoDB database is nil")
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Database unavailable"})
 			return
 		}
-		fmt.Println("MongoDB client successfully fetched") // Debugging line
+		fmt.Println("MongoDB database successfully fetched") // Debugging line
 
 		// Fetch the user entry timeline from the database
-		collection := db.Database(config.Cfg.Cloud.MongoDBName).Collection("user_entry_timelines")
+		collection := db.Collection("user_entry_timelines")
 		var timeline models.UserEntryTimeline
 		err := collection.FindOne(c, bson.M{"auth_user_id": userID}).Decode(&timeline)
 		if err != nil {
 			if err == mongo.ErrNoDocuments {
-				fmt.Println("Error fetching timeline: User not found") // Debugging line
+				fmt.Println("Error fetching timeline: User not found")
 				c.JSON(http.StatusNotFound, gin.H{"error": "Timeline not found"})
 			} else {
-				fmt.Println("Error fetching timeline:", err) // Debugging line
+				fmt.Println("Error fetching timeline:", err)
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch timeline"})
 			}
 			return
 		}
 
-		// Debugging line to print timeline data
 		fmt.Println("Timeline data:", timeline)
 
 		// Define the steps and their completion status
@@ -63,9 +60,7 @@ func GetNextEntryStep() gin.HandlerFunc {
 
 		// Iterate through steps and check if any step is incomplete and required
 		for _, step := range steps {
-			// Debugging line to check step data
 			fmt.Printf("Checking step: %s, Completed: %v, Required: %v\n", step.Name, step.Completed, step.Required)
-
 			if step.Required && !step.Completed {
 				c.JSON(http.StatusOK, gin.H{
 					"completed": false,
@@ -75,22 +70,21 @@ func GetNextEntryStep() gin.HandlerFunc {
 			}
 		}
 
-		// Mark completed if not already
+		// If all required steps are complete, mark timeline as completed (if not already)
 		if !timeline.Completed {
-			fmt.Println("Marking timeline as completed") // Debugging line
+			fmt.Println("Marking timeline as completed")
 			timeline.Completed = true
 			update := bson.M{
 				"$set": bson.M{"completed": true},
 			}
 
-			// Update the timeline as completed in MongoDB
 			_, err := collection.UpdateOne(c, bson.M{"auth_user_id": userID}, update)
 			if err != nil {
-				fmt.Println("Error updating timeline:", err) // Debugging line
+				fmt.Println("Error updating timeline:", err)
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to mark as completed"})
 				return
 			}
-			fmt.Println("Timeline marked as completed") // Debugging line to indicate timeline was marked completed
+			fmt.Println("Timeline marked as completed")
 		}
 
 		// Return the response
@@ -100,3 +94,4 @@ func GetNextEntryStep() gin.HandlerFunc {
 		})
 	}
 }
+
