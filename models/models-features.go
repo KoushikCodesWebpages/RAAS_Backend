@@ -1,14 +1,20 @@
 package models
 
 import (
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"time"
+	"context"
+	"github.com/google/uuid"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+
 )
 
-// UserEntryTimeline for MongoDB
 type UserEntryTimeline struct {
 	ID                              primitive.ObjectID `bson:"_id,omitempty" json:"id"`  // MongoDB ID
-	AuthUserID                       primitive.ObjectID `bson:"authUserId" json:"authUserId"`
+	AuthUserID                       uuid.UUID         `bson:"authUserId" json:"authUserId"`
 
 	PersonalInfosCompleted          bool       `bson:"personalInfosCompleted" json:"personalInfosCompleted"`
 	PersonalInfosRequired           bool       `bson:"personalInfosRequired" json:"personalInfosRequired"`
@@ -37,16 +43,27 @@ type UserEntryTimeline struct {
 	UpdatedAt                       time.Time  `bson:"updatedAt" json:"updatedAt"`
 }
 
-// SalaryRange for MongoDB
+func CreateUserEntryTimelineIndexes(collection *mongo.Collection) error {
+	indexModel := mongo.IndexModel{
+		Keys:    bson.D{{Key: "auth_user_id", Value: 1}},
+		Options: options.Index().SetUnique(true),       
+	}
+	_, err := collection.Indexes().CreateOne(context.Background(), indexModel)
+	return err
+}
+
+
+
+
+
+
 type SalaryRange struct {
 	Min int `bson:"min" json:"min"`
 	Max int `bson:"max" json:"max"`
 }
-
-// SelectedJobApplication for MongoDB
 type SelectedJobApplication struct {
 	ID                     primitive.ObjectID `bson:"_id,omitempty" json:"id"`
-	AuthUserID             primitive.ObjectID `bson:"authUserId" json:"authUserId"`
+	AuthUserID             uuid.UUID         `bson:"authUserId" json:"authUserId"`
 	Source                 string             `bson:"source" json:"source"`
 	JobID                  string             `bson:"jobId" json:"jobId"`
 	Title                 string             `bson:"title" json:"title"`
@@ -61,25 +78,57 @@ type SelectedJobApplication struct {
 	MaxSalary             int                `bson:"maxSalary" json:"maxSalary"`
 	MatchScore            float64            `bson:"matchScore" json:"matchScore"`
 	Description           string             `bson:"description" json:"description"`
-
 	Selected              bool               `bson:"selected" json:"selected"`
 	CvGenerated           bool               `bson:"cvGenerated" json:"cvGenerated"`
 	CoverLetterGenerated  bool               `bson:"coverLetterGenerated" json:"coverLetterGenerated"`
 	ViewLink              bool               `bson:"viewLink" json:"viewLink"`
 }
+func CreateSelectedJobApplicationIndexes(collection *mongo.Collection) error {
+	indexModel := mongo.IndexModel{
+		Keys:    bson.D{{Key: "authUserId", Value: 1}, {Key: "jobId", Value: 1}}, // Compound index on authUserId and jobId
+		Options: options.Index().SetUnique(true),                                 // Unique index
+	}
+	_, err := collection.Indexes().CreateOne(context.Background(), indexModel)
+	return err
+}
 
-// CV for MongoDB
+
+
+
+
 type CV struct {
 	ID         primitive.ObjectID `bson:"_id,omitempty" json:"id"`
-	AuthUserID primitive.ObjectID `bson:"authUserId" json:"authUserId"`
+	AuthUserID uuid.UUID         `bson:"authUserId" json:"authUserId"`
 	JobID      string             `bson:"jobId" json:"jobId"`
 	CVUrl      string             `bson:"cvUrl" json:"cvUrl"`
 }
 
-// CoverLetter for MongoDB
+func CreateCVIndexes(collection *mongo.Collection) error {
+	indexModel := mongo.IndexModel{
+		Keys:    bson.D{{Key: "authUserId", Value: 1}, {Key: "jobId", Value: 1}}, 
+		Options: options.Index().SetUnique(true),                               
+	}
+	_, err := collection.Indexes().CreateOne(context.Background(), indexModel)
+	return err
+}
+
+
 type CoverLetter struct {
 	ID            primitive.ObjectID `bson:"_id,omitempty" json:"id"`
-	AuthUserID    primitive.ObjectID `bson:"authUserId" json:"authUserId"`
+	AuthUserID    uuid.UUID         `bson:"authUserId" json:"authUserId"`
 	JobID         string             `bson:"jobId" json:"jobId"`
 	CoverLetterURL string            `bson:"coverLetterURL" json:"coverLetterURL"`
+}
+
+
+func CreateCoverLetterIndexes(collection *mongo.Collection) error {
+
+	indexModel := mongo.IndexModel{
+		Keys:    bson.D{{Key: "authUserId", Value: 1}, {Key: "jobId", Value: 1}}, 
+		Options: options.Index().SetUnique(true),                                 
+	}
+
+	// Create the index
+	_, err := collection.Indexes().CreateOne(context.Background(), indexModel)
+	return err
 }

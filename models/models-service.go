@@ -1,35 +1,93 @@
 package models
 
-import
-(
+import (
+
+	"context"
 	"github.com/google/uuid"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+
 )
 
-// Job model combining Metadata, Description, and JobLink
+
 type Job struct {
-	ID             uint   `gorm:"primaryKey;autoIncrement"`
-	JobID          string `gorm:"unique;type:varchar(191)"`
-	Title          string
-	Company        string
-	Location       string
-	PostedDate     string
-	Link           string `gorm:"unique;type:varchar(191)"`
-	Processed      bool
-	Source         string // LinkedIn or Xing (to differentiate the source)
+	ID             primitive.ObjectID `bson:"_id,omitempty" json:"id"`
+	JobID          string             `bson:"jobId" json:"jobId"`
+	Title          string             `bson:"title" json:"title"`
+	Company        string             `bson:"company" json:"company"`
+	Location       string             `bson:"location" json:"location"`
+	PostedDate     string             `bson:"postedDate" json:"postedDate"`
+	Link           string             `bson:"link" json:"link"`
+	Processed      bool               `bson:"processed" json:"processed"`
+	Source         string             `bson:"source" json:"source"`
 
 	// Job Description
-	JobDescription string
-	JobType        string
-	Skills         string
+	JobDescription string             `bson:"jobDescription" json:"jobDescription"`
+	JobType        string             `bson:"jobType" json:"jobType"`
+	Skills         string             `bson:"skills" json:"skills"`
 
-	// JobLink for unique reference
-	JobLink string `gorm:"unique;type:varchar(191);not null"`
+
+	JobLink string `bson:"jobLink" json:"jobLink"`
+
+	SelectedCount int `bson:"selectedCount" json:"selectedCount"`
 }
 
+func CreateJobIndexes(collection *mongo.Collection) error {
+	// Unique index for jobId
+	jobIdIndex := mongo.IndexModel{
+		Keys:    bson.D{{Key: "jobId", Value: 1}}, // Index on jobId, unique
+		Options: options.Index().SetUnique(true),
+	}
+
+	// Unique index for jobLink
+	jobLinkIndex := mongo.IndexModel{
+		Keys:    bson.D{{Key: "jobLink", Value: 1}}, // Index on jobLink, unique
+		Options: options.Index().SetUnique(true),
+	}
+
+	// Hashed index for title (for job title-based lookups)
+	jobTitleIndex := mongo.IndexModel{
+		Keys:    bson.D{{Key: "title", Value: "hashed"}}, // Hashed index on title
+		Options: options.Index().SetUnique(false),       // Not unique
+	}
+
+	// Hashed index for selectedCount (for fast equality checks)
+	selectedCountIndex := mongo.IndexModel{
+		Keys:    bson.D{{Key: "selectedCount", Value: "hashed"}}, // Hashed index on selectedCount
+		Options: options.Index().SetUnique(false),               // Not unique
+	}
+
+	// Create indexes
+	_, err := collection.Indexes().CreateMany(context.Background(), []mongo.IndexModel{
+		jobIdIndex, jobLinkIndex, jobTitleIndex, selectedCountIndex,
+	})
+	return err
+}
+
+// MatchScore for job seeker match score
 type MatchScore struct {
-	AuthUserID uuid.UUID `gorm:"type:char(36);not null;constraint:OnDelete:CASCADE,OnUpdate:CASCADE" json:"authUserId"` // Seeker ID (foreign key reference)`  // Seeker ID (foreign key reference)
-	JobID      string    `gorm:"primaryKey"`                // Job ID (foreign key reference, as string)
-	MatchScore float64   `gorm:"type:float"`                // Match score percentage (0 to 100)
+	AuthUserID uuid.UUID `bson:"authUserId" json:"authUserId"`
+	JobID      string    `bson:"jobId" json:"jobId"`          
+	MatchScore float64   `bson:"matchScore" json:"matchScore"` 
+}
+
+
+func CreateMatchScoreIndexes(collection *mongo.Collection) error {
+	// Compound unique index for authUserId and jobId
+	matchScoreIndex := mongo.IndexModel{
+		Keys:    bson.D{
+			{Key: "authUserId", Value: 1}, // Index on authUserId
+			{Key: "jobId", Value: 1},      // Index on jobId
+		},
+		Options: options.Index().SetUnique(true), // Ensuring the combination is unique
+	}
+
+	// Create the compound index
+	_, err := collection.Indexes().CreateOne(context.Background(), matchScoreIndex)
+	return err
 }
 
 
@@ -44,76 +102,4 @@ type MatchScore struct {
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-// LinkedIn job metadata
-type LinkedInJobMetaData struct {
-	ID         string `gorm:"primaryKey;type:varchar(191)"`
-	JobID      string `gorm:"unique;type:varchar(191)"`
-	Title      string
-	Company    string
-	Location   string
-	PostedDate string
-	Link       string `gorm:"unique;type:varchar(191)"`
-	Processed  bool
-
-	// Relationships
-}
-
-// Xing job metadata
-type XingJobMetaData struct {
-	ID         string `gorm:"primaryKey;type:varchar(191)"`
-	JobID      string `gorm:"unique;type:varchar(191)"`
-	Title      string
-	Company    string
-	Location   string
-	PostedDate string
-	Link       string `gorm:"unique;type:varchar(191)"`
-	Processed  bool
-}
-
-// LinkedIn application links
-type LinkedInJobApplicationLink struct {
-	ID      uint   `gorm:"primaryKey;autoIncrement"`
-	JobID   string `gorm:"type:varchar(191);not null"`
-	JobLink string `gorm:"unique;type:varchar(191)"`
-}
-
-// Xing application links
-type XingJobApplicationLink struct {
-	ID      uint   `gorm:"primaryKey;autoIncrement"`
-	JobID   string `gorm:"type:varchar(191);not null;uniqueIndex:idx_xing_job_app"`
-	JobLink string `gorm:"type:varchar(191);not null;uniqueIndex:idx_xing_job_app"`
-
-}
-
-// LinkedIn job description
-type LinkedInJobDescription struct {
-	ID             uint   `gorm:"primaryKey;autoIncrement"`
-	JobID          string `gorm:"type:varchar(191);not null;uniqueIndex:idx_linkedin_job"`
-	JobLink        string `gorm:"type:varchar(191);not null;uniqueIndex:idx_linkedin_job"`
-	JobDescription string
-	JobType        string
-	Skills         string
-}
-
-// Xing job description
-type XingJobDescription struct {
-	ID             uint   `gorm:"primaryKey;autoIncrement"`
-	JobID          string `gorm:"type:varchar(191);not null;uniqueIndex:idx_xing_job"`
-	JobLink        string `gorm:"type:varchar(191);not null;uniqueIndex:idx_xing_job"`
-	JobDescription string
-	JobType        string
-	Skills         string
-
-}
 

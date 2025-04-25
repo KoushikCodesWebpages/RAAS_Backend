@@ -3,10 +3,12 @@ package auth
 import (
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
-	"gorm.io/gorm"
 	"net/http"
 	"fmt"
-	"errors"
+
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+
 
 	"RAAS/config"
 	"RAAS/models"
@@ -15,6 +17,7 @@ import (
 	"RAAS/handlers/repo"
 	"RAAS/utils"
 )
+
 func SeekerSignUp(c *gin.Context) {
 	var input dto.SeekerSignUpInput
 
@@ -25,7 +28,7 @@ func SeekerSignUp(c *gin.Context) {
 	}
 
 	// Initialize userRepo with valid config
-	db := c.MustGet("db").(*gorm.DB)
+	db := c.MustGet("db").(*mongo.Client)
 	userRepo := repo.NewUserRepo(db, config.Cfg)
 
 	// Validate the input data
@@ -36,13 +39,9 @@ func SeekerSignUp(c *gin.Context) {
 
 	// Check if the email is already taken and whether it's verified or not
 	var user models.AuthUser
-	if err := db.Where("email = ?", input.Email).First(&user).Error; err != nil {
-		if !errors.Is(err, gorm.ErrRecordNotFound) {
-			// Database error
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error", "details": err.Error()})
-			return
-		}
-	} else {
+	err := db.Database(config.Cfg.Cloud.MongoDBName).Collection("auth_users").FindOne(c, bson.M{"email": input.Email}).Decode(&user)
+
+	if err != mongo.ErrNoDocuments {
 		// If email exists, check if it's verified
 		if user.EmailVerified {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Email is already taken and verified."})
@@ -59,9 +58,6 @@ func SeekerSignUp(c *gin.Context) {
 			<p>If you did not sign up, you can ignore this email.</p>
 		`, input.Email, verificationLink)
 
-		// Log for debugging email sending
-		// c.Logger().Infof("Resending verification email to: %s", input.Email)
-
 		// Send the verification email again
 		emailCfg := utils.EmailConfig{
 			Host:     config.Cfg.Cloud.EmailHost,
@@ -77,15 +73,9 @@ func SeekerSignUp(c *gin.Context) {
 			return
 		}
 
-		// Log after successful email sending
-		// c.Logger().Info("Verification email resent successfully.")
-
 		c.JSON(http.StatusOK, gin.H{"message": "Please check your email to verify your account. Email resent."})
 		return
 	}
-
-	// Log before hashing the password
-	// c.Logger().Infof("Hashing password for user: %s", input.Email)
 
 	// Hash the password
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
@@ -95,20 +85,13 @@ func SeekerSignUp(c *gin.Context) {
 	}
 
 	// Create the user and send the verification email
-	// c.Logger().Infof("Creating user with email: %s", input.Email)
 	if err := userRepo.CreateSeeker(input, string(hashedPassword)); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not create Seeker", "details": err.Error()})
 		return
 	}
 
-	// Log successful user creation
-	// c.Logger().Infof("User created successfully. Email verification sent to: %s", input.Email)
-
-	// Final response
 	c.JSON(http.StatusCreated, gin.H{"message": "Seeker registered successfully. Please check your email to verify."})
 }
-
-
 
 func VerifyEmail(c *gin.Context) {
 	token := c.Query("token")
@@ -124,7 +107,9 @@ func VerifyEmail(c *gin.Context) {
 	}
 
 	var user models.AuthUser
-	if err := db.(*gorm.DB).Where("verification_token = ?", token).First(&user).Error; err != nil {
+	err := db.(*mongo.Client).Database(config.Cfg.Cloud.MongoDBName).Collection("auth_users").FindOne(c, bson.M{"verification_token": token}).Decode(&user)
+
+	if err == mongo.ErrNoDocuments {
 		c.String(http.StatusNotFound, "Invalid or expired token")
 		return
 	}
@@ -139,50 +124,30 @@ func VerifyEmail(c *gin.Context) {
 	user.EmailVerified = true
 	user.VerificationToken = ""
 
-	if err := db.(*gorm.DB).Save(&user).Error; err != nil {
+	// Update user in the database
+	_, err = db.(*mongo.Client).Database(config.Cfg.Cloud.MongoDBName).Collection("auth_users").UpdateOne(
+		c,
+		bson.M{"_id": user.ID},
+		bson.M{"$set": bson.M{"email_verified": true, "verification_token": ""}},
+	)
+
+	if err != nil {
 		c.String(http.StatusInternalServerError, "Failed to verify email")
 		return
 	}
 
-	html := `
+	c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(`
 		<!DOCTYPE html>
 		<html lang="en">
 		<head>
 			<meta charset="UTF-8">
 			<title>Email Verified</title>
 			<style>
-				body {
-					font-family: Arial, sans-serif;
-					background-color: #f2f4f8;
-					color: #333;
-					text-align: center;
-					padding-top: 100px;
-				}
-				.card {
-					background: white;
-					padding: 40px;
-					margin: auto;
-					border-radius: 8px;
-					box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-					width: 90%;
-					max-width: 500px;
-				}
-				h1 {
-					color: #28a745;
-				}
-				p {
-					margin-top: 10px;
-					font-size: 18px;
-				}
-				a {
-					display: inline-block;
-					margin-top: 20px;
-					text-decoration: none;
-					color: white;
-					background-color: #007bff;
-					padding: 10px 20px;
-					border-radius: 5px;
-				}
+				body { font-family: Arial, sans-serif; background-color: #f2f4f8; color: #333; text-align: center; padding-top: 100px; }
+				.card { background: white; padding: 40px; margin: auto; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 90%; max-width: 500px; }
+				h1 { color: #28a745; }
+				p { margin-top: 10px; font-size: 18px; }
+				a { display: inline-block; margin-top: 20px; text-decoration: none; color: white; background-color: #007bff; padding: 10px 20px; border-radius: 5px; }
 			</style>
 		</head>
 		<body>
@@ -193,17 +158,12 @@ func VerifyEmail(c *gin.Context) {
 			</div>
 		</body>
 		</html>
-	`
-
-	c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(html))
+	`))
 }
-
-
-
 
 func Login(c *gin.Context) {
 	var input dto.LoginInput
-	db := c.MustGet("db").(*gorm.DB)
+	db := c.MustGet("db").(*mongo.Client)
 	userRepo := repo.NewUserRepo(db, config.Cfg)
 
 	if err := c.ShouldBindJSON(&input); err != nil {
@@ -225,5 +185,3 @@ func Login(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"token": token})
 }
-
-
