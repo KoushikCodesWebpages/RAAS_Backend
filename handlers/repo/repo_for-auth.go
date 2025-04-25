@@ -3,6 +3,7 @@ package repo
 import (
 	"fmt"
 	"errors"
+	"context"
 	"github.com/google/uuid"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -31,7 +32,44 @@ func (r *UserRepo) ValidateSeekerSignUpInput(input dto.SeekerSignUpInput) error 
     return nil
 }
 
+func (r *UserRepo) CheckDuplicateEmailOrPhone(email, phone string) (bool, bool, error) {
+	var user models.AuthUser
+	// Check for existing email
+	err := r.DB.Database(config.Cfg.Cloud.MongoDBName).Collection("auth_users").FindOne(context.TODO(), bson.M{"email": email}).Decode(&user)
+	if err != mongo.ErrNoDocuments {
+		if err == nil {
+			return true, false, nil // Email already taken
+		}
+		return false, false, fmt.Errorf("failed to check email: %w", err)
+	}
+
+	// Check for existing phone number
+	err = r.DB.Database(config.Cfg.Cloud.MongoDBName).Collection("auth_users").FindOne(context.TODO(), bson.M{"phone": phone}).Decode(&user)
+	if err != mongo.ErrNoDocuments {
+		if err == nil {
+			return false, true, nil // Phone number already taken
+		}
+		return false, false, fmt.Errorf("failed to check phone: %w", err)
+	}
+
+	return false, false, nil // No duplicates found
+}
+
 func (r *UserRepo) CreateSeeker(input dto.SeekerSignUpInput, hashedPassword string) error {
+	// Check for duplicate email or phone number
+	emailTaken, phoneTaken, err := r.CheckDuplicateEmailOrPhone(input.Email, input.Number)
+	if err != nil {
+		return fmt.Errorf("error checking for duplicates: %w", err)
+	}
+
+	if emailTaken {
+		return fmt.Errorf("email is already taken")
+	}
+
+	if phoneTaken {
+		return fmt.Errorf("phone number is already taken")
+	}
+
 	// Generate a verification token (UUID)
 	token := uuid.New().String()
 
@@ -47,7 +85,7 @@ func (r *UserRepo) CreateSeeker(input dto.SeekerSignUpInput, hashedPassword stri
 	}
 
 	// Save AuthUser to the database
-	_, err := r.DB.Database(config.Cfg.Cloud.MongoDBName).Collection("auth_users").InsertOne(nil, authUser)
+	_, err = r.DB.Database(config.Cfg.Cloud.MongoDBName).Collection("auth_users").InsertOne(context.TODO(), authUser)
 	if err != nil {
 		return fmt.Errorf("failed to create auth user: %w", err)
 	}
@@ -69,16 +107,16 @@ func (r *UserRepo) CreateSeeker(input dto.SeekerSignUpInput, hashedPassword stri
 	}
 
 	// Save Seeker to the database
-	_, err = r.DB.Database(config.Cfg.Cloud.MongoDBName).Collection("seekers").InsertOne(nil, seeker)
+	_, err = r.DB.Database(config.Cfg.Cloud.MongoDBName).Collection("seekers").InsertOne(context.TODO(), seeker)
 	if err != nil {
 		return fmt.Errorf("failed to create seeker profile: %w", err)
 	}
 
 	timeline := models.UserEntryTimeline{
-		AuthUserID: authUser.ID.String(), // Convert UUID to string
+		AuthUserID: authUser.ID, // Convert UUID to string
 	}
 	
-	_, err = r.DB.Database(config.Cfg.Cloud.MongoDBName).Collection("user_entry_timelines").InsertOne(nil, timeline)
+	_, err = r.DB.Database(config.Cfg.Cloud.MongoDBName).Collection("user_entry_timelines").InsertOne(context.TODO(), timeline)
 	if err != nil {
 		return fmt.Errorf("user created but failed to create entry timeline: %w", err)
 	}
@@ -116,7 +154,7 @@ func (r *UserRepo) AuthenticateUser(email, password string) (*models.AuthUser, e
 	var user models.AuthUser
 
 	// Find the user by email
-	err := r.DB.Database(config.Cfg.Cloud.MongoDBName).Collection("auth_users").FindOne(nil, bson.M{"email": email}).Decode(&user)
+	err := r.DB.Database(config.Cfg.Cloud.MongoDBName).Collection("auth_users").FindOne(context.TODO(), bson.M{"email": email}).Decode(&user)
 	if err == mongo.ErrNoDocuments {
 		return nil, errors.New("user not found")
 	}
