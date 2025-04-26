@@ -137,7 +137,10 @@ func (h *PersonalInfoHandler) GetPersonalInfo(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, personalInfo)
+	c.JSON(http.StatusOK, gin.H{
+		"personal_info": personalInfo,
+	})
+	
 }
 
 // UpdatePersonalInfo updates the personal information

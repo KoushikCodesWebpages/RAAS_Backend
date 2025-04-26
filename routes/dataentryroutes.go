@@ -39,6 +39,17 @@ func SetupDataEntryRoutes(r *gin.Engine, client *mongo.Client, cfg *config.Confi
 		professionalSummaryRoutes.PUT("", professionalSummaryHandler.UpdateProfessionalSummary)
 	}
 
+
+	workExperienceHandler := dataentry.NewWorkExperienceHandler()
+	workExperienceRoutes := r.Group("/work-experience")
+	workExperienceRoutes.Use(middleware.AuthMiddleware())
+	{
+		workExperienceRoutes.POST("", workExperienceHandler.CreateWorkExperience)
+		workExperienceRoutes.GET("", workExperienceHandler.GetWorkExperience)
+		// workExperienceRoutes.PUT("", workExperienceHandler.UpdateWorkExperience)
+	}
+
+
 	// // CERTIFICATES routes
 	// certificateHandler := dataentry.NewCertificateHandler(client)
 	// certificateRoutes := r.Group("/certificates")

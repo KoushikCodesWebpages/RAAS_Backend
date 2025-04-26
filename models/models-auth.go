@@ -57,15 +57,16 @@ type Seeker struct {
 	SubscriptionTier            string             `json:"subscription_tier" bson:"subscription_tier"`
 	DailySelectableJobsCount    int                `json:"daily_selectable_jobs_count" bson:"daily_selectable_jobs_count"`
 	DailyGeneratableCV          int                `json:"daily_generatable_cv" bson:"daily_generatable_cv"`
-	DailyGeneratableCoverletter int               `json:"daily_generatable_coverletter" bson:"daily_generatable_coverletter"`
+	DailyGeneratableCoverletter int                `json:"daily_generatable_coverletter" bson:"daily_generatable_coverletter"`
 	TotalApplications           int                `json:"total_applications" bson:"total_applications"`
 
 	PersonalInfo                bson.M             `json:"personal_info" bson:"personal_info"`
 	ProfessionalSummary         bson.M             `json:"professional_summary" bson:"professional_summary"`
-	WorkExperiences             bson.M             `json:"work_experiences" bson:"work_experiences"`
-	Educations                  bson.M             `json:"education" bson:"education"`
-	Certificates                bson.M             `json:"certificates" bson:"certificates"`
-	Languages                   bson.M             `json:"languages" bson:"languages"`
+	
+	WorkExperiences             []bson.M            `json:"work_experiences" bson:"work_experiences"`
+	Educations                  []bson.M            `json:"education" bson:"education"`
+	Certificates                []bson.M            `json:"certificates" bson:"certificates"`
+	Languages                   []bson.M            `json:"languages" bson:"languages"`
 
 	PrimaryTitle                string             `json:"primary_title" bson:"primary_title"`
 	SecondaryTitle              *string            `json:"secondary_title,omitempty" bson:"secondary_title,omitempty"`

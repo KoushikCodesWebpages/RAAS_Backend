@@ -1,149 +1,154 @@
 package dataentry
 
-// import (
-// 	"RAAS/dto"
-// 	"RAAS/models"
-// 	"encoding/json"
-// 	"fmt"
-// 	"github.com/gin-gonic/gin"
-// 	"github.com/google/uuid"
-// 	"gorm.io/gorm"
-// 	"net/http"
-// 	"strconv"
-// 	"time"
-// )
+import (
+	"context"
+	"log"
+	"net/http"
+	"time"
 
-// type WorkExperienceHandler struct {
-// 	DB *gorm.DB
-// }
+	"github.com/gin-gonic/gin"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
 
-// func NewWorkExperienceHandler(db *gorm.DB) *WorkExperienceHandler {
-// 	return &WorkExperienceHandler{DB: db}
-// }
-// func (h *WorkExperienceHandler) CreateWorkExperience(c *gin.Context) {
-//     userID := c.MustGet("userID").(uuid.UUID)
+	"RAAS/dto"
+	"RAAS/models"
+	"RAAS/handlers"
+)
 
-//     var input dto.WorkExperienceRequest
-//     if err := c.ShouldBindJSON(&input); err != nil {
-//         c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
-//         return
-//     }
+type WorkExperienceHandler struct{}
 
-//     // Validate that none of the required fields are empty
-//     if input.JobTitle == "" || input.CompanyName == "" || input.EmploymentType == "" || input.StartDate.IsZero() || input.KeyResponsibilities == "" {
-//         c.JSON(http.StatusBadRequest, gin.H{"error": "All fields are required"})
-//         return
-//     }
+func NewWorkExperienceHandler() *WorkExperienceHandler {
+	return &WorkExperienceHandler{}
+}
 
-//     // Fetch seeker from the database
-//     var seeker models.Seeker
-//     if err := h.DB.First(&seeker, "auth_user_id = ?", userID).Error; err != nil {
-//         c.JSON(http.StatusNotFound, gin.H{"error": "Seeker not found"})
-//         return
-//     }
+// CreateWorkExperience handles the creation or update of a single work experience
+func (h *WorkExperienceHandler) CreateWorkExperience(c *gin.Context) {
+	userID := c.MustGet("userID").(string)
+	db := c.MustGet("db").(*mongo.Database)
+	seekersCollection := db.Collection("seekers")
+	entryTimelineCollection := db.Collection("user_entry_timelines")
 
-//     // Check if WorkExperiences is empty or null, and initialize it as an empty slice if necessary
-//     var workExperiences []map[string]interface{}
-//     if len(seeker.WorkExperiences) > 0 {
-//         if err := json.Unmarshal(seeker.WorkExperiences, &workExperiences); err != nil {
-//             c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse work experiences", "details": err.Error()})
-//             return
-//         }
-//     }
+	var input dto.WorkExperienceRequest
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
+		log.Printf("Error binding input: %v", err)
+		return
+	}
 
-//     // Create a new work experience entry
-//     newWorkExperience := map[string]interface{}{
-//         "jobTitle":          input.JobTitle,
-//         "companyName":       input.CompanyName,
-//         "employmentType":    input.EmploymentType,
-//         "startDate":         input.StartDate.Format("2006-01-02"),
-//         "endDate":           input.EndDate.Format("2006-01-02"),
-//         "keyResponsibilities": input.KeyResponsibilities,
-//     }
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
-//     // Append the new work experience entry
-//     workExperiences = append(workExperiences, newWorkExperience)
+	var seeker models.Seeker
+	if err := seekersCollection.FindOne(ctx, bson.M{"auth_user_id": userID}).Decode(&seeker); err != nil {
+		if err == mongo.ErrNoDocuments {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Seeker not found"})
+			log.Printf("Seeker not found for auth_user_id: %s", userID)
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error retrieving seeker"})
+			log.Printf("Error retrieving seeker for auth_user_id: %s, Error: %v", userID, err)
+		}
+		return
+	}
 
-//     // Convert the updated work experiences back to JSON
-//     updatedWorkExperiencesJSON, err := json.Marshal(workExperiences)
-//     if err != nil {
-//         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to marshal updated work experiences", "details": err.Error()})
-//         return
-//     }
+	// Create a dto.WorkExperienceRequest from the input
+	workExperience := dto.WorkExperienceRequest{
+		JobTitle:           input.JobTitle,
+		CompanyName:        input.CompanyName,
+		EmploymentType:     input.EmploymentType,
+		StartDate:          input.StartDate,
+		EndDate:            input.EndDate,
+		KeyResponsibilities: input.KeyResponsibilities,
+	}
 
-//     // Update the work experiences in the database
-//     seeker.WorkExperiences = updatedWorkExperiencesJSON
-//     if err := h.DB.Save(&seeker).Error; err != nil {
-//         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update work experiences", "details": err.Error()})
-//         return
-//     }
+	// Use AppendToWorkExperience to add the new experience
+	if err := handlers.AppendToWorkExperience(&seeker, workExperience); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process work experience"})
+		log.Printf("Failed to process work experience for auth_user_id: %s, Error: %v", userID, err)
+		return
+	}
 
-//     // Create a response object for the new work experience
-//     response := dto.WorkExperienceResponse{
-//         ID:                  uint(len(workExperiences)),  // Dynamically generate ID
-//         AuthUserID:          userID,
-//         JobTitle:            input.JobTitle,
-//         CompanyName:         input.CompanyName,
-//         EmploymentType:      input.EmploymentType,
-//         StartDate:           input.StartDate,
-//         EndDate:             input.EndDate,
-//         KeyResponsibilities: input.KeyResponsibilities,
-//     }
+	// Update seeker document with the new work experiences
+	update := bson.M{
+		"$set": bson.M{
+			"work_experiences": seeker.WorkExperiences, // Save updated work experiences
+		},
+	}
 
-//     // Return the response with the new work experience
-//     c.JSON(http.StatusCreated, response)
-// }
+	updateResult, err := seekersCollection.UpdateOne(ctx, bson.M{"auth_user_id": userID}, update)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save work experience"})
+		log.Printf("Failed to update work experience for auth_user_id: %s, Error: %v", userID, err)
+		return
+	}
 
+	if updateResult.MatchedCount == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "No matching seeker found to update"})
+		log.Printf("No matching seeker found for auth_user_id: %s", userID)
+		return
+	}
 
-// func (h *WorkExperienceHandler) GetWorkExperiences(c *gin.Context) {
-// 	userID := c.MustGet("userID").(uuid.UUID)
+	// Update user entry timeline to mark work experiences completed
+	timelineUpdate := bson.M{
+		"$set": bson.M{
+			"work_experiences_completed": true,
+		},
+	}
 
-// 	var seeker models.Seeker
-// 	if err := h.DB.First(&seeker, "auth_user_id = ?", userID).Error; err != nil {
-// 		c.JSON(http.StatusNotFound, gin.H{"error": "Seeker not found"})
-// 		return
-// 	}
+	if _, err := entryTimelineCollection.UpdateOne(ctx, bson.M{"auth_user_id": userID}, timelineUpdate); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user entry timeline"})
+		log.Printf("Failed to update user entry timeline for auth_user_id: %s, Error: %v", userID, err)
+		return
+	}
 
-// 	if len(seeker.WorkExperiences) == 0 || string(seeker.WorkExperiences) == "null" {
-// 		c.JSON(http.StatusNotFound, gin.H{"error": "No work experiences found"})
-// 		return
-// 	}
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Work experience created successfully",
+	})
+}
 
-// 	var workExperiences []map[string]interface{}
-// 	if err := json.Unmarshal(seeker.WorkExperiences, &workExperiences); err != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse work experiences"})
-// 		return
-// 	}
+// GetWorkExperienceHandler handles the retrieval of a user's work experiences
+func (h *WorkExperienceHandler) GetWorkExperience(c *gin.Context) {
+    // Extract user ID from the context
+    userID := c.MustGet("userID").(string)
+    db := c.MustGet("db").(*mongo.Database)
+    seekersCollection := db.Collection("seekers")
 
-// 	var response []dto.WorkExperienceResponse
-// 	for idx, we := range workExperiences {
-// 		startDate, err := time.Parse("2006-01-02", we["startDate"].(string))
-// 		if err != nil {
-// 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid start date format"})
-// 			return
-// 		}
+    // Set up a context with timeout
+    ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+    defer cancel()
 
-// 		// Parse EndDate directly as it's now required
-// 		endDate, err := time.Parse("2006-01-02", we["endDate"].(string))
-// 		if err != nil {
-// 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid end date format"})
-// 			return
-// 		}
+    // Find the seeker by their auth_user_id
+    var seeker models.Seeker
+    if err := seekersCollection.FindOne(ctx, bson.M{"auth_user_id": userID}).Decode(&seeker); err != nil {
+        if err == mongo.ErrNoDocuments {
+            c.JSON(http.StatusNotFound, gin.H{"error": "Seeker not found"})
+            log.Printf("Seeker not found for auth_user_id: %s", userID)
+        } else {
+            c.JSON(http.StatusInternalServerError, gin.H{"error": "Error retrieving seeker"})
+            log.Printf("Error retrieving seeker for auth_user_id: %s, Error: %v", userID, err)
+        }
+        return
+    }
 
-// 		response = append(response, dto.WorkExperienceResponse{
-// 			ID:                  uint(idx + 1),
-// 			AuthUserID:          userID,
-// 			JobTitle:            we["jobTitle"].(string),
-// 			CompanyName:         we["companyName"].(string),
-// 			EmploymentType:      we["employmentType"].(string),
-// 			StartDate:           startDate,
-// 			EndDate:             endDate,
-// 			KeyResponsibilities: we["keyResponsibilities"].(string),
-// 		})
-// 	}
+    // Check if the user has work experiences
+    if len(seeker.WorkExperiences) == 0 {
+        c.JSON(http.StatusNoContent, gin.H{"message": "No work experiences found"})
+        return
+    }
 
-// 	c.JSON(http.StatusOK, response)
-// }
+    // Convert bson.M to the expected dto.WorkExperienceRequest type
+    workExperiences, err := handlers.GetWorkExperience(&seeker)
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Error processing work experiences"})
+        log.Printf("Error processing work experiences for auth_user_id: %s, Error: %v", userID, err)
+        return
+    }
+
+    // Return the work experiences in the response
+    c.JSON(http.StatusOK, gin.H{
+        "work_experiences": workExperiences,
+    })
+}
+
 
 
 // func (h *WorkExperienceHandler) PatchWorkExperience(c *gin.Context) {

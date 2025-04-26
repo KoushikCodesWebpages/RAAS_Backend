@@ -3,6 +3,7 @@ package dto
 import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"time"
+	"RAAS/utils"
 )
 
 // =======================
@@ -65,23 +66,25 @@ type ProfessionalSummaryResponse struct {
 // WORK EXPERIENCE
 // =======================
 
+// Request payload (for creating or updating)
 type WorkExperienceRequest struct {
-	JobTitle            string    `json:"job_title" binding:"required" bson:"job_title"`
-	CompanyName         string    `json:"company_name" binding:"required" bson:"company_name"`
-	EmploymentType      string    `json:"employment_type" binding:"required" bson:"employment_type"`
-	StartDate           time.Time `json:"start_date" binding:"required" bson:"start_date"`
-	EndDate             *time.Time `json:"end_date,omitempty" bson:"end_date,omitempty"`
-	KeyResponsibilities string    `json:"key_responsibilities" binding:"required" bson:"key_responsibilities"`
+	JobTitle            string          `json:"job_title" binding:"required" bson:"job_title"`
+	CompanyName         string          `json:"company_name" binding:"required" bson:"company_name"`
+	EmploymentType      string          `json:"employment_type" binding:"required" bson:"employment_type"`
+	StartDate           utils.DateOnly  `json:"start_date" binding:"required" bson:"start_date"`
+	EndDate             *utils.DateOnly `json:"end_date,omitempty" bson:"end_date,omitempty"`
+	KeyResponsibilities string          `json:"key_responsibilities" binding:"required" bson:"key_responsibilities"`
 }
 
+// Response payload
 type WorkExperienceResponse struct {
 	ID                  primitive.ObjectID `json:"id" bson:"_id,omitempty"`
 	AuthUserID          string              `json:"auth_user_id" bson:"auth_user_id"`
 	JobTitle            string              `json:"job_title" bson:"job_title"`
 	CompanyName         string              `json:"company_name" bson:"company_name"`
 	EmploymentType      string              `json:"employment_type" bson:"employment_type"`
-	StartDate           time.Time           `json:"start_date" bson:"start_date"`
-	EndDate             *time.Time          `json:"end_date,omitempty" bson:"end_date,omitempty"`
+	StartDate           utils.DateOnly      `json:"start_date" bson:"start_date"`
+	EndDate             *utils.DateOnly     `json:"end_date,omitempty" bson:"end_date,omitempty"`
 	KeyResponsibilities string              `json:"key_responsibilities" bson:"key_responsibilities"`
 }
 

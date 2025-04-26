@@ -86,7 +86,7 @@ func (h *ProfessionalSummaryHandler) GetProfessionalSummary(c *gin.Context) {
 	}
 
 	if !handlers.IsFieldFilled(seeker.ProfessionalSummary) {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Professional summary not yet filled"})
+		c.JSON(http.StatusNoContent, gin.H{"error": "Professional summary not yet filled"})
 		return
 	}
 
@@ -96,12 +96,15 @@ func (h *ProfessionalSummaryHandler) GetProfessionalSummary(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, dto.ProfessionalSummaryResponse{
-		AuthUserID:   userID,
-		About:        profSummary.About,
-		Skills:       profSummary.Skills,
-		AnnualIncome: profSummary.AnnualIncome,
+	c.JSON(http.StatusOK, gin.H{
+		"professional_summary": dto.ProfessionalSummaryResponse{
+			AuthUserID:   userID,
+			About:        profSummary.About,
+			Skills:       profSummary.Skills,
+			AnnualIncome: profSummary.AnnualIncome,
+		},
 	})
+	
 }
 
 func (h *ProfessionalSummaryHandler) UpdateProfessionalSummary(c *gin.Context) {
@@ -144,51 +147,51 @@ func (h *ProfessionalSummaryHandler) UpdateProfessionalSummary(c *gin.Context) {
 	})
 }
 
-func (h *ProfessionalSummaryHandler) PatchProfessionalSummary(c *gin.Context) {
-	userID := c.MustGet("userID").(string)
-	seekersCollection := c.MustGet("db").(*mongo.Database).Collection("seekers")
+// func (h *ProfessionalSummaryHandler) PatchProfessionalSummary(c *gin.Context) {
+// 	userID := c.MustGet("userID").(string)
+// 	seekersCollection := c.MustGet("db").(*mongo.Database).Collection("seekers")
 
-	var updates map[string]interface{}
-	if err := c.ShouldBindJSON(&updates); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
-		return
-	}
+// 	var updates map[string]interface{}
+// 	if err := c.ShouldBindJSON(&updates); err != nil {
+// 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
+// 		return
+// 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
+// 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+// 	defer cancel()
 
-	var seeker models.Seeker
-	err := seekersCollection.FindOne(ctx, bson.M{"auth_user_id": userID}).Decode(&seeker)
-	if err != nil {
-		handleDBError(err, c, "Seeker not found", userID)
-		return
-	}
+// 	var seeker models.Seeker
+// 	err := seekersCollection.FindOne(ctx, bson.M{"auth_user_id": userID}).Decode(&seeker)
+// 	if err != nil {
+// 		handleDBError(err, c, "Seeker not found", userID)
+// 		return
+// 	}
 
-	var profSummaryMap map[string]interface{}
-	if err := handlers.GetFieldFromBson(seeker.ProfessionalSummary, &profSummaryMap); err != nil {
-		handleProcessingError(err, c, "Failed to unmarshal professional summary", userID)
-		return
-	}
+// 	var profSummaryMap map[string]interface{}
+// 	if err := handlers.GetFieldFromBson(seeker.ProfessionalSummary, &profSummaryMap); err != nil {
+// 		handleProcessingError(err, c, "Failed to unmarshal professional summary", userID)
+// 		return
+// 	}
 
-	for key, value := range updates {
-		profSummaryMap[key] = value
-	}
+// 	for key, value := range updates {
+// 		profSummaryMap[key] = value
+// 	}
 
-	if err := handlers.SetFieldToBson(profSummaryMap, &seeker.ProfessionalSummary); err != nil {
-		handleProcessingError(err, c, "Failed to marshal updated professional summary", userID)
-		return
-	}
+// 	if err := handlers.SetFieldToBson(profSummaryMap, &seeker.ProfessionalSummary); err != nil {
+// 		handleProcessingError(err, c, "Failed to marshal updated professional summary", userID)
+// 		return
+// 	}
 
-	_, err = seekersCollection.UpdateOne(ctx, bson.M{"auth_user_id": userID}, bson.M{
-		"$set": bson.M{"professional_summary": seeker.ProfessionalSummary},
-	})
-	if err != nil {
-		handleDBError(err, c, "Database update failed", userID)
-		return
-	}
+// 	_, err = seekersCollection.UpdateOne(ctx, bson.M{"auth_user_id": userID}, bson.M{
+// 		"$set": bson.M{"professional_summary": seeker.ProfessionalSummary},
+// 	})
+// 	if err != nil {
+// 		handleDBError(err, c, "Database update failed", userID)
+// 		return
+// 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Professional summary patched successfully"})
-}
+// 	c.JSON(http.StatusOK, gin.H{"message": "Professional summary patched successfully"})
+// }
 
 // Helper function to handle DB errors
 func handleDBError(err error, c *gin.Context, message, userID string) {
