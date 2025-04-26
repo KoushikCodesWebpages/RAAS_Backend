@@ -50,6 +50,16 @@ func SetupDataEntryRoutes(r *gin.Engine, client *mongo.Client, cfg *config.Confi
 	}
 
 
+	educationHandler := dataentry.NewEducationHandler()
+	educationRoutes := r.Group("/education")
+	educationRoutes.Use(middleware.AuthMiddleware())
+	{
+		educationRoutes.POST("", educationHandler.CreateEducation)
+		educationRoutes.GET("", educationHandler.GetEducation)
+		// educationRoutes.PUT("", educationHandler.UpdateEducation)
+	}
+
+
 	// // CERTIFICATES routes
 	// certificateHandler := dataentry.NewCertificateHandler(client)
 	// certificateRoutes := r.Group("/certificates")

@@ -1,149 +1,153 @@
 package dataentry
 
-// import (
-// 	"RAAS/dto"
-// 	"RAAS/models"
-// 	"encoding/json"
-// 	"fmt"
-// 	"github.com/gin-gonic/gin"
-// 	"github.com/google/uuid"
-// 	"gorm.io/gorm"
-// 	"net/http"
-// 	"strconv"
-// 	"time"
-// )
+import (
+	"context"
+	"log"
+	"net/http"
+	"time"
 
-// type EducationHandler struct {
-// 	DB *gorm.DB
-// }
+	"github.com/gin-gonic/gin"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
 
-// func NewEducationHandler(db *gorm.DB) *EducationHandler {
-// 	return &EducationHandler{DB: db}
-// }
+	"RAAS/dto"
+	"RAAS/models"
+	"RAAS/handlers"
+)
 
-// func (h *EducationHandler) CreateEducation(c *gin.Context) {
-// 	userID := c.MustGet("userID").(uuid.UUID)
+type EducationHandler struct{}
 
-// 	var input dto.EducationRequest
-// 	if err := c.ShouldBindJSON(&input); err != nil {
-// 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
-// 		return
-// 	}
+func NewEducationHandler() *EducationHandler {
+	return &EducationHandler{}
+}
 
-// 	// Validate that none of the required fields are empty
-// 	if input.Degree == "" || input.Institution == "" || input.FieldOfStudy == "" || input.StartDate.IsZero() || input.Achievements == "" {
-// 		c.JSON(http.StatusBadRequest, gin.H{"error": "All fields are required"})
-// 		return
-// 	}
+// CreateEducation handles the creation or update of a single education entry
+func (h *EducationHandler) CreateEducation(c *gin.Context) {
+	userID := c.MustGet("userID").(string)
+	db := c.MustGet("db").(*mongo.Database)
+	seekersCollection := db.Collection("seekers")
+	entryTimelineCollection := db.Collection("user_entry_timelines")
 
-// 	// Fetch seeker from the database
-// 	var seeker models.Seeker
-// 	if err := h.DB.First(&seeker, "auth_user_id = ?", userID).Error; err != nil {
-// 		c.JSON(http.StatusNotFound, gin.H{"error": "Seeker not found"})
-// 		return
-// 	}
+	var input dto.EducationRequest
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
+		log.Printf("Error binding input: %v", err)
+		return
+	}
 
-// 	// Check if Education is empty or null, and initialize it as an empty slice if necessary
-// 	var educations []map[string]interface{}
-// 	if len(seeker.Educations) > 0 {
-// 		if err := json.Unmarshal(seeker.Educations, &educations); err != nil {
-// 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse educations", "details": err.Error()})
-// 			return
-// 		}
-// 	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
-// 	// Create a new education entry
-// 	newEducation := map[string]interface{}{
-// 		"degree":        input.Degree,
-// 		"institution":   input.Institution,
-// 		"fieldOfStudy":  input.FieldOfStudy,
-// 		"startDate":     input.StartDate.Format("2006-01-02"),
-// 		"endDate":       input.EndDate.Format("2006-01-02"),
-// 		"achievements":  input.Achievements,
-// 	}
+	var seeker models.Seeker
+	if err := seekersCollection.FindOne(ctx, bson.M{"auth_user_id": userID}).Decode(&seeker); err != nil {
+		if err == mongo.ErrNoDocuments {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Seeker not found"})
+			log.Printf("Seeker not found for auth_user_id: %s", userID)
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error retrieving seeker"})
+			log.Printf("Error retrieving seeker for auth_user_id: %s, Error: %v", userID, err)
+		}
+		return
+	}
 
-// 	// Append the new education entry
-// 	educations = append(educations, newEducation)
+	// Create an EducationRequest from the input
+	education := dto.EducationRequest{
+		Degree:       input.Degree,
+		Institution:  input.Institution,
+		FieldOfStudy: input.FieldOfStudy,
+		StartDate:    input.StartDate,
+		EndDate:      input.EndDate,
+		Achievements: input.Achievements,
+	}
 
-// 	// Convert the updated education data back to JSON
-// 	updatedEducationsJSON, err := json.Marshal(educations)
-// 	if err != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to marshal updated educations", "details": err.Error()})
-// 		return
-// 	}
+	// Use AppendToEducation to add the new education
+	if err := handlers.AppendToEducation(&seeker, education); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process education"})
+		log.Printf("Failed to process education for auth_user_id: %s, Error: %v", userID, err)
+		return
+	}
 
-// 	// Update the educations in the database
-// 	seeker.Educations = updatedEducationsJSON
-// 	if err := h.DB.Save(&seeker).Error; err != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update educations", "details": err.Error()})
-// 		return
-// 	}
+	// Update seeker document with the new education
+	update := bson.M{
+		"$set": bson.M{
+			"education": seeker.Education, // Save updated education records
+		},
+	}
 
-// 	// Create a response object for the new education
-// 	response := dto.EducationResponse{
-// 		ID:             uint(len(educations)), // Dynamically generate ID
-// 		AuthUserID:     userID,
-// 		Degree:         input.Degree,
-// 		Institution:    input.Institution,
-// 		FieldOfStudy:   input.FieldOfStudy,
-// 		StartDate:      input.StartDate,
-// 		EndDate:        input.EndDate,
-// 		Achievements:   input.Achievements,
-// 	}
+	updateResult, err := seekersCollection.UpdateOne(ctx, bson.M{"auth_user_id": userID}, update)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save education"})
+		log.Printf("Failed to update education for auth_user_id: %s, Error: %v", userID, err)
+		return
+	}
 
-// 	// Return the response with the new education
-// 	c.JSON(http.StatusCreated, response)
-// }
+	if updateResult.MatchedCount == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "No matching seeker found to update"})
+		log.Printf("No matching seeker found for auth_user_id: %s", userID)
+		return
+	}
 
-// func (h *EducationHandler) GetEducations(c *gin.Context) {
-// 	userID := c.MustGet("userID").(uuid.UUID)
+	// Update user entry timeline to mark education completed
+	timelineUpdate := bson.M{
+		"$set": bson.M{
+			"educations_completed": true,
+		},
+	}
 
-// 	var seeker models.Seeker
-// 	if err := h.DB.First(&seeker, "auth_user_id = ?", userID).Error; err != nil {
-// 		c.JSON(http.StatusNotFound, gin.H{"error": "Seeker not found"})
-// 		return
-// 	}
+	if _, err := entryTimelineCollection.UpdateOne(ctx, bson.M{"auth_user_id": userID}, timelineUpdate); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user entry timeline"})
+		log.Printf("Failed to update user entry timeline for auth_user_id: %s, Error: %v", userID, err)
+		return
+	}
 
-// 	if len(seeker.Educations) == 0 || string(seeker.Educations) == "null" {
-// 		c.JSON(http.StatusNotFound, gin.H{"error": "No education records found"})
-// 		return
-// 	}
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Education added successfully",
+	})
+}
+// GetEducationHandler handles the retrieval of a user's education records
+func (h *EducationHandler) GetEducation(c *gin.Context) {
+    // Extract user ID from the context
+    userID := c.MustGet("userID").(string)
+    db := c.MustGet("db").(*mongo.Database)
+    seekersCollection := db.Collection("seekers")
 
-// 	var educations []map[string]interface{}
-// 	if err := json.Unmarshal(seeker.Educations, &educations); err != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse education records"})
-// 		return
-// 	}
+    // Set up a context with timeout
+    ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+    defer cancel()
 
-// 	var response []dto.EducationResponse
-// 	for idx, edu := range educations {
-// 		startDate, err := time.Parse("2006-01-02", edu["startDate"].(string))
-// 		if err != nil {
-// 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid start date format"})
-// 			return
-// 		}
+    // Find the seeker by their auth_user_id
+    var seeker models.Seeker
+    if err := seekersCollection.FindOne(ctx, bson.M{"auth_user_id": userID}).Decode(&seeker); err != nil {
+        if err == mongo.ErrNoDocuments {
+            c.JSON(http.StatusNotFound, gin.H{"error": "Seeker not found"})
+            log.Printf("Seeker not found for auth_user_id: %s", userID)
+        } else {
+            c.JSON(http.StatusInternalServerError, gin.H{"error": "Error retrieving seeker"})
+            log.Printf("Error retrieving seeker for auth_user_id: %s, Error: %v", userID, err)
+        }
+        return
+    }
 
-// 		// Parse EndDate directly as it's now required
-// 		endDate, err := time.Parse("2006-01-02", edu["endDate"].(string))
-// 		if err != nil {
-// 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid end date format"})
-// 			return
-// 		}
+    // Check if the user has any education records
+    if len(seeker.Education) == 0 {
+        c.JSON(http.StatusNoContent, gin.H{"message": "No education records found"})
+        return
+    }
 
-// 		response = append(response, dto.EducationResponse{
-// 			ID:             uint(idx + 1),
-// 			AuthUserID:     userID,
-// 			Degree:         edu["degree"].(string),
-// 			Institution:    edu["institution"].(string),
-// 			FieldOfStudy:   edu["fieldOfStudy"].(string),
-// 			StartDate:      startDate,
-// 			EndDate:        endDate,
-// 			Achievements:   edu["achievements"].(string),
-// 		})
-// 	}
+    // Fetch the education data (could be a function similar to GetWorkExperience)
+    educations, err := handlers.GetEducation(&seeker)
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Error processing education records"})
+        log.Printf("Error processing education records for auth_user_id: %s, Error: %v", userID, err)
+        return
+    }
 
-// 	c.JSON(http.StatusOK, response)
-// }
+    // Return the education data in the response
+    c.JSON(http.StatusOK, gin.H{
+        "educations": educations,
+    })
+}
+
 
 // func (h *EducationHandler) PatchEducation(c *gin.Context) {
 // 	userID := c.MustGet("userID").(uuid.UUID)

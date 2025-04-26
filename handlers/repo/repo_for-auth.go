@@ -108,7 +108,7 @@ func (r *UserRepo) CreateSeeker(input dto.SeekerSignUpInput, hashedPassword stri
 		PersonalInfo:                bson.M{},
 		ProfessionalSummary:         bson.M{},
 		WorkExperiences:             []bson.M{},
-		Educations:                  []bson.M{},
+		Education:                  []bson.M{},
 		Certificates:                []bson.M{},
 		Languages:                   []bson.M{},
 		PrimaryTitle:                "",

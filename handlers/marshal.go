@@ -119,6 +119,44 @@ func AppendToWorkExperience(seeker *models.Seeker, newWorkExperience dto.WorkExp
 }
 
 
+// GetEducation retrieves the education information of the seeker
+func GetEducation(seeker *models.Seeker) ([]bson.M, error) {
+    if len(seeker.Education) == 0 {
+        return []bson.M{}, nil
+    }
+    return seeker.Education, nil
+}
+
+// SetEducation sets the education information for a Seeker using an array of bson.M.
+func SetEducation(seeker *models.Seeker, educations []bson.M) error {
+    seeker.Education = educations
+    return nil
+}
+
+// AppendToEducation adds a new education entry to the Seeker's education list
+func AppendToEducation(seeker *models.Seeker, newEducation dto.EducationRequest) error {
+    // Check if the Educations array is nil or empty, if so, initialize it
+    if seeker.Education == nil {
+        seeker.Education = []bson.M{}
+    }
+
+    // Create a new education entry as a bson.M document
+    educationBson := bson.M{
+        "degree":        newEducation.Degree,
+        "institution":   newEducation.Institution,
+        "field_of_study": newEducation.FieldOfStudy,
+        "start_date":    newEducation.StartDate,
+        "end_date":      newEducation.EndDate,
+        "achievements":  newEducation.Achievements,
+    }
+
+    // Append the new education entry to the Educations array
+    seeker.Education = append(seeker.Education, educationBson)
+
+    return nil
+}
+
+
 
 // func GetLanguages(seeker *models.Seeker) ([]dto.LanguageRequest, error) {
 // 	var languages []dto.LanguageRequest
@@ -181,30 +219,3 @@ func AppendToWorkExperience(seeker *models.Seeker, newWorkExperience dto.WorkExp
 // 	return nil
 // }
 
-// func GetEducations(seeker *models.Seeker) ([]dto.EducationRequest, error) {
-// 	var educations []dto.EducationRequest
-// 	if seeker.Educations == nil {
-// 		return nil, errors.New("educations are nil")
-// 	}
-// 	educationsData, err := bson.Marshal(seeker.Educations)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	if err := UnmarshalBsonToArray(educationsData, &educations); err != nil {
-// 		return nil, err
-// 	}
-// 	return educations, nil
-// }
-
-// func SetEducations(seeker *models.Seeker, educations []dto.EducationRequest) error {
-// 	data, err := MarshalArrayToBson(educations)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	var bsonData bson.M
-// 	if err := bson.Unmarshal(data, &bsonData); err != nil {
-// 		return err
-// 	}
-// 	seeker.Educations = bsonData
-// 	return nil
-// }

@@ -101,7 +101,7 @@ func (h *WorkExperienceHandler) CreateWorkExperience(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message": "Work experience created successfully",
+		"message": "Work experience added successfully",
 	})
 }
 

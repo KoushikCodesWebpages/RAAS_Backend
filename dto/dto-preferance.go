@@ -2,7 +2,6 @@ package dto
 
 import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"time"
 	"RAAS/utils"
 )
 
@@ -96,8 +95,8 @@ type EducationRequest struct {
 	Degree       string     `json:"degree" binding:"required" bson:"degree"`
 	Institution  string     `json:"institution" binding:"required" bson:"institution"`
 	FieldOfStudy string     `json:"field_of_study" binding:"required" bson:"field_of_study"`
-	StartDate    time.Time  `json:"start_date" binding:"required" bson:"start_date"`
-	EndDate      *time.Time `json:"end_date,omitempty" bson:"end_date,omitempty"`
+	StartDate    utils.DateOnly  `json:"start_date" binding:"required" bson:"start_date"`
+	EndDate      *utils.DateOnly `json:"end_date,omitempty" bson:"end_date,omitempty"`
 	Achievements string     `json:"achievements,omitempty" bson:"achievements,omitempty"`
 }
 
@@ -107,8 +106,8 @@ type EducationResponse struct {
 	Degree       string              `json:"degree" bson:"degree"`
 	Institution  string              `json:"institution" bson:"institution"`
 	FieldOfStudy string              `json:"field_of_study" bson:"field_of_study"`
-	StartDate    time.Time           `json:"start_date" bson:"start_date"`
-	EndDate      *time.Time          `json:"end_date,omitempty" bson:"end_date,omitempty"`
+	StartDate    utils.DateOnly      `json:"start_date" bson:"start_date"`
+	EndDate      *utils.DateOnly     `json:"end_date,omitempty" bson:"end_date,omitempty"`
 	Achievements string              `json:"achievements,omitempty" bson:"achievements,omitempty"`
 }
 

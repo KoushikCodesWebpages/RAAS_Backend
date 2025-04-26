@@ -64,7 +64,7 @@ type Seeker struct {
 	ProfessionalSummary         bson.M             `json:"professional_summary" bson:"professional_summary"`
 	
 	WorkExperiences             []bson.M            `json:"work_experiences" bson:"work_experiences"`
-	Educations                  []bson.M            `json:"education" bson:"education"`
+	Education                 	[]bson.M            `json:"education" bson:"education"`
 	Certificates                []bson.M            `json:"certificates" bson:"certificates"`
 	Languages                   []bson.M            `json:"languages" bson:"languages"`
 
