@@ -5,22 +5,6 @@ import (
 	"RAAS/utils"
 )
 
-// =======================
-// JOB TITLE
-// =======================
-
-type JobTitleInput struct {
-	PrimaryTitle   string  `json:"primary_title" bson:"primary_title"`
-	SecondaryTitle *string `json:"secondary_title,omitempty" bson:"secondary_title,omitempty"`
-	TertiaryTitle  *string `json:"tertiary_title,omitempty" bson:"tertiary_title,omitempty"`
-}
-
-type JobTitleResponse struct {
-	AuthUserID     string  `json:"auth_user_id" bson:"auth_user_id"`
-	PrimaryTitle   string  `json:"primary_title" bson:"primary_title"`
-	SecondaryTitle *string `json:"secondary_title,omitempty" bson:"secondary_title,omitempty"`
-	TertiaryTitle  *string `json:"tertiary_title,omitempty" bson:"tertiary_title,omitempty"`
-}
 
 // =======================
 // PERSONAL INFO
@@ -144,4 +128,21 @@ type LanguageResponse struct {
 	LanguageName     string              `json:"language" bson:"language"`
 	CertificateFile  string              `json:"certificate_file" bson:"certificate_file"`
 	ProficiencyLevel string              `json:"proficiency" bson:"proficiency"`
+}
+
+// =======================
+// JOB TITLE
+// =======================
+
+type JobTitleInput struct {
+	PrimaryTitle   string  `json:"primary_title" bson:"primary_title"`
+	SecondaryTitle *string `json:"secondary_title,omitempty" bson:"secondary_title,omitempty"`
+	TertiaryTitle  *string `json:"tertiary_title,omitempty" bson:"tertiary_title,omitempty"`
+}
+
+type JobTitleResponse struct {
+	AuthUserID     string  `json:"auth_user_id" bson:"auth_user_id"`
+	PrimaryTitle   string  `json:"primary_title" bson:"primary_title"`
+	SecondaryTitle *string `json:"secondary_title,omitempty" bson:"secondary_title,omitempty"`
+	TertiaryTitle  *string `json:"tertiary_title,omitempty" bson:"tertiary_title,omitempty"`
 }

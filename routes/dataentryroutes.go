@@ -60,16 +60,16 @@ func SetupDataEntryRoutes(r *gin.Engine, client *mongo.Client, cfg *config.Confi
 	}
 
 
-	// // CERTIFICATES routes
-	// certificateHandler := dataentry.NewCertificateHandler(client)
-	// certificateRoutes := r.Group("/certificates")
-	// certificateRoutes.Use(middleware.AuthMiddleware())
-	// {
-	// 	certificateRoutes.POST("", certificateHandler.CreateCertificate)
-	// 	certificateRoutes.GET("", certificateHandler.GetCertificates)
-	// 	certificateRoutes.PUT(":id", certificateHandler.PatchCertificate)
-	// 	certificateRoutes.DELETE(":id", certificateHandler.DeleteCertificate)
-	// }
+	// CERTIFICATES routes
+	certificateHandler := dataentry.NewCertificateHandler()
+	certificateRoutes := r.Group("/certificates")
+	certificateRoutes.Use(middleware.AuthMiddleware())
+	{
+		certificateRoutes.POST("", certificateHandler.CreateCertificate)
+		certificateRoutes.GET("", certificateHandler.GetCertificates)
+		// certificateRoutes.PUT(":id", certificateHandler.PatchCertificate)
+		// certificateRoutes.DELETE(":id", certificateHandler.DeleteCertificate)
+	}
 
 	// // LANGUAGES routes	
 	// languageHandler := dataentry.NewLanguageHandler(client)

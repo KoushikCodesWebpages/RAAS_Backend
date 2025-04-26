@@ -156,6 +156,43 @@ func AppendToEducation(seeker *models.Seeker, newEducation dto.EducationRequest)
     return nil
 }
 
+// GetCertificates retrieves the certificate information of the seeker
+func GetCertificates(seeker *models.Seeker) ([]bson.M, error) {
+    if len(seeker.Certificates) == 0 {
+        return []bson.M{}, nil
+    }
+    return seeker.Certificates, nil
+}
+
+// SetCertificates sets the certificate information for a Seeker using an array of bson.M
+func SetCertificates(seeker *models.Seeker, certificates []bson.M) error {
+    seeker.Certificates = certificates
+    return nil
+}
+
+// AppendToCertificates adds a new certificate entry to the Seeker's certificates list
+func AppendToCertificates(seeker *models.Seeker, newCertificate dto.CertificateRequest, certificateFile string) error {
+    // Check if the Certificates array is nil or empty, if so, initialize it
+    if seeker.Certificates == nil {
+        seeker.Certificates = []bson.M{}
+    }
+
+    // Create a new certificate entry as a bson.M document
+    certificateBson := bson.M{
+        "certificate_name":   newCertificate.CertificateName,
+        "certificate_file":   certificateFile,
+    }
+
+    // Only add certificate_number if it's not nil
+    if newCertificate.CertificateNumber != nil {
+        certificateBson["certificate_number"] = *newCertificate.CertificateNumber
+    }
+
+    // Append the new certificate entry to the Certificates array
+    seeker.Certificates = append(seeker.Certificates, certificateBson)
+
+    return nil
+}
 
 
 // func GetLanguages(seeker *models.Seeker) ([]dto.LanguageRequest, error) {
@@ -188,34 +225,3 @@ func AppendToEducation(seeker *models.Seeker, newEducation dto.EducationRequest)
 // 	seeker.Languages = bsonData
 // 	return nil
 // }
-
-// func GetCertificates(seeker *models.Seeker) ([]dto.CertificateRequest, error) {
-// 	var certificates []dto.CertificateRequest
-// 	if seeker.Certificates == nil {
-// 		return nil, errors.New("certificates are nil")
-// 	}
-// 	certificatesData, err := bson.Marshal(seeker.Certificates)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	if err := UnmarshalBsonToArray(certificatesData, &certificates); err != nil {
-// 		return nil, err
-// 	}
-// 	return certificates, nil
-// }
-
-
-// func SetCertificates(seeker *models.Seeker, certificates []dto.CertificateRequest) error {
-// 	data, err := MarshalArrayToBson(certificates)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	var bsonData bson.M
-// 	if err := bson.Unmarshal(data, &bsonData); err != nil {
-// 		return err
-// 	}
-
-// 	seeker.Certificates = bsonData
-// 	return nil
-// }
-

@@ -1,139 +1,156 @@
 package dataentry
 
-// import (
-// 	"RAAS/config"
-// 	"RAAS/dto"
-// 	"RAAS/handlers/features"
-// 	"RAAS/models"
-// 	"encoding/json"
-// 	"fmt"
-// 	"log"
-// 	"net/http"
-// 	"strconv"
+import (
+	"RAAS/config"
+	"RAAS/dto"
+	"RAAS/handlers"
+	"RAAS/handlers/features"
+	"RAAS/models"
+	"context"
+	"log"
+	"net/http"
+	"time"
 
-// 	"github.com/gin-gonic/gin"
-// 	"github.com/google/uuid"
-// 	"gorm.io/gorm"
-// )
+	"github.com/gin-gonic/gin"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+)
 
-// type CertificateHandler struct {
-// 	DB *gorm.DB
-// }
+type CertificateHandler struct{}
 
-// func NewCertificateHandler(db *gorm.DB) *CertificateHandler {
-// 	return &CertificateHandler{DB: db}
-// }
+func NewCertificateHandler() *CertificateHandler {
+	return &CertificateHandler{}
+}
 
-// func (h *CertificateHandler) CreateCertificate(c *gin.Context) {
-// 	userID := c.MustGet("userID").(uuid.UUID)
-// 	certificateName := c.PostForm("CertificateName")
-// 	certificateNumber := c.PostForm("CertificateNumber")
+// CreateCertificate handles the creation or update of a single certificate entry
+func (h *CertificateHandler) CreateCertificate(c *gin.Context) {
+	userID := c.MustGet("userID").(string)
+	db := c.MustGet("db").(*mongo.Database)
+	seekersCollection := db.Collection("seekers")
+	entryTimelineCollection := db.Collection("user_entry_timelines")
 
-// 	if certificateName == "" || certificateNumber == "" {
-// 		c.JSON(http.StatusBadRequest, gin.H{"error": "Certificate name and number are required"})
-// 		return
-// 	}
+	var input dto.CertificateRequest
+	if err := c.ShouldBind(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
+		log.Printf("Error binding input: %v", err)
+		return
+	}
 
-// 	// File upload
-// 	mediaUploadHandler := features.NewMediaUploadHandler(features.GetBlobServiceClient())
-// 	_, header, err := c.Request.FormFile("file")
-// 	if err != nil {
-// 		log.Printf("[WARN] No file uploaded: %v", err)
-// 	}
+	// Upload file if present
+	var fileURL string
+	mediaUploadHandler := features.NewMediaUploadHandler(features.GetBlobServiceClient())
 
-// 	var fileURL string
-// 	if header != nil {
-// 		if !mediaUploadHandler.ValidateFileType(header) {
-// 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid file type"})
-// 			return
-// 		}
-// 		fileURL, err = mediaUploadHandler.UploadMedia(c, config.Cfg.Cloud.AzureCertificatesContainer)
-// 		if err != nil {
-// 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to upload file", "details": err.Error()})
-// 			return
-// 		}
-// 	}
+	_, header, err := c.Request.FormFile("file")
+	if err == nil && header != nil {
+		if !mediaUploadHandler.ValidateFileType(header) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid file type"})
+			return
+		}
+		fileURL, err = mediaUploadHandler.UploadMedia(c, config.Cfg.Cloud.AzureCertificatesContainer)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to upload file", "details": err.Error()})
+			return
+		}
+	} else {
+		log.Printf("[WARN] No file uploaded for certificate: %v", err)
+	}
 
-// 	// Get Seeker
-// 	var seeker models.Seeker
-// 	if err := h.DB.First(&seeker, "auth_user_id = ?", userID).Error; err != nil {
-// 		c.JSON(http.StatusNotFound, gin.H{"error": "Seeker not found"})
-// 		return
-// 	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
-// 	// Parse existing certificates
-// 	var certificates []map[string]interface{}
-// 	if len(seeker.Certificates) > 0 {
-// 		if err := json.Unmarshal(seeker.Certificates, &certificates); err != nil {
-// 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse certificates", "details": err.Error()})
-// 			return
-// 		}
-// 	}
+	var seeker models.Seeker
+	if err := seekersCollection.FindOne(ctx, bson.M{"auth_user_id": userID}).Decode(&seeker); err != nil {
+		if err == mongo.ErrNoDocuments {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Seeker not found"})
+			log.Printf("Seeker not found for auth_user_id: %s", userID)
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error retrieving seeker"})
+			log.Printf("Error retrieving seeker for auth_user_id: %s, Error: %v", userID, err)
+		}
+		return
+	}
 
-// 	// Add new certificate
-// 	newCert := map[string]interface{}{
-// 		"certificateName":   certificateName,
-// 		"certificateNumber": certificateNumber,
-// 		"certificateFile":   fileURL,
-// 	}
-// 	certificates = append(certificates, newCert)
+	// Append the new certificate
+	if err := handlers.AppendToCertificates(&seeker, input, fileURL); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process certificate"})
+		log.Printf("Failed to process certificate for auth_user_id: %s, Error: %v", userID, err)
+		return
+	}
 
-// 	updatedJSON, err := json.Marshal(certificates)
-// 	if err != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to marshal certificates"})
-// 		return
-// 	}
-// 	seeker.Certificates = updatedJSON
-// 	if err := h.DB.Save(&seeker).Error; err != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save seeker certificates"})
-// 		return
-// 	}
+	// Update seeker document
+	update := bson.M{
+		"$set": bson.M{
+			"certificates": seeker.Certificates,
+		},
+	}
 
-// 	response := dto.CertificateResponse{
-// 		ID:                uint(len(certificates)),
-// 		AuthUserID:        userID,
-// 		CertificateName:   certificateName,
-// 		CertificateNumber: &certificateNumber,
-// 		CertificateFile:   fileURL,
-// 	}
+	updateResult, err := seekersCollection.UpdateOne(ctx, bson.M{"auth_user_id": userID}, update)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save certificate"})
+		log.Printf("Failed to update certificate for auth_user_id: %s, Error: %v", userID, err)
+		return
+	}
 
-// 	c.JSON(http.StatusCreated, response)
-// }
+	if updateResult.MatchedCount == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "No matching seeker found to update"})
+		log.Printf("No matching seeker found for auth_user_id: %s", userID)
+		return
+	}
 
-// func (h *CertificateHandler) GetCertificates(c *gin.Context) {
-// 	userID := c.MustGet("userID").(uuid.UUID)
+	// Update user entry timeline to mark certificates completed
+	timelineUpdate := bson.M{
+		"$set": bson.M{
+			"certificates_completed": true,
+		},
+	}
+	if _, err := entryTimelineCollection.UpdateOne(ctx, bson.M{"auth_user_id": userID}, timelineUpdate); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user entry timeline"})
+		log.Printf("Failed to update user entry timeline for auth_user_id: %s, Error: %v", userID, err)
+		return
+	}
 
-// 	var seeker models.Seeker
-// 	if err := h.DB.First(&seeker, "auth_user_id = ?", userID).Error; err != nil {
-// 		c.JSON(http.StatusNotFound, gin.H{"error": "Seeker not found"})
-// 		return
-// 	}
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Certificate added successfully",
+	})
+}
 
-// 	if len(seeker.Certificates) == 0 || string(seeker.Certificates) == "null" {
-// 		c.JSON(http.StatusNotFound, gin.H{"error": "No certificate records found"})
-// 		return
-// 	}
+// GetCertificates handles the retrieval of a user's certificates
+func (h *CertificateHandler) GetCertificates(c *gin.Context) {
+	userID := c.MustGet("userID").(string)
+	db := c.MustGet("db").(*mongo.Database)
+	seekersCollection := db.Collection("seekers")
 
-// 	var certs []map[string]interface{}
-// 	if err := json.Unmarshal(seeker.Certificates, &certs); err != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse certificate records"})
-// 		return
-// 	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
-// 	var response []dto.CertificateResponse
-// 	for idx, cert := range certs {
-// 		num := cert["certificateNumber"].(string)
-// 		response = append(response, dto.CertificateResponse{
-// 			ID:                uint(idx + 1),
-// 			AuthUserID:        userID,
-// 			CertificateName:   cert["certificateName"].(string),
-// 			CertificateNumber: &num,
-// 			CertificateFile:   cert["certificateFile"].(string),
-// 		})
-// 	}
+	var seeker models.Seeker
+	if err := seekersCollection.FindOne(ctx, bson.M{"auth_user_id": userID}).Decode(&seeker); err != nil {
+		if err == mongo.ErrNoDocuments {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Seeker not found"})
+			log.Printf("Seeker not found for auth_user_id: %s", userID)
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error retrieving seeker"})
+			log.Printf("Error retrieving seeker for auth_user_id: %s, Error: %v", userID, err)
+		}
+		return
+	}
 
-// 	c.JSON(http.StatusOK, response)
-// }
+	if len(seeker.Certificates) == 0 {
+		c.JSON(http.StatusNoContent, gin.H{"message": "No certificates found"})
+		return
+	}
+
+	certificates, err := handlers.GetCertificates(&seeker)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error processing certificates"})
+		log.Printf("Error processing certificates for auth_user_id: %s, Error: %v", userID, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"certificates": certificates,
+	})
+}
 
 // func (h *CertificateHandler) PatchCertificate(c *gin.Context) {
 // 	userID := c.MustGet("userID").(uuid.UUID)
