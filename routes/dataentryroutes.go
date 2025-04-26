@@ -71,16 +71,16 @@ func SetupDataEntryRoutes(r *gin.Engine, client *mongo.Client, cfg *config.Confi
 		// certificateRoutes.DELETE(":id", certificateHandler.DeleteCertificate)
 	}
 
-	// // LANGUAGES routes	
-	// languageHandler := dataentry.NewLanguageHandler(client)
-	// languageRoutes := r.Group("/languages")
-	// languageRoutes.Use(middleware.AuthMiddleware())
-	// {
-	// 	languageRoutes.POST("", languageHandler.CreateLanguage)
-	// 	languageRoutes.GET("", languageHandler.GetLanguages)
-	// 	languageRoutes.PUT(":id", languageHandler.PatchLanguage)
-	// 	languageRoutes.DELETE(":id", languageHandler.DeleteLanguage)
-	// }
+	// LANGUAGES routes	
+	languageHandler := dataentry.NewLanguageHandler()
+	languageRoutes := r.Group("/languages")
+	languageRoutes.Use(middleware.AuthMiddleware())
+	{
+		languageRoutes.POST("", languageHandler.CreateLanguage)
+		languageRoutes.GET("", languageHandler.GetLanguages)
+		// languageRoutes.PUT(":id", languageHandler.PatchLanguage)
+		// languageRoutes.DELETE(":id", languageHandler.DeleteLanguage)
+	}
 
 	// // JOB TITLES routes
 	// jobTitleHandler := dataentry.NewJobTitleHandler(client)

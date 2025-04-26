@@ -1,147 +1,157 @@
 package dataentry
 
-// import (
+import (
+	"RAAS/config"
+	"RAAS/dto"
+	"RAAS/handlers"
+	"RAAS/handlers/features"
+	"RAAS/models"
+	"context"
+	"log"
+	"net/http"
+	"time"
 
-// 	"log"
-// 	"net/http"
-//     "encoding/json"
-//     "fmt"
-// 	"github.com/gin-gonic/gin"
-// 	"github.com/google/uuid"
-// 	"gorm.io/gorm"
+	"github.com/gin-gonic/gin"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+)
 
-//     "RAAS/config"
-// 	"RAAS/dto"
-// 	"RAAS/handlers/features"
-// 	"RAAS/models"
-//     "strconv"
+type LanguageHandler struct{}
 
-// )
+func NewLanguageHandler() *LanguageHandler {
+	return &LanguageHandler{}
+}
 
-// type LanguageHandler struct {
-// 	DB *gorm.DB
-// }
+// CreateLanguage handles the creation or update of a single language entry
+func (h *LanguageHandler) CreateLanguage(c *gin.Context) {
+	userID := c.MustGet("userID").(string)
+	db := c.MustGet("db").(*mongo.Database)
+	seekersCollection := db.Collection("seekers")
+	entryTimelineCollection := db.Collection("user_entry_timelines")
 
-// func NewLanguageHandler(db *gorm.DB) *LanguageHandler {
-// 	return &LanguageHandler{DB: db}
-// }
+	var input dto.LanguageRequest
+	if err := c.ShouldBind(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
+		log.Printf("Error binding input: %v", err)
+		return
+	}
 
-// // CreateLanguage adds a new language record for the authenticated user
-// func (h *LanguageHandler) CreateLanguage(c *gin.Context) {
-// 	userID := c.MustGet("userID").(uuid.UUID)
+	// Upload file if present
+	var fileURL string
+	mediaUploadHandler := features.NewMediaUploadHandler(features.GetBlobServiceClient())
 
-// 	// Retrieve language name and proficiency from form fields
-// 	languageName := c.PostForm("LanguageName")
-// 	proficiency := c.PostForm("ProficiencyLevel")
+	_, header, err := c.Request.FormFile("file")
+	if err == nil && header != nil {
+		if !mediaUploadHandler.ValidateFileType(header) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid file type"})
+			return
+		}
+		fileURL, err = mediaUploadHandler.UploadMedia(c, config.Cfg.Cloud.AzureLanguagesContainer)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to upload file", "details": err.Error()})
+			return
+		}
+	} else {
+		log.Printf("[WARN] No file uploaded for language: %v", err)
+	}
 
-// 	if languageName == "" || proficiency == "" {
-// 		c.JSON(http.StatusBadRequest, gin.H{"error": "Language name and proficiency are required"})
-// 		return
-// 	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
-// 	// Handle file upload
-// 	mediaUploadHandler := features.NewMediaUploadHandler(features.GetBlobServiceClient())
+	var seeker models.Seeker
+	if err := seekersCollection.FindOne(ctx, bson.M{"auth_user_id": userID}).Decode(&seeker); err != nil {
+		if err == mongo.ErrNoDocuments {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Seeker not found"})
+			log.Printf("Seeker not found for auth_user_id: %s", userID)
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error retrieving seeker"})
+			log.Printf("Error retrieving seeker for auth_user_id: %s, Error: %v", userID, err)
+		}
+		return
+	}
 
-// 	_, header, err := c.Request.FormFile("file")
-// 	if err != nil {
-// 		log.Printf("[WARN] No file uploaded: %v", err)
-// 	}
+	// Append the new language
+	if err := handlers.AppendToLanguages(&seeker, input, fileURL); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process language"})
+		log.Printf("Failed to process language for auth_user_id: %s, Error: %v", userID, err)
+		return
+	}
 
-// 	var fileURL string
-// 	if header != nil {
-// 		if !mediaUploadHandler.ValidateFileType(header) {
-// 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid file type"})
-// 			return
-// 		}
+	// Update seeker document
+	update := bson.M{
+		"$set": bson.M{
+			"languages": seeker.Languages,
+		},
+	}
 
-// 		fileURL, err = mediaUploadHandler.UploadMedia(c, config.Cfg.Cloud.AzureLanguagesContainer)
-// 		if err != nil {
-// 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to upload file", "details": err.Error()})
-// 			return
-// 		}
-// 	}
+	updateResult, err := seekersCollection.UpdateOne(ctx, bson.M{"auth_user_id": userID}, update)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save language"})
+		log.Printf("Failed to update language for auth_user_id: %s, Error: %v", userID, err)
+		return
+	}
 
-// 	// Fetch seeker profile
-// 	var seeker models.Seeker
-// 	if err := h.DB.First(&seeker, "auth_user_id = ?", userID).Error; err != nil {
-// 		c.JSON(http.StatusNotFound, gin.H{"error": "Seeker profile not found"})
-// 		return
-// 	}
+	if updateResult.MatchedCount == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "No matching seeker found to update"})
+		log.Printf("No matching seeker found for auth_user_id: %s", userID)
+		return
+	}
 
-// 	// Unmarshal existing languages
-// 	var languages []map[string]interface{}
-// 	if len(seeker.Languages) > 0 {
-// 		if err := json.Unmarshal(seeker.Languages, &languages); err != nil {
-// 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse languages", "details": err.Error()})
-// 			return
-// 		}
-// 	}
+	// Update user entry timeline to mark languages completed
+	timelineUpdate := bson.M{
+		"$set": bson.M{
+			"languages_completed": true,
+		},
+	}
+	if _, err := entryTimelineCollection.UpdateOne(ctx, bson.M{"auth_user_id": userID}, timelineUpdate); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user entry timeline"})
+		log.Printf("Failed to update user entry timeline for auth_user_id: %s, Error: %v", userID, err)
+		return
+	}
 
-// 	// Append new language
-// 	newLanguage := map[string]interface{}{
-// 		"language":     languageName,
-// 		"proficiency":  proficiency,
-// 		"certificateFile": fileURL,
-// 	}
-// 	languages = append(languages, newLanguage)
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Language added successfully",
+	})
+}
 
-// 	// Marshal back to JSON
-// 	updatedLanguagesJSON, err := json.Marshal(languages)
-// 	if err != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to marshal updated languages", "details": err.Error()})
-// 		return
-// 	}
+// GetLanguages handles the retrieval of a user's languages
+func (h *LanguageHandler) GetLanguages(c *gin.Context) {
+	userID := c.MustGet("userID").(string)
+	db := c.MustGet("db").(*mongo.Database)
+	seekersCollection := db.Collection("seekers")
 
-// 	seeker.Languages = updatedLanguagesJSON
-// 	if err := h.DB.Save(&seeker).Error; err != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update seeker languages", "details": err.Error()})
-// 		return
-// 	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
-// 	// Return response
-// 	response := dto.LanguageResponse{
-// 		ID:               uint(len(languages)), // pseudo ID based on index
-// 		AuthUserID:       userID,
-// 		LanguageName:     languageName,
-// 		CertificateFile:  fileURL,
-// 		ProficiencyLevel: proficiency,
-// 	}
+	var seeker models.Seeker
+	if err := seekersCollection.FindOne(ctx, bson.M{"auth_user_id": userID}).Decode(&seeker); err != nil {
+		if err == mongo.ErrNoDocuments {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Seeker not found"})
+			log.Printf("Seeker not found for auth_user_id: %s", userID)
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error retrieving seeker"})
+			log.Printf("Error retrieving seeker for auth_user_id: %s, Error: %v", userID, err)
+		}
+		return
+	}
 
-// 	c.JSON(http.StatusCreated, response)
-// }
-// func (h *LanguageHandler) GetLanguages(c *gin.Context) {
-// 	userID := c.MustGet("userID").(uuid.UUID)
+	if len(seeker.Languages) == 0 {
+		c.JSON(http.StatusNoContent, gin.H{"message": "No languages found"})
+		return
+	}
 
-// 	var seeker models.Seeker
-// 	if err := h.DB.First(&seeker, "auth_user_id = ?", userID).Error; err != nil {
-// 		c.JSON(http.StatusNotFound, gin.H{"error": "Seeker not found"})
-// 		return
-// 	}
+	languages, err := handlers.GetLanguages(&seeker)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error processing languages"})
+		log.Printf("Error processing languages for auth_user_id: %s, Error: %v", userID, err)
+		return
+	}
 
-// 	if len(seeker.Languages) == 0 || string(seeker.Languages) == "null" {
-// 		c.JSON(http.StatusNotFound, gin.H{"error": "No language records found"})
-// 		return
-// 	}
+	c.JSON(http.StatusOK, gin.H{
+		"languages": languages,
+	})
+}
 
-// 	var languages []map[string]interface{}
-// 	if err := json.Unmarshal(seeker.Languages, &languages); err != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse language records"})
-// 		return
-// 	}
-
-// 	var response []dto.LanguageResponse
-// 	for idx, lang := range languages {
-// 		response = append(response, dto.LanguageResponse{
-// 			ID:              uint(idx + 1),
-// 			AuthUserID:      userID,
-// 			LanguageName:        lang["language"].(string),
-// 			ProficiencyLevel:     lang["proficiency"].(string),
-// 			CertificateFile: lang["certificateFile"].(string),
-// 		})
-// 	}
-
-// 	c.JSON(http.StatusOK, response)
-// }
 
 // func (h *LanguageHandler) PatchLanguage(c *gin.Context) {
 // 	userID := c.MustGet("userID").(uuid.UUID)

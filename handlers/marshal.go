@@ -158,70 +158,71 @@ func AppendToEducation(seeker *models.Seeker, newEducation dto.EducationRequest)
 
 // GetCertificates retrieves the certificate information of the seeker
 func GetCertificates(seeker *models.Seeker) ([]bson.M, error) {
-    if len(seeker.Certificates) == 0 {
-        return []bson.M{}, nil
-    }
-    return seeker.Certificates, nil
+	if len(seeker.Certificates) == 0 {
+		return []bson.M{}, nil
+	}
+	return seeker.Certificates, nil
 }
 
 // SetCertificates sets the certificate information for a Seeker using an array of bson.M
 func SetCertificates(seeker *models.Seeker, certificates []bson.M) error {
-    seeker.Certificates = certificates
-    return nil
+	seeker.Certificates = certificates
+	return nil
 }
 
 // AppendToCertificates adds a new certificate entry to the Seeker's certificates list
 func AppendToCertificates(seeker *models.Seeker, newCertificate dto.CertificateRequest, certificateFile string) error {
-    // Check if the Certificates array is nil or empty, if so, initialize it
-    if seeker.Certificates == nil {
-        seeker.Certificates = []bson.M{}
+	// Check if the Certificates array is nil or empty, if so, initialize it
+	if seeker.Certificates == nil {
+		seeker.Certificates = []bson.M{}
+	}
+
+	// Create a new certificate entry as a bson.M document
+	certificateBson := bson.M{
+		"certificate_name":   newCertificate.CertificateName,
+		"certificate_file":   certificateFile,
+	}
+
+	// Only add certificate_number if it's not nil
+	if newCertificate.CertificateNumber != nil {
+		certificateBson["certificate_number"] = *newCertificate.CertificateNumber
+	}
+
+	// Append the new certificate entry to the Certificates array
+	seeker.Certificates = append(seeker.Certificates, certificateBson)
+
+	return nil
+}
+
+// GetLanguages retrieves the language information of the seeker
+func GetLanguages(seeker *models.Seeker) ([]bson.M, error) {
+    if len(seeker.Languages) == 0 {
+        return []bson.M{}, nil
+    }
+    return seeker.Languages, nil
+}
+
+// SetLanguages sets the language information for a Seeker using an array of bson.M
+func SetLanguages(seeker *models.Seeker, languages []bson.M) error {
+    seeker.Languages = languages
+    return nil
+}
+// AppendToLanguages adds a new language entry to the Seeker's languages list
+func AppendToLanguages(seeker *models.Seeker, newLanguage dto.LanguageRequest, languageFile string) error {
+    // Check if the Languages array is nil or empty, if so, initialize it
+    if seeker.Languages == nil {
+        seeker.Languages = []bson.M{}
     }
 
-    // Create a new certificate entry as a bson.M document
-    certificateBson := bson.M{
-        "certificate_name":   newCertificate.CertificateName,
-        "certificate_file":   certificateFile,
+    // Create a new language entry as a bson.M document
+    languageBson := bson.M{
+        "language":         newLanguage.LanguageName,
+        "proficiency":      newLanguage.ProficiencyLevel,
+        "certificate_file": languageFile,
     }
 
-    // Only add certificate_number if it's not nil
-    if newCertificate.CertificateNumber != nil {
-        certificateBson["certificate_number"] = *newCertificate.CertificateNumber
-    }
-
-    // Append the new certificate entry to the Certificates array
-    seeker.Certificates = append(seeker.Certificates, certificateBson)
+    // Append the new language entry to the Languages array
+    seeker.Languages = append(seeker.Languages, languageBson)
 
     return nil
 }
-
-
-// func GetLanguages(seeker *models.Seeker) ([]dto.LanguageRequest, error) {
-// 	var languages []dto.LanguageRequest
-// 	if seeker.Languages == nil {
-// 		return nil, errors.New("languages are nil")
-// 	}
-// 	languagesData, err := bson.Marshal(seeker.Languages)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	if err := UnmarshalBsonToArray(languagesData, &languages); err != nil {
-// 		return nil, err
-// 	}
-// 	return languages, nil
-// }
-
-
-
-
-// func SetLanguages(seeker *models.Seeker, languages []dto.LanguageRequest) error {
-// 	data, err := MarshalArrayToBson(languages)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	var bsonData bson.M
-// 	if err := bson.Unmarshal(data, &bsonData); err != nil {
-// 		return err
-// 	}
-// 	seeker.Languages = bsonData
-// 	return nil
-// }
