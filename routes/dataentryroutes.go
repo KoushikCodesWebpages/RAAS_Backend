@@ -29,15 +29,15 @@ func SetupDataEntryRoutes(r *gin.Engine, client *mongo.Client, cfg *config.Confi
 		personalInfoRoutes.PATCH("", personalInfoHandler.PatchPersonalInfo)  // Partial Update Personal Info
 	}
 
-	// // PROFESSIONAL SUMMARY routes
-	// professionalSummaryHandler := dataentry.NewProfessionalSummaryHandler(client)
-	// professionalSummaryRoutes := r.Group("/professional-summary")
-	// professionalSummaryRoutes.Use(middleware.AuthMiddleware())
-	// {
-	// 	professionalSummaryRoutes.POST("", professionalSummaryHandler.CreateProfessionalSummary)
-	// 	professionalSummaryRoutes.GET("", professionalSummaryHandler.GetProfessionalSummary)
-	// 	professionalSummaryRoutes.PUT("", professionalSummaryHandler.UpdateProfessionalSummary)
-	// }
+	// PROFESSIONAL SUMMARY routes
+	professionalSummaryHandler := dataentry.NewProfessionalSummaryHandler()
+	professionalSummaryRoutes := r.Group("/professional-summary")
+	professionalSummaryRoutes.Use(middleware.AuthMiddleware())
+	{
+		professionalSummaryRoutes.POST("", professionalSummaryHandler.CreateProfessionalSummary)
+		professionalSummaryRoutes.GET("", professionalSummaryHandler.GetProfessionalSummary)
+		professionalSummaryRoutes.PUT("", professionalSummaryHandler.UpdateProfessionalSummary)
+	}
 
 	// // CERTIFICATES routes
 	// certificateHandler := dataentry.NewCertificateHandler(client)

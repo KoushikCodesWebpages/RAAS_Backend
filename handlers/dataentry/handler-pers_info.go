@@ -2,17 +2,16 @@ package dataentry
 
 import (
 	"context"
+	"log"
 	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"RAAS/dto"
 	"RAAS/models"
 	"RAAS/handlers"
-	"log"
 )
 
 type PersonalInfoHandler struct{}
@@ -22,26 +21,20 @@ func NewPersonalInfoHandler() *PersonalInfoHandler {
 }
 
 func (h *PersonalInfoHandler) CreatePersonalInfo(c *gin.Context) {
-	// Get user ID from context
-	userID := c.MustGet("userID").(uuid.UUID).String()
-	// Get MongoDB collection from context
-	collection := c.MustGet("db").(*mongo.Database).Collection("seekers")
+	userID := c.MustGet("userID").(string)
+	seekersCollection := c.MustGet("db").(*mongo.Database).Collection("seekers")
+	entryTimelineCollection := c.MustGet("db").(*mongo.Database).Collection("user_entry_timelines")
 
-	// Bind input data to PersonalInfoRequest
 	var input dto.PersonalInfoRequest
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
-		log.Printf("Error binding input: %s", err.Error()) // Log binding error
+		log.Printf("Error binding input: %s", err.Error())
 		return
 	}
 
-	// Log the received input for debugging
-	log.Printf("Received input: %+v", input)
-
-	// Ensure DateOfBirth is not empty
 	if input.DateOfBirth == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Date of birth cannot be empty"})
-		log.Printf("Date of birth is empty for userID: %s", userID) // Log missing date of birth
+		log.Printf("Date of birth is empty for userID: %s", userID)
 		return
 	}
 
@@ -51,90 +44,92 @@ func (h *PersonalInfoHandler) CreatePersonalInfo(c *gin.Context) {
 
 	var seeker models.Seeker
 	// Fetch seeker by "auth_user_id"
-	err := collection.FindOne(ctx, bson.M{"auth_user_id": userID}).Decode(&seeker)
+	err := seekersCollection.FindOne(ctx, bson.M{"auth_user_id": userID}).Decode(&seeker)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Seeker not found"})
-			log.Printf("Seeker not found for userID: %s", userID) // Log if seeker not found
+			log.Printf("Seeker not found for auth_user_id: %s", userID)
 		} else {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error retrieving seeker"})
-			log.Printf("Error retrieving seeker for userID: %s, Error: %s", userID, err.Error()) // Log DB error
+			log.Printf("Error retrieving seeker for auth_user_id: %s, Error: %s", userID, err.Error())
 		}
 		return
 	}
 
-	// Log the seeker document for debugging
 	log.Printf("Found seeker: %+v", seeker)
 
-	// Check if personal info is already set
-	if handlers.IsFieldFilled(seeker.PersonalInfo) {
-		c.JSON(http.StatusConflict, gin.H{"error": "Personal info already exists"})
-		log.Printf("Personal info already exists for userID: %s", userID) // Log conflict
-		return
-	}
-
-	// Set the personal info from the request
+	// Process and set personal info
 	if err := handlers.SetPersonalInfo(&seeker, &input); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process personal info"})
-		log.Printf("Failed to process personal info for userID: %s, Error: %s", userID, err.Error()) // Log processing error
+		log.Printf("Failed to process personal info for auth_user_id: %s, Error: %s", userID, err.Error())
 		return
 	}
 
-	// Log the personal info after setting it
-	log.Printf("Set personal info for userID: %s: %+v", userID, seeker.PersonalInfo)
-
-	// Update personal info in MongoDB
-	updateResult, err := collection.UpdateOne(ctx, bson.M{"auth_user_id": userID}, bson.M{"$set": bson.M{"personal_info": seeker.PersonalInfo}})
+	// Update personal info in MongoDB (seekers collection)
+	updateResult, err := seekersCollection.UpdateOne(ctx, bson.M{"auth_user_id": userID}, bson.M{"$set": bson.M{"personal_info": seeker.PersonalInfo}})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save personal info"})
-		log.Printf("Failed to update personal info for userID: %s, Error: %s", userID, err.Error()) // Log update error
+		log.Printf("Failed to update personal info for auth_user_id: %s, Error: %s", userID, err.Error())
 		return
 	}
 
-	// Log the result of the update operation
-	log.Printf("Update result: %+v", updateResult)
-
-	// Check if the update operation affected any documents
+	// Check if any document was matched
 	if updateResult.MatchedCount == 0 {
 		c.JSON(http.StatusNotFound, gin.H{"error": "No matching seeker found to update"})
-		log.Printf("No matching seeker found for userID: %s", userID) // Log no matching seeker
+		log.Printf("No matching seeker found for auth_user_id: %s", userID)
 		return
 	}
 
-	// Return the newly created personal info in the response
-	c.JSON(http.StatusCreated, dto.PersonalInfoResponse{
-		AuthUserID:      userID,
-		FirstName:       input.FirstName,
-		SecondName:      input.SecondName,
-		DateOfBirth:     input.DateOfBirth,
-		Address:         input.Address,
-		LinkedInProfile: input.LinkedInProfile,
-	})
+	// Determine the message based on whether we were creating or updating
+	message := "Personal info created"
+	if handlers.IsFieldFilled(seeker.PersonalInfo) {
+		message = "Personal info updated"
+	}
 
-	// Log the response being returned
-	log.Printf("Returning response: %+v", dto.PersonalInfoResponse{
-		AuthUserID:      userID,
-		FirstName:       input.FirstName,
-		SecondName:      input.SecondName,
-		DateOfBirth:     input.DateOfBirth,
-		Address:         input.Address,
-		LinkedInProfile: input.LinkedInProfile,
+	// Now, update the user entry progress in user_entry_timelines collection
+	// Set `personal_infos_completed` to true
+	timelineUpdate := bson.M{
+		"$set": bson.M{
+			"personal_infos_completed": true, // Mark personal info as completed
+		},
+	}
+
+	// Update the user entry timeline for the specific user
+	timelineUpdateResult, err := entryTimelineCollection.UpdateOne(ctx, bson.M{"auth_user_id": userID}, timelineUpdate)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user entry timeline"})
+		log.Printf("Failed to update user entry timeline for auth_user_id: %s, Error: %s", userID, err.Error())
+		return
+	}
+
+	log.Printf("Timeline update result: %+v", timelineUpdateResult)
+
+	// Respond with appropriate message
+	c.JSON(http.StatusOK, gin.H{
+		"message": message,
 	})
 }
 
 
-
 func (h *PersonalInfoHandler) GetPersonalInfo(c *gin.Context) {
-	userID := c.MustGet("userID").(uuid.UUID).String()
+	userID := c.MustGet("userID").(string)
 	collection := c.MustGet("db").(*mongo.Database).Collection("seekers")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	var seeker models.Seeker
-	err := collection.FindOne(ctx, bson.M{"user_id": userID}).Decode(&seeker)
-	if err != nil || seeker.PersonalInfo == nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Personal info not found"})
+	err := collection.FindOne(ctx, bson.M{"auth_user_id": userID}).Decode(&seeker)
+	if err != nil {
+		// Handle case where seeker is not found
+		c.JSON(http.StatusNotFound, gin.H{"error": "Seeker not found"})
+		return
+	}
+
+	// Check if personal info is empty
+	if seeker.PersonalInfo == nil || !handlers.IsFieldFilled(seeker.PersonalInfo) {
+		// Respond with 204 No Content and a custom message
+		c.JSON(http.StatusNoContent, gin.H{"message": "Personal information not filled"})
 		return
 	}
 
@@ -148,7 +143,7 @@ func (h *PersonalInfoHandler) GetPersonalInfo(c *gin.Context) {
 }
 
 func (h *PersonalInfoHandler) UpdatePersonalInfo(c *gin.Context) {
-	userID := c.MustGet("userID").(uuid.UUID).String()
+	userID := c.MustGet("userID").(string)
 	collection := c.MustGet("db").(*mongo.Database).Collection("seekers")
 
 	var input dto.PersonalInfoRequest
@@ -161,7 +156,7 @@ func (h *PersonalInfoHandler) UpdatePersonalInfo(c *gin.Context) {
 	defer cancel()
 
 	var seeker models.Seeker
-	err := collection.FindOne(ctx, bson.M{"user_id": userID}).Decode(&seeker)
+	err := collection.FindOne(ctx, bson.M{"auth_user_id": userID}).Decode(&seeker)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Seeker not found"})
 		return
@@ -172,7 +167,7 @@ func (h *PersonalInfoHandler) UpdatePersonalInfo(c *gin.Context) {
 		return
 	}
 
-	_, err = collection.UpdateOne(ctx, bson.M{"user_id": userID}, bson.M{"$set": bson.M{"personal_info": seeker.PersonalInfo}})
+	_, err = collection.UpdateOne(ctx, bson.M{"auth_user_id": userID}, bson.M{"$set": bson.M{"personal_info": seeker.PersonalInfo}})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update personal info"})
 		return
@@ -188,9 +183,8 @@ func (h *PersonalInfoHandler) UpdatePersonalInfo(c *gin.Context) {
 	})
 }
 
-
 func (h *PersonalInfoHandler) PatchPersonalInfo(c *gin.Context) {
-	userID := c.MustGet("userID").(uuid.UUID).String()
+	userID := c.MustGet("userID").(string)
 	collection := c.MustGet("db").(*mongo.Database).Collection("seekers")
 
 	var input dto.PersonalInfoRequest
@@ -208,7 +202,7 @@ func (h *PersonalInfoHandler) PatchPersonalInfo(c *gin.Context) {
 	defer cancel()
 
 	var seeker models.Seeker
-	err := collection.FindOne(ctx, bson.M{"user_id": userID}).Decode(&seeker)
+	err := collection.FindOne(ctx, bson.M{"auth_user_id": userID}).Decode(&seeker)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Seeker not found"})
 		return
@@ -220,7 +214,6 @@ func (h *PersonalInfoHandler) PatchPersonalInfo(c *gin.Context) {
 		return
 	}
 
-	// Patch allowed fields
 	if input.FirstName != "" {
 		personalInfo.FirstName = input.FirstName
 	}
@@ -236,7 +229,7 @@ func (h *PersonalInfoHandler) PatchPersonalInfo(c *gin.Context) {
 		return
 	}
 
-	_, err = collection.UpdateOne(ctx, bson.M{"user_id": userID}, bson.M{"$set": bson.M{"personal_info": seeker.PersonalInfo}})
+	_, err = collection.UpdateOne(ctx, bson.M{"auth_user_id": userID}, bson.M{"$set": bson.M{"personal_info": seeker.PersonalInfo}})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save patched personal info"})
 		return

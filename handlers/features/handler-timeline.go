@@ -13,20 +13,17 @@ import (
 // GetNextEntryStep handles fetching the next incomplete step in the user entry timeline for MongoDB
 func GetNextEntryStep() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Get userID from context (already a string)
+		
 		userID := c.MustGet("userID").(string)
-		fmt.Println("UserID:", userID) // Debugging line
+		fmt.Println("UserID:", userID) 
 
-		// Get MongoDB database from context
 		db := c.MustGet("db").(*mongo.Database)
 		if db == nil {
 			fmt.Println("Error: MongoDB database is nil")
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Database unavailable"})
 			return
 		}
-		fmt.Println("MongoDB database successfully fetched") // Debugging line
-
-		// Fetch the user entry timeline from the database
+		
 		collection := db.Collection("user_entry_timelines")
 		var timeline models.UserEntryTimeline
 		err := collection.FindOne(c, bson.M{"auth_user_id": userID}).Decode(&timeline)
@@ -41,9 +38,6 @@ func GetNextEntryStep() gin.HandlerFunc {
 			return
 		}
 
-		fmt.Println("Timeline data:", timeline)
-
-		// Define the steps and their completion status
 		steps := []struct {
 			Name      string
 			Completed bool
@@ -57,8 +51,7 @@ func GetNextEntryStep() gin.HandlerFunc {
 			{"languages", timeline.LanguagesCompleted, timeline.LanguagesRequired},
 			{"preferred_job_titles", timeline.PreferredJobTitlesCompleted, timeline.PreferredJobTitlesRequired},
 		}
-
-		// Iterate through steps and check if any step is incomplete and required
+	
 		for _, step := range steps {
 			fmt.Printf("Checking step: %s, Completed: %v, Required: %v\n", step.Name, step.Completed, step.Required)
 			if step.Required && !step.Completed {
@@ -70,9 +63,7 @@ func GetNextEntryStep() gin.HandlerFunc {
 			}
 		}
 
-		// If all required steps are complete, mark timeline as completed (if not already)
 		if !timeline.Completed {
-			fmt.Println("Marking timeline as completed")
 			update := bson.M{
 				"$set": bson.M{"completed": true},
 			}
@@ -83,10 +74,8 @@ func GetNextEntryStep() gin.HandlerFunc {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to mark as completed"})
 				return
 			}
-			fmt.Println("Timeline marked as completed")
 		}
 
-		// Return the response
 		c.JSON(http.StatusOK, gin.H{
 			"completed": true,
 			"next_step": nil,
