@@ -82,14 +82,13 @@ func SetupDataEntryRoutes(r *gin.Engine, client *mongo.Client, cfg *config.Confi
 		// languageRoutes.DELETE(":id", languageHandler.DeleteLanguage)
 	}
 
-	// // JOB TITLES routes
-	// jobTitleHandler := dataentry.NewJobTitleHandler(client)
-	// jobTitleRoutes := r.Group("/jobtitles")
-	// jobTitleRoutes.Use(middleware.AuthMiddleware())
-	// {
-	// 	jobTitleRoutes.POST("", jobTitleHandler.CreateJobTitle)
-	// 	jobTitleRoutes.GET("", jobTitleHandler.GetJobTitle)
-	// 	jobTitleRoutes.PUT("", jobTitleHandler.UpdateJobTitle)
-	// 	jobTitleRoutes.PATCH("", jobTitleHandler.PatchJobTitle)
-	// }
+	// JOB TITLES routes
+	jobTitleHandler := dataentry.NewJobTitleHandler()
+	jobTitleRoutes := r.Group("/jobtitles")
+	jobTitleRoutes.Use(middleware.AuthMiddleware())
+	{
+		jobTitleRoutes.POST("", jobTitleHandler.CreateJobTitleOnce)
+		jobTitleRoutes.GET("", jobTitleHandler.GetJobTitle)
+		// jobTitleRoutes.PATCH("", jobTitleHandler.PatchJobTitle)
+	}
 }
