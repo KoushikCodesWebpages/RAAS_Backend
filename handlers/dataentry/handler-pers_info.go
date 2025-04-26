@@ -20,6 +20,7 @@ func NewPersonalInfoHandler() *PersonalInfoHandler {
 	return &PersonalInfoHandler{}
 }
 
+// CreatePersonalInfo handles the creation of personal information
 func (h *PersonalInfoHandler) CreatePersonalInfo(c *gin.Context) {
 	userID := c.MustGet("userID").(string)
 	seekersCollection := c.MustGet("db").(*mongo.Database).Collection("seekers")
@@ -56,9 +57,7 @@ func (h *PersonalInfoHandler) CreatePersonalInfo(c *gin.Context) {
 		return
 	}
 
-	log.Printf("Found seeker: %+v", seeker)
-
-	// Process and set personal info
+	// Process and set personal info using the new reusable function
 	if err := handlers.SetPersonalInfo(&seeker, &input); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process personal info"})
 		log.Printf("Failed to process personal info for auth_user_id: %s, Error: %s", userID, err.Error())
@@ -95,14 +94,13 @@ func (h *PersonalInfoHandler) CreatePersonalInfo(c *gin.Context) {
 	}
 
 	// Update the user entry timeline for the specific user
-	timelineUpdateResult, err := entryTimelineCollection.UpdateOne(ctx, bson.M{"auth_user_id": userID}, timelineUpdate)
+	_, err = entryTimelineCollection.UpdateOne(ctx, bson.M{"auth_user_id": userID}, timelineUpdate)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user entry timeline"})
 		log.Printf("Failed to update user entry timeline for auth_user_id: %s, Error: %s", userID, err.Error())
 		return
 	}
 
-	log.Printf("Timeline update result: %+v", timelineUpdateResult)
 
 	// Respond with appropriate message
 	c.JSON(http.StatusOK, gin.H{
@@ -110,7 +108,7 @@ func (h *PersonalInfoHandler) CreatePersonalInfo(c *gin.Context) {
 	})
 }
 
-
+// GetPersonalInfo retrieves the personal information
 func (h *PersonalInfoHandler) GetPersonalInfo(c *gin.Context) {
 	userID := c.MustGet("userID").(string)
 	collection := c.MustGet("db").(*mongo.Database).Collection("seekers")
@@ -142,6 +140,7 @@ func (h *PersonalInfoHandler) GetPersonalInfo(c *gin.Context) {
 	c.JSON(http.StatusOK, personalInfo)
 }
 
+// UpdatePersonalInfo updates the personal information
 func (h *PersonalInfoHandler) UpdatePersonalInfo(c *gin.Context) {
 	userID := c.MustGet("userID").(string)
 	collection := c.MustGet("db").(*mongo.Database).Collection("seekers")
@@ -162,8 +161,9 @@ func (h *PersonalInfoHandler) UpdatePersonalInfo(c *gin.Context) {
 		return
 	}
 
+	// Process and set personal info using the reusable function
 	if err := handlers.SetPersonalInfo(&seeker, &input); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to marshal personal info"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process personal info"})
 		return
 	}
 
@@ -183,6 +183,7 @@ func (h *PersonalInfoHandler) UpdatePersonalInfo(c *gin.Context) {
 	})
 }
 
+// PatchPersonalInfo allows partial updates to the personal information
 func (h *PersonalInfoHandler) PatchPersonalInfo(c *gin.Context) {
 	userID := c.MustGet("userID").(string)
 	collection := c.MustGet("db").(*mongo.Database).Collection("seekers")
@@ -214,6 +215,7 @@ func (h *PersonalInfoHandler) PatchPersonalInfo(c *gin.Context) {
 		return
 	}
 
+	// Apply patch updates
 	if input.FirstName != "" {
 		personalInfo.FirstName = input.FirstName
 	}
@@ -224,6 +226,7 @@ func (h *PersonalInfoHandler) PatchPersonalInfo(c *gin.Context) {
 		personalInfo.LinkedInProfile = input.LinkedInProfile
 	}
 
+	// Set updated personal info in the Seeker object
 	if err := handlers.SetPersonalInfo(&seeker, personalInfo); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update personal info"})
 		return

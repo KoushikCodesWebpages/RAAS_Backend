@@ -37,39 +37,21 @@ func (h *ProfessionalSummaryHandler) CreateProfessionalSummary(c *gin.Context) {
 	defer cancel()
 
 	var seeker models.Seeker
-	// Fetch seeker by auth_user_id
 	err := seekersCollection.FindOne(ctx, bson.M{"auth_user_id": userID}).Decode(&seeker)
 	if err != nil {
-		if err == mongo.ErrNoDocuments {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Seeker not found"})
-			log.Printf("Seeker not found for auth_user_id: %s", userID)
-		} else {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error retrieving seeker"})
-			log.Printf("Error retrieving seeker for auth_user_id: %s, Error: %s", userID, err.Error())
-		}
+		handleDBError(err, c, "Seeker not found", userID)
 		return
 	}
-
-	log.Printf("Found seeker: %+v", seeker)
 
 	// Process and set professional summary
 	if err := handlers.SetProfessionalSummary(&seeker, &input); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process professional summary"})
-		log.Printf("Failed to process professional summary for auth_user_id: %s, Error: %s", userID, err.Error())
+		handleProcessingError(err, c, "Failed to process professional summary", userID)
 		return
 	}
 
-	// Update professional summary in MongoDB (seekers collection)
 	updateResult, err := seekersCollection.UpdateOne(ctx, bson.M{"auth_user_id": userID}, bson.M{"$set": bson.M{"professional_summary": seeker.ProfessionalSummary}})
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save professional summary"})
-		log.Printf("Failed to update professional summary for auth_user_id: %s, Error: %s", userID, err.Error())
-		return
-	}
-
-	if updateResult.MatchedCount == 0 {
-		c.JSON(http.StatusNotFound, gin.H{"error": "No matching seeker found to update"})
-		log.Printf("No matching seeker found for auth_user_id: %s", userID)
+	if err != nil || updateResult.MatchedCount == 0 {
+		handleDBError(err, c, "Failed to save professional summary", userID)
 		return
 	}
 
@@ -78,26 +60,15 @@ func (h *ProfessionalSummaryHandler) CreateProfessionalSummary(c *gin.Context) {
 		message = "Professional summary updated"
 	}
 
-	// Now, update the user entry progress in user_entry_timelines collection
-	// Set professional_summaries_completed to true
-	timelineUpdate := bson.M{
-		"$set": bson.M{
-			"professional_summaries_completed": true,
-		},
-	}
-
+	// Update user entry timeline for the specific user
+	timelineUpdate := bson.M{"$set": bson.M{"professional_summaries_completed": true}}
 	timelineUpdateResult, err := entryTimelineCollection.UpdateOne(ctx, bson.M{"auth_user_id": userID}, timelineUpdate)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user entry timeline"})
-		log.Printf("Failed to update user entry timeline for auth_user_id: %s, Error: %s", userID, err.Error())
+	if err != nil || timelineUpdateResult.MatchedCount == 0 {
+		handleDBError(err, c, "Failed to update user entry timeline", userID)
 		return
 	}
 
-	log.Printf("Timeline update result: %+v", timelineUpdateResult)
-
-	c.JSON(http.StatusOK, gin.H{
-		"message": message,
-	})
+	c.JSON(http.StatusOK, gin.H{"message": message})
 }
 
 func (h *ProfessionalSummaryHandler) GetProfessionalSummary(c *gin.Context) {
@@ -110,26 +81,18 @@ func (h *ProfessionalSummaryHandler) GetProfessionalSummary(c *gin.Context) {
 	var seeker models.Seeker
 	err := seekersCollection.FindOne(ctx, bson.M{"auth_user_id": userID}).Decode(&seeker)
 	if err != nil {
-		if err == mongo.ErrNoDocuments {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Seeker not found"})
-			log.Printf("Seeker not found for auth_user_id: %s", userID)
-		} else {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve seeker", "details": err.Error()})
-			log.Printf("Error retrieving seeker for auth_user_id: %s, Error: %s", userID, err.Error())
-		}
+		handleDBError(err, c, "Seeker not found", userID)
 		return
 	}
 
-	isFilled := handlers.IsFieldFilled(seeker.ProfessionalSummary)
-	if !isFilled {
+	if !handlers.IsFieldFilled(seeker.ProfessionalSummary) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Professional summary not yet filled"})
 		return
 	}
 
 	profSummary, err := handlers.GetProfessionalSummary(&seeker)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse professional summary", "details": err.Error()})
-		log.Printf("Failed to parse professional summary for auth_user_id: %s, Error: %s", userID, err.Error())
+		handleProcessingError(err, c, "Failed to parse professional summary", userID)
 		return
 	}
 
@@ -140,7 +103,6 @@ func (h *ProfessionalSummaryHandler) GetProfessionalSummary(c *gin.Context) {
 		AnnualIncome: profSummary.AnnualIncome,
 	})
 }
-
 
 func (h *ProfessionalSummaryHandler) UpdateProfessionalSummary(c *gin.Context) {
 	userID := c.MustGet("userID").(string)
@@ -158,28 +120,19 @@ func (h *ProfessionalSummaryHandler) UpdateProfessionalSummary(c *gin.Context) {
 	var seeker models.Seeker
 	err := seekersCollection.FindOne(ctx, bson.M{"auth_user_id": userID}).Decode(&seeker)
 	if err != nil {
-		if err == mongo.ErrNoDocuments {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Seeker not found"})
-		} else {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve seeker", "details": err.Error()})
-		}
+		handleDBError(err, c, "Seeker not found", userID)
 		return
 	}
 
 	if err := handlers.SetProfessionalSummary(&seeker, &input); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update professional summary", "details": err.Error()})
+		handleProcessingError(err, c, "Failed to update professional summary", userID)
 		return
 	}
 
-	update := bson.M{
-		"$set": bson.M{
-			"professional_summary": seeker.ProfessionalSummary,
-		},
-	}
-
+	update := bson.M{"$set": bson.M{"professional_summary": seeker.ProfessionalSummary}}
 	_, err = seekersCollection.UpdateOne(ctx, bson.M{"auth_user_id": userID}, update)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database update failed", "details": err.Error()})
+		handleDBError(err, c, "Database update failed", userID)
 		return
 	}
 
@@ -190,7 +143,6 @@ func (h *ProfessionalSummaryHandler) UpdateProfessionalSummary(c *gin.Context) {
 		AnnualIncome: input.AnnualIncome,
 	})
 }
-
 
 func (h *ProfessionalSummaryHandler) PatchProfessionalSummary(c *gin.Context) {
 	userID := c.MustGet("userID").(string)
@@ -208,29 +160,22 @@ func (h *ProfessionalSummaryHandler) PatchProfessionalSummary(c *gin.Context) {
 	var seeker models.Seeker
 	err := seekersCollection.FindOne(ctx, bson.M{"auth_user_id": userID}).Decode(&seeker)
 	if err != nil {
-		if err == mongo.ErrNoDocuments {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Seeker not found"})
-		} else {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve seeker", "details": err.Error()})
-		}
+		handleDBError(err, c, "Seeker not found", userID)
 		return
 	}
 
-	// Unmarshal existing professional summary into a map
 	var profSummaryMap map[string]interface{}
 	if err := handlers.GetFieldFromBson(seeker.ProfessionalSummary, &profSummaryMap); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to unmarshal professional summary", "details": err.Error()})
+		handleProcessingError(err, c, "Failed to unmarshal professional summary", userID)
 		return
 	}
 
-	// Apply the partial updates
 	for key, value := range updates {
 		profSummaryMap[key] = value
 	}
 
-	// Marshal updated map back to BSON
 	if err := handlers.SetFieldToBson(profSummaryMap, &seeker.ProfessionalSummary); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to marshal updated professional summary", "details": err.Error()})
+		handleProcessingError(err, c, "Failed to marshal updated professional summary", userID)
 		return
 	}
 
@@ -238,9 +183,26 @@ func (h *ProfessionalSummaryHandler) PatchProfessionalSummary(c *gin.Context) {
 		"$set": bson.M{"professional_summary": seeker.ProfessionalSummary},
 	})
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database update failed", "details": err.Error()})
+		handleDBError(err, c, "Database update failed", userID)
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Professional summary patched successfully"})
+}
+
+// Helper function to handle DB errors
+func handleDBError(err error, c *gin.Context, message, userID string) {
+	if err == mongo.ErrNoDocuments {
+		c.JSON(http.StatusNotFound, gin.H{"error": message})
+		log.Printf("User %s: %s", userID, message)
+	} else {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": message, "details": err.Error()})
+		log.Printf("Error for user %s: %s, Error: %s", userID, message, err.Error())
+	}
+}
+
+// Helper function to handle processing errors
+func handleProcessingError(err error, c *gin.Context, message, userID string) {
+	c.JSON(http.StatusInternalServerError, gin.H{"error": message, "details": err.Error()})
+	log.Printf("Processing error for user %s: %s, Error: %s", userID, message, err.Error())
 }
