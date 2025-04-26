@@ -17,14 +17,14 @@ func SetupAuthRoutes(r *gin.Engine, cfg *config.Config) {
 	forgotPassLimiter := middleware.RateLimiterMiddleware(3, time.Minute)
 	resetPassLimiter := middleware.RateLimiterMiddleware(3, time.Minute)
 	verifyEmailLimiter := middleware.RateLimiterMiddleware(10, time.Minute)
-	googleLoginLimiter := middleware.RateLimiterMiddleware(10, time.Minute)
-	googleCallbackLimiter := middleware.RateLimiterMiddleware(20, time.Minute)
+	// googleLoginLimiter := middleware.RateLimiterMiddleware(10, time.Minute)
+	// googleCallbackLimiter := middleware.RateLimiterMiddleware(20, time.Minute)
 
 	authGroup := r.Group("/auth")
 	{
 		// Google OAuth (rate-limited)
-		authGroup.GET("/google/login", googleLoginLimiter, auth.GoogleLoginHandler)
-		authGroup.GET("/google/callback", googleCallbackLimiter, auth.GoogleCallbackHandler)
+		// authGroup.GET("/google/login", googleLoginLimiter, auth.GoogleLoginHandler)
+		// authGroup.GET("/google/callback", googleCallbackLimiter, auth.GoogleCallbackHandler)
 
 		// Standard auth routes (rate-limited where necessary)
 		authGroup.POST("/signup", signupLimiter, auth.SeekerSignUp)

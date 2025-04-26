@@ -7,15 +7,18 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"RAAS/models"
+	"context"
 )
 
-const resetPasskey = "reset@arshan.de"
+const resetPasskey = "reset@arshan.de" // You can use os.Getenv("RESET_PASSKEY") in production to make this more secure
 
+// ResetRequest defines the structure of the reset request payload
 type ResetRequest struct {
 	Passkey string `json:"passkey"`
 	Email   string `json:"email"`
 }
 
+// ResetDBHandler handles the logic for resetting the DB (deleting a user and associated data)
 func ResetDBHandler(c *gin.Context) {
 	var req ResetRequest
 
@@ -43,7 +46,7 @@ func ResetDBHandler(c *gin.Context) {
 	}
 
 	// Ensure UUID is converted to string
-	userID := authUser.AuthUserID.String() // Convert UUID to string
+	userID := authUser.AuthUserID // Convert UUID to string
 	log.Printf("🔄 Reset triggered for user: %s (ID: %s)", req.Email, userID)
 
 	// Attempt to delete user by string ID
@@ -73,29 +76,34 @@ func ResetDBHandler(c *gin.Context) {
 
 	// Delete user data from each collection
 	for _, collectionName := range collections {
-		// Check if the collection exists by querying for a document
-		count, err := db.Collection(collectionName).CountDocuments(c, bson.M{"auth_user_id": authUser.AuthUserID})
-		if err != nil {
-			log.Printf("❌ Error checking collection '%s': %v", collectionName, err)
-			continue // Skip this collection if there is an error
-		}
-
-		if count > 0 {
-			// If the collection is 'user_entry_timelines', use the correct field for deletion
-			_, err := db.Collection(collectionName).DeleteMany(c, bson.M{"auth_user_id": authUser.AuthUserID})
-			if err != nil {
-				log.Printf("❌ Error deleting from %s: %v", collectionName, err)
-			} else {
-				log.Printf("✅ Deleted data from %s", collectionName)
-			}
-		} else {
-			log.Printf("🔄 No documents found in collection '%s', skipping deletion.", collectionName)
-		}
+		deleteUserDataFromCollection(c, db, collectionName, userID)
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "User and associated data deleted successfully."})
 }
 
+// Helper function for deleting data from each collection
+func deleteUserDataFromCollection(c context.Context, db *mongo.Database, collectionName string, userID string) {
+	count, err := db.Collection(collectionName).CountDocuments(c, bson.M{"auth_user_id": userID})
+	if err != nil {
+		log.Printf("❌ Error checking collection '%s': %v", collectionName, err)
+		return // Skip this collection if there's an error
+	}
+
+	if count > 0 {
+		// Perform deletion
+		_, err := db.Collection(collectionName).DeleteMany(c, bson.M{"auth_user_id": userID})
+		if err != nil {
+			log.Printf("❌ Error deleting from %s: %v", collectionName, err)
+		} else {
+			log.Printf("✅ Deleted data from %s", collectionName)
+		}
+	} else {
+		log.Printf("🔄 No documents found in collection '%s', skipping deletion.", collectionName)
+	}
+}
+
+// PrintAllCollectionsHandler handles the logic for listing all collections in the DB
 func PrintAllCollectionsHandler(c *gin.Context) {
 	// Get MongoDB database object
 	db := c.MustGet("db").(*mongo.Database) // Changed to *mongo.Database

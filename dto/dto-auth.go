@@ -35,7 +35,7 @@ type SeekerResponse struct {
 func SeekerProfileResponse(seeker models.Seeker) SeekerResponse {
     return SeekerResponse{
         ID:               seeker.ID,                 // ID as primitive.ObjectID
-        AuthUserID:       seeker.AuthUserID.String(), // UUID as string for AuthUserID
+        AuthUserID:       seeker.AuthUserID, // UUID as string for AuthUserID
         SubscriptionTier: seeker.SubscriptionTier,
     }
 }

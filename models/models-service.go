@@ -3,7 +3,6 @@ package models
 import (
 
 	"context"
-	"github.com/google/uuid"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	
 	"go.mongodb.org/mongo-driver/bson"
@@ -69,7 +68,7 @@ func CreateJobIndexes(collection *mongo.Collection) error {
 
 // MatchScore for job seeker match score
 type MatchScore struct {
-	AuthUserID uuid.UUID `json:"auth_user_id" bson:"auth_user_id"`
+	AuthUserID string `json:"auth_user_id" bson:"auth_user_id"`
 	JobID      string    `bson:"jobId" json:"jobId"`          
 	MatchScore float64   `bson:"matchScore" json:"matchScore"` 
 }

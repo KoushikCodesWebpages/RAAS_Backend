@@ -5,16 +5,16 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"RAAS/models"
 )
+
 // GetNextEntryStep handles fetching the next incomplete step in the user entry timeline for MongoDB
 func GetNextEntryStep() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Get userID from context
-		userID := c.MustGet("userID").(uuid.UUID)
+		// Get userID from context (already a string)
+		userID := c.MustGet("userID").(string)
 		fmt.Println("UserID:", userID) // Debugging line
 
 		// Get MongoDB database from context
@@ -73,7 +73,6 @@ func GetNextEntryStep() gin.HandlerFunc {
 		// If all required steps are complete, mark timeline as completed (if not already)
 		if !timeline.Completed {
 			fmt.Println("Marking timeline as completed")
-			timeline.Completed = true
 			update := bson.M{
 				"$set": bson.M{"completed": true},
 			}
@@ -94,4 +93,3 @@ func GetNextEntryStep() gin.HandlerFunc {
 		})
 	}
 }
-

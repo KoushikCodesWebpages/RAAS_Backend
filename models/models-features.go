@@ -3,132 +3,118 @@ package models
 import (
 	"time"
 	"context"
-	"github.com/google/uuid"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-
 )
 
 type UserEntryTimeline struct {
-	ID                              primitive.ObjectID `bson:"_id,omitempty" json:"id"`  // MongoDB ID
-	AuthUserID                       uuid.UUID         `bson:"auth_user_id" json:"auth_user_id"`
+	ID                             primitive.ObjectID `bson:"_id,omitempty" json:"id"`
+	AuthUserID                     string             `bson:"auth_user_id" json:"auth_user_id"`
 
-	PersonalInfosCompleted          bool       `bson:"personalInfosCompleted" json:"personalInfosCompleted"`
-	PersonalInfosRequired           bool       `bson:"personalInfosRequired" json:"personalInfosRequired"`
+	PersonalInfosCompleted         bool               `bson:"personal_infos_completed" json:"personal_infos_completed"`
+	PersonalInfosRequired          bool               `bson:"personal_infos_required" json:"personal_infos_required"`
 
-	ProfessionalSummariesCompleted  bool       `bson:"professionalSummariesCompleted" json:"professionalSummariesCompleted"`
-	ProfessionalSummariesRequired   bool       `bson:"professionalSummariesRequired" json:"professionalSummariesRequired"`
+	ProfessionalSummariesCompleted bool               `bson:"professional_summaries_completed" json:"professional_summaries_completed"`
+	ProfessionalSummariesRequired  bool               `bson:"professional_summaries_required" json:"professional_summaries_required"`
 
-	WorkExperiencesCompleted        bool       `bson:"workExperiencesCompleted" json:"workExperiencesCompleted"`
-	WorkExperiencesRequired         bool       `bson:"workExperiencesRequired" json:"workExperiencesRequired"`
+	WorkExperiencesCompleted       bool               `bson:"work_experiences_completed" json:"work_experiences_completed"`
+	WorkExperiencesRequired        bool               `bson:"work_experiences_required" json:"work_experiences_required"`
 
-	EducationsCompleted             bool       `bson:"educationsCompleted" json:"educationsCompleted"`
-	EducationsRequired              bool       `bson:"educationsRequired" json:"educationsRequired"`
+	EducationsCompleted            bool               `bson:"educations_completed" json:"educations_completed"`
+	EducationsRequired             bool               `bson:"educations_required" json:"educations_required"`
 
-	CertificatesCompleted           bool       `bson:"certificatesCompleted" json:"certificatesCompleted"`
-	CertificatesRequired            bool       `bson:"certificatesRequired" json:"certificatesRequired"`
+	CertificatesCompleted          bool               `bson:"certificates_completed" json:"certificates_completed"`
+	CertificatesRequired           bool               `bson:"certificates_required" json:"certificates_required"`
 
-	LanguagesCompleted              bool       `bson:"languagesCompleted" json:"languagesCompleted"`
-	LanguagesRequired               bool       `bson:"languagesRequired" json:"languagesRequired"`
+	LanguagesCompleted             bool               `bson:"languages_completed" json:"languages_completed"`
+	LanguagesRequired              bool               `bson:"languages_required" json:"languages_required"`
 
-	PreferredJobTitlesCompleted     bool       `bson:"preferredJobTitlesCompleted" json:"preferredJobTitlesCompleted"`
-	PreferredJobTitlesRequired      bool       `bson:"preferredJobTitlesRequired" json:"preferredJobTitlesRequired"`
+	PreferredJobTitlesCompleted    bool               `bson:"preferred_job_titles_completed" json:"preferred_job_titles_completed"`
+	PreferredJobTitlesRequired     bool               `bson:"preferred_job_titles_required" json:"preferred_job_titles_required"`
 
-	Completed                       bool       `bson:"completed" json:"completed"`
+	Completed                      bool               `bson:"completed" json:"completed"`
 
-	CreatedAt                       time.Time  `bson:"createdAt" json:"createdAt"`
-	UpdatedAt                       time.Time  `bson:"updatedAt" json:"updatedAt"`
+	CreatedAt                      time.Time          `bson:"created_at" json:"created_at"`
+	UpdatedAt                      time.Time          `bson:"updated_at" json:"updated_at"`
 }
 
 func CreateUserEntryTimelineIndexes(collection *mongo.Collection) error {
 	indexModel := mongo.IndexModel{
 		Keys:    bson.D{{Key: "auth_user_id", Value: 1}},
-		Options: options.Index().SetUnique(true),       
+		Options: options.Index().SetUnique(true).SetName("unique_auth_user_id"),
 	}
 	_, err := collection.Indexes().CreateOne(context.Background(), indexModel)
 	return err
 }
-
-
-
-
 
 
 type SalaryRange struct {
 	Min int `bson:"min" json:"min"`
 	Max int `bson:"max" json:"max"`
 }
+
 type SelectedJobApplication struct {
 	ID                     primitive.ObjectID `bson:"_id,omitempty" json:"id"`
-	AuthUserID             uuid.UUID         `json:"auth_user_id" bson:"auth_user_id"`
+	AuthUserID             string             `bson:"auth_user_id" json:"auth_user_id"` // Changed to string
 	Source                 string             `bson:"source" json:"source"`
-	JobID                  string             `bson:"jobId" json:"jobId"`
+	JobID                  string             `bson:"job_id" json:"job_id"` // Changed to string
 	Title                 string             `bson:"title" json:"title"`
 	Company               string             `bson:"company" json:"company"`
 	Location              string             `bson:"location" json:"location"`
-	PostedDate            string             `bson:"postedDate" json:"postedDate"`
+	PostedDate            string             `bson:"posted_date" json:"posted_date"`
 	Processed             bool               `bson:"processed" json:"processed"`
-	JobType               string             `bson:"jobType" json:"jobType"`
+	JobType               string             `bson:"job_type" json:"job_type"`
 	Skills                string             `bson:"skills" json:"skills"`
-	UserSkills            string             `bson:"userSkills" json:"userSkills"`
-	MinSalary             int                `bson:"minSalary" json:"minSalary"`
-	MaxSalary             int                `bson:"maxSalary" json:"maxSalary"`
-	MatchScore            float64            `bson:"matchScore" json:"matchScore"`
+	UserSkills            string             `bson:"user_skills" json:"user_skills"`
+	MinSalary             int                `bson:"min_salary" json:"min_salary"`
+	MaxSalary             int                `bson:"max_salary" json:"max_salary"`
+	MatchScore            float64            `bson:"match_score" json:"match_score"`
 	Description           string             `bson:"description" json:"description"`
 	Selected              bool               `bson:"selected" json:"selected"`
-	CvGenerated           bool               `bson:"cvGenerated" json:"cvGenerated"`
-	CoverLetterGenerated  bool               `bson:"coverLetterGenerated" json:"coverLetterGenerated"`
-	ViewLink              bool               `bson:"viewLink" json:"viewLink"`
+	CvGenerated           bool               `bson:"cv_generated" json:"cv_generated"`
+	CoverLetterGenerated  bool               `bson:"cover_letter_generated" json:"cover_letter_generated"`
+	ViewLink              bool               `bson:"view_link" json:"view_link"`
 }
+
 func CreateSelectedJobApplicationIndexes(collection *mongo.Collection) error {
 	indexModel := mongo.IndexModel{
-		Keys:    bson.D{{Key: "authUserId", Value: 1}, {Key: "jobId", Value: 1}}, // Compound index on authUserId and jobId
-		Options: options.Index().SetUnique(true),                                 // Unique index
+		Keys:    bson.D{{Key: "auth_user_id", Value: 1}, {Key: "job_id", Value: 1}}, // Compound index on auth_user_id and job_id
+		Options: options.Index().SetUnique(true),
 	}
 	_, err := collection.Indexes().CreateOne(context.Background(), indexModel)
 	return err
 }
 
-
-
-
-
 type CV struct {
 	ID         primitive.ObjectID `bson:"_id,omitempty" json:"id"`
-	AuthUserID uuid.UUID         `json:"auth_user_id" bson:"auth_user_id"`
-	JobID      string             `bson:"jobId" json:"jobId"`
-	CVUrl      string             `bson:"cvUrl" json:"cvUrl"`
+	AuthUserID string             `bson:"auth_user_id" json:"auth_user_id"` // Changed to string
+	JobID      string             `bson:"job_id" json:"job_id"` // Changed to string
+	CVUrl      string             `bson:"cv_url" json:"cv_url"` // Changed to string
 }
 
 func CreateCVIndexes(collection *mongo.Collection) error {
 	indexModel := mongo.IndexModel{
-		Keys:    bson.D{{Key: "authUserId", Value: 1}, {Key: "jobId", Value: 1}}, 
-		Options: options.Index().SetUnique(true),                               
+		Keys:    bson.D{{Key: "auth_user_id", Value: 1}, {Key: "job_id", Value: 1}},
+		Options: options.Index().SetUnique(true),
 	}
 	_, err := collection.Indexes().CreateOne(context.Background(), indexModel)
 	return err
 }
 
-
 type CoverLetter struct {
 	ID            primitive.ObjectID `bson:"_id,omitempty" json:"id"`
-	AuthUserID    uuid.UUID         `json:"auth_user_id" bson:"auth_user_id"`
-	JobID         string             `bson:"jobId" json:"jobId"`
-	CoverLetterURL string            `bson:"coverLetterURL" json:"coverLetterURL"`
+	AuthUserID    string             `bson:"auth_user_id" json:"auth_user_id"` // Changed to string
+	JobID         string             `bson:"job_id" json:"job_id"` // Changed to string
+	CoverLetterURL string            `bson:"cover_letter_url" json:"cover_letter_url"` // Changed to string
 }
 
-
 func CreateCoverLetterIndexes(collection *mongo.Collection) error {
-
 	indexModel := mongo.IndexModel{
-		Keys:    bson.D{{Key: "authUserId", Value: 1}, {Key: "jobId", Value: 1}}, 
-		Options: options.Index().SetUnique(true),                                 
+		Keys:    bson.D{{Key: "auth_user_id", Value: 1}, {Key: "job_id", Value: 1}},
+		Options: options.Index().SetUnique(true),
 	}
-
-	// Create the index
 	_, err := collection.Indexes().CreateOne(context.Background(), indexModel)
 	return err
 }

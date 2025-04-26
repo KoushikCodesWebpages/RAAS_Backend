@@ -1,56 +1,65 @@
 package auth
 
 import (
+	"context"
+	"fmt"
+	"net/http"
+	"time"
+
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
-	"net/http"
-	"fmt"
-
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 
-
 	"RAAS/config"
-	"RAAS/models"
 	"RAAS/dto"
-	"RAAS/security"
 	"RAAS/handlers/repo"
+	"RAAS/models"
+	"RAAS/security"
 	"RAAS/utils"
 )
 
 func SeekerSignUp(c *gin.Context) {
 	var input dto.SeekerSignUpInput
 
-	// Bind input and check for errors
 	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_input", "details": err.Error()})
 		return
 	}
 
-	// Initialize userRepo with valid config
-	db := c.MustGet("db").(*mongo.Client)
-	userRepo := repo.NewUserRepo(db, config.Cfg)
+	db := c.MustGet("db").(*mongo.Database)
+	userRepo := repo.NewUserRepo(db)
 
-	// Validate the input data
 	if err := userRepo.ValidateSeekerSignUpInput(input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "validation_error", "details": err.Error()})
 		return
 	}
 
-	// Check if the email is already taken and whether it's verified or not
-	var user models.AuthUser
-	err := db.Database(config.Cfg.Cloud.MongoDBName).Collection("auth_users").FindOne(c, bson.M{"email": input.Email}).Decode(&user)
+	// Check if email or phone already exists
+	emailTaken, phoneTaken, err := userRepo.CheckDuplicateEmailOrPhone(input.Email, input.Number)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "check_duplicate_failed", "details": err.Error()})
+		return
+	}
 
-	if err != mongo.ErrNoDocuments {
-		// If email exists, check if it's verified
-		if user.EmailVerified {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Email is already taken and verified."})
+	if emailTaken || phoneTaken {
+		var user models.AuthUser
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		err := db.Collection("auth_users").FindOne(ctx, bson.M{"email": input.Email}).Decode(&user)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "database_error", "details": err.Error()})
 			return
 		}
 
-		// If email is not verified, resend the verification email
-		token := user.VerificationToken
-		verificationLink := fmt.Sprintf("%s/auth/verify-email?token=%s", config.Cfg.Project.FrontendBaseUrl, token)
+		if user.EmailVerified {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "email_already_verified"})
+			return
+		}
+
+		// Resend verification email
+		verificationLink := fmt.Sprintf("%s/auth/verify-email?token=%s", config.Cfg.Project.FrontendBaseUrl, user.VerificationToken)
 		emailBody := fmt.Sprintf(`
 			<p>Hello %s,</p>
 			<p>Thanks for signing up! Please verify your email by clicking the link below:</p>
@@ -58,7 +67,6 @@ func SeekerSignUp(c *gin.Context) {
 			<p>If you did not sign up, you can ignore this email.</p>
 		`, input.Email, verificationLink)
 
-		// Send the verification email again
 		emailCfg := utils.EmailConfig{
 			Host:     config.Cfg.Cloud.EmailHost,
 			Port:     config.Cfg.Cloud.EmailPort,
@@ -69,28 +77,28 @@ func SeekerSignUp(c *gin.Context) {
 		}
 
 		if err := utils.SendEmail(emailCfg, input.Email, "Verify your email", emailBody); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to resend verification email", "details": err.Error()})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed_to_send_verification_email", "details": err.Error()})
 			return
 		}
 
-		c.JSON(http.StatusOK, gin.H{"message": "Please check your email to verify your account. Email resent."})
+		c.JSON(http.StatusOK, gin.H{"message": "verification_email_resent"})
 		return
 	}
 
-	// Hash the password
+	// Hash password
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error hashing password"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "password_hash_error"})
 		return
 	}
 
-	// Create the user and send the verification email
+	// Create the seeker
 	if err := userRepo.CreateSeeker(input, string(hashedPassword)); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not create Seeker", "details": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "create_seeker_failed", "details": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"message": "Seeker registered successfully. Please check your email to verify."})
+	c.JSON(http.StatusCreated, gin.H{"message": "seeker_registered_successfully"})
 }
 
 func VerifyEmail(c *gin.Context) {
@@ -100,35 +108,29 @@ func VerifyEmail(c *gin.Context) {
 		return
 	}
 
-	db, exists := c.Get("db")
-	if !exists {
-		c.String(http.StatusInternalServerError, "DB not found")
-		return
-	}
+	db := c.MustGet("db").(*mongo.Database)
 
 	var user models.AuthUser
-	err := db.(*mongo.Client).Database(config.Cfg.Cloud.MongoDBName).Collection("auth_users").FindOne(c, bson.M{"verification_token": token}).Decode(&user)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
+	err := db.Collection("auth_users").FindOne(ctx, bson.M{"verification_token": token}).Decode(&user)
 	if err == mongo.ErrNoDocuments {
 		c.String(http.StatusNotFound, "Invalid or expired token")
 		return
+	} else if err != nil {
+		c.String(http.StatusInternalServerError, "Database error")
+		return
 	}
 
-
-	// If the token is valid, verify the email
 	if user.EmailVerified {
 		c.String(http.StatusOK, "Email already verified.")
 		return
 	}
 
-	// Mark the email as verified and clear the verification token
-	user.EmailVerified = true
-	user.VerificationToken = ""
-
-	// Update user in the database
-	_, err = db.(*mongo.Client).Database(config.Cfg.Cloud.MongoDBName).Collection("auth_users").UpdateOne(
-		c,
-		bson.M{"_id": user.AuthUserID},
+	_, err = db.Collection("auth_users").UpdateOne(
+		ctx,
+		bson.M{"auth_user_id": user.AuthUserID},
 		bson.M{"$set": bson.M{"email_verified": true, "verification_token": ""}},
 	)
 
@@ -164,23 +166,27 @@ func VerifyEmail(c *gin.Context) {
 
 func Login(c *gin.Context) {
 	var input dto.LoginInput
-	db := c.MustGet("db").(*mongo.Client)
-	userRepo := repo.NewUserRepo(db, config.Cfg)
+
+	db := c.MustGet("db").(*mongo.Database)
+	userRepo := repo.NewUserRepo(db)
 
 	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_input", "details": err.Error()})
 		return
 	}
 
-	user, err := userRepo.AuthenticateUser(input.Email, input.Password)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	user, err := userRepo.AuthenticateUser(ctx, input.Email, input.Password)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid_credentials"})
 		return
 	}
 
 	token, err := security.GenerateJWT(user.AuthUserID, user.Email, user.Role)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not generate token"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "token_generation_failed"})
 		return
 	}
 
