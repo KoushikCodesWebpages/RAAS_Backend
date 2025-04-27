@@ -10,44 +10,54 @@ import (
 )
 
 var MongoDB *mongo.Database
-
-// InitDB initializes the MongoDB connection and returns the client and database instances
 func InitDB(cfg *config.Config) (*mongo.Client, *mongo.Database) {
+	// Create MongoDB client options using the URI from the config
 	clientOptions := options.Client().ApplyURI(cfg.Cloud.MongoDBUri)
+
+	// Connect to MongoDB
 	client, err := mongo.Connect(context.TODO(), clientOptions)
 	if err != nil {
 		log.Fatalf("❌ Error connecting to MongoDB: %v", err)
 	}
 
-	// Check the connection
+	// Ping MongoDB to check the connection
 	err = client.Ping(context.TODO(), nil)
 	if err != nil {
 		log.Fatalf("❌ Error pinging MongoDB: %v", err)
 	}
 
+	// Set the global MongoDB variable to the database from the config
 	MongoDB = client.Database(cfg.Cloud.MongoDBName)
 	log.Println("✅ MongoDB connection established")
+
+	// Print all collections (optional)
 	PrintAllCollections()
 
-	// Optionally reset collections
+	// Optionally reset collections (this function could be defined elsewhere if needed)
 	// resetCollections()
 
 	// Call the CreateAllIndexes function to create the necessary indexes for all models
 	CreateAllIndexes()
 
+	// Now, select the "jobs" collection
+	collection := MongoDB.Collection("jobs") // Replace with your actual collection name
+	SeedJobs(collection)
+
+	
+
+
+	// Return the client and MongoDB database instances
 	return client, MongoDB
 }
 
 // Reset collections if necessary
 func resetCollections() {
 	collections := []string{
-		"auth_users",
-		"seekers",
-		"admins",
 		"match_scores",
 		"user_entry_timelines",
 		"selected_job_applications",
 		"cover_letters",
+		"jobs",
 		"cv",
 	}
 

@@ -1,40 +1,92 @@
 package models
 
 import (
-	"gorm.io/gorm"
-	"log"
+    "context"
+    "log"
+    "strings"
+
+    "go.mongodb.org/mongo-driver/bson"
+    "go.mongodb.org/mongo-driver/mongo"
 )
 
-// SeedJobs - Seeds the Job model with metadata, description, and application links
-func SeedJobs(db *gorm.DB) {
-	// Check if jobs already seeded
-	var count int64
-	db.Model(&Job{}).Count(&count)
-	if count > 0 {
-		return // Already seeded
-	}
 
-	// Seed LinkedIn and Xing jobs into the main Job model
-	jobs := []Job{
-		// LinkedIn Jobs
-		{JobID: "L001", Title: "Software Engineer", Company: "LinkedIn", Location: "Berlin", PostedDate: "2024-04-01", Link: "https://linkedin.com/jobs/1", Processed: true, Source: "LinkedIn", JobDescription: "We are looking for a skilled Software Engineer to build scalable systems.", JobType: "Full-time", Skills: "Go, REST, Microservices, Docker", JobLink: "https://apply.linkedin.com/job/1"},
-		{JobID: "L002", Title: "DevOps Engineer", Company: "Google", Location: "Munich", PostedDate: "2024-04-02", Link: "https://linkedin.com/jobs/2", Processed: true, Source: "LinkedIn", JobDescription: "Join our DevOps team to manage CI/CD pipelines and cloud infrastructure.", JobType: "Full-time", Skills: "CI/CD, Jenkins, AWS, Docker, Kubernetes", JobLink: "https://apply.linkedin.com/job/2"},
-		{JobID: "L003", Title: "Software Engineer", Company: "Meta", Location: "Hamburg", PostedDate: "2024-04-03", Link: "https://linkedin.com/jobs/3", Processed: true, Source: "LinkedIn", JobDescription: "Develop backend services with Go and microservices architecture.", JobType: "Remote", Skills: "Go, gRPC, PostgreSQL, Docker", JobLink: "https://apply.linkedin.com/job/3"},
-		{JobID: "L004", Title: "DevOps Engineer", Company: "Amazon", Location: "Stuttgart", PostedDate: "2024-04-04", Link: "https://linkedin.com/jobs/4", Processed: true, Source: "LinkedIn", JobDescription: "Automate infrastructure with Terraform and Kubernetes.", JobType: "Contract", Skills: "Terraform, Kubernetes, Helm, AWS", JobLink: "https://apply.linkedin.com/job/4"},
-		{JobID: "L005", Title: "Software Engineer", Company: "Apple", Location: "Frankfurt", PostedDate: "2024-04-05", Link: "https://linkedin.com/jobs/5", Processed: true, Source: "LinkedIn", JobDescription: "Contribute to the core platform used by millions of users.", JobType: "Full-time", Skills: "Go, Redis, Kafka, Prometheus", JobLink: "https://apply.linkedin.com/job/5"},
-		{JobID: "L006", Title: "DevOps Engineer", Company: "IBM", Location: "Cologne", PostedDate: "2024-04-06", Link: "https://linkedin.com/jobs/6", Processed: true, Source: "LinkedIn", JobDescription: "Maintain and scale cloud-based infrastructure for large applications.", JobType: "Remote", Skills: "AWS, Terraform, Docker, Monitoring", JobLink: "https://apply.linkedin.com/job/6"},
-		
-		// Xing Jobs
-		{JobID: "X001", Title: "Software Engineer", Company: "Xing", Location: "Hamburg", PostedDate: "2024-04-01", Link: "https://xing.com/jobs/1", Processed: true, Source: "Xing", JobDescription: "Join Xing as a Software Engineer working on scalable APIs.", JobType: "Full-time", Skills: "Go, REST APIs, MySQL, Docker", JobLink: "https://apply.xing.com/job/1"},
-		{JobID: "X002", Title: "DevOps Engineer", Company: "SAP", Location: "Berlin", PostedDate: "2024-04-02", Link: "https://xing.com/jobs/2", Processed: true, Source: "Xing", JobDescription: "DevOps position focusing on automation and observability.", JobType: "Remote", Skills: "CI/CD, Grafana, Prometheus, Bash, Terraform", JobLink: "https://apply.xing.com/job/2"},
-		{JobID: "X003", Title: "Software Engineer", Company: "Siemens", Location: "Munich", PostedDate: "2024-04-03", Link: "https://xing.com/jobs/3", Processed: true, Source: "Xing", JobDescription: "Help modernize our legacy systems into cloud-native services.", JobType: "Full-time", Skills: "AWS, Kubernetes, Go, Monolith Refactoring", JobLink: "https://apply.xing.com/job/3"},
-		{JobID: "X004", Title: "DevOps Engineer", Company: "Allianz", Location: "Cologne", PostedDate: "2024-04-04", Link: "https://xing.com/jobs/4", Processed: true, Source: "Xing", JobDescription: "Implement CI/CD pipelines and improve deployment efficiency.", JobType: "Part-time", Skills: "GitLab CI, Docker, Helm, Kubernetes", JobLink: "https://apply.xing.com/job/4"},
-	}
-	
-
-	// Insert the jobs into the database
-	if err := db.Create(&jobs).Error; err != nil {
-        log.Printf("Error seeding jobs: %v", err)
+func SeedJobs(collection *mongo.Collection) {
+    jobs := []Job{
+        {JobID: "L001", Title: "Software Engineer", Company: "LinkedIn", Location: "Berlin", PostedDate: "2024-04-01", Link: "https://linkedin.com/jobs/1", Processed: true, Source: "LinkedIn", JobDescription: "We are looking for a skilled Software Engineer to build scalable systems.", JobType: "Full-time", Skills: "Go, REST, Microservices, Docker", JobLink: "https://apply.linkedin.com/job/1"},
+        {JobID: "L002", Title: "DevOps Engineer", Company: "Google", Location: "Munich", PostedDate: "2024-04-02", Link: "https://linkedin.com/jobs/2", Processed: true, Source: "LinkedIn", JobDescription: "Join our DevOps team to manage CI/CD pipelines and cloud infrastructure.", JobType: "Full-time", Skills: "CI/CD, Jenkins, AWS, Docker, Kubernetes", JobLink: "https://apply.linkedin.com/job/2"},
+        {JobID: "L003", Title: "Software Engineer", Company: "Meta", Location: "Hamburg", PostedDate: "2024-04-03", Link: "https://linkedin.com/jobs/3", Processed: true, Source: "LinkedIn", JobDescription: "Develop backend services with Go and microservices architecture.", JobType: "Remote", Skills: "Go, gRPC, PostgreSQL, Docker", JobLink: "https://apply.linkedin.com/job/3"},
+        {JobID: "L004", Title: "Software Engineer", Company: "Meta", Location: "Hamburg", PostedDate: "2024-04-03", Link: "https://linkedin.com/jobs/3", Processed: true, Source: "LinkedIn", JobDescription: "Develop backend services with Go and microservices architecture.", JobType: "Remote", Skills: "Go, gRPC, PostgreSQL, Docker", JobLink: "https://apply.linkedin.com/job/3"},
+        {JobID: "L005", Title: "Software Engineer", Company: "Meta", Location: "Hamburg", PostedDate: "2024-04-03", Link: "https://linkedin.com/jobs/3", Processed: true, Source: "LinkedIn", JobDescription: "Develop backend services with Go and microservices architecture.", JobType: "Remote", Skills: "Go, gRPC, PostgreSQL, Docker", JobLink: "https://apply.linkedin.com/job/3"},
+        {JobID: "L006", Title: "Software Engineer", Company: "Meta", Location: "Hamburg", PostedDate: "2024-04-03", Link: "https://linkedin.com/jobs/3", Processed: true, Source: "LinkedIn", JobDescription: "Develop backend services with Go and microservices architecture.", JobType: "Remote", Skills: "Go, gRPC, PostgreSQL, Docker", JobLink: "https://apply.linkedin.com/job/3"},
+        {JobID: "L007", Title: "Software Engineer", Company: "Meta", Location: "Hamburg", PostedDate: "2024-04-03", Link: "https://linkedin.com/jobs/3", Processed: true, Source: "LinkedIn", JobDescription: "Develop backend services with Go and microservices architecture.", JobType: "Remote", Skills: "Go, gRPC, PostgreSQL, Docker", JobLink: "https://apply.linkedin.com/job/3"},
+        {JobID: "L008", Title: "Software Engineer", Company: "Meta", Location: "Hamburg", PostedDate: "2024-04-03", Link: "https://linkedin.com/jobs/3", Processed: true, Source: "LinkedIn", JobDescription: "Develop backend services with Go and microservices architecture.", JobType: "Remote", Skills: "Go, gRPC, PostgreSQL, Docker", JobLink: "https://apply.linkedin.com/job/3"},
+        {JobID: "L009", Title: "Software Engineer", Company: "Meta", Location: "Hamburg", PostedDate: "2024-04-03", Link: "https://linkedin.com/jobs/3", Processed: true, Source: "LinkedIn", JobDescription: "Develop backend services with Go and microservices architecture.", JobType: "Remote", Skills: "Go, gRPC, PostgreSQL, Docker", JobLink: "https://apply.linkedin.com/job/3"},
+        {JobID: "L010", Title: "Software Engineer", Company: "Meta", Location: "Hamburg", PostedDate: "2024-04-03", Link: "https://linkedin.com/jobs/3", Processed: true, Source: "LinkedIn", JobDescription: "Develop backend services with Go and microservices architecture.", JobType: "Remote", Skills: "Go, gRPC, PostgreSQL, Docker", JobLink: "https://apply.linkedin.com/job/3"},
+        {JobID: "L011", Title: "DevOps Engineer", Company: "Google", Location: "Munich", PostedDate: "2024-04-02", Link: "https://linkedin.com/jobs/2", Processed: true, Source: "LinkedIn", JobDescription: "Join our DevOps team to manage CI/CD pipelines and cloud infrastructure.", JobType: "Full-time", Skills: "CI/CD, Jenkins, AWS, Docker, Kubernetes", JobLink: "https://apply.linkedin.com/job/2"},
+        {JobID: "L012", Title: "Software Engineer", Company: "LinkedIn", Location: "Berlin", PostedDate: "2024-04-01", Link: "https://linkedin.com/jobs/1", Processed: true, Source: "LinkedIn", JobDescription: "We are looking for a skilled Software Engineer to build scalable systems.", JobType: "Full-time", Skills: "Go, REST, Microservices, Docker", JobLink: "https://apply.linkedin.com/job/1"},
+        {JobID: "L013", Title: "Software Engineer", Company: "Meta", Location: "Hamburg", PostedDate: "2024-04-03", Link: "https://linkedin.com/jobs/3", Processed: true, Source: "LinkedIn", JobDescription: "Develop backend services with Go and microservices architecture.", JobType: "Remote", Skills: "Go, gRPC, PostgreSQL, Docker", JobLink: "https://apply.linkedin.com/job/3"},
+        {JobID: "L014", Title: "DevOps Engineer", Company: "Google", Location: "Munich", PostedDate: "2024-04-02", Link: "https://linkedin.com/jobs/2", Processed: true, Source: "LinkedIn", JobDescription: "Join our DevOps team to manage CI/CD pipelines and cloud infrastructure.", JobType: "Full-time", Skills: "CI/CD, Jenkins, AWS, Docker, Kubernetes", JobLink: "https://apply.linkedin.com/job/2"},
+        {JobID: "L015", Title: "Software Engineer", Company: "LinkedIn", Location: "Berlin", PostedDate: "2024-04-01", Link: "https://linkedin.com/jobs/1", Processed: true, Source: "LinkedIn", JobDescription: "We are looking for a skilled Software Engineer to build scalable systems.", JobType: "Full-time", Skills: "Go, REST, Microservices, Docker", JobLink: "https://apply.linkedin.com/job/1"},
+        {JobID: "L016", Title: "Software Engineer", Company: "Meta", Location: "Hamburg", PostedDate: "2024-04-03", Link: "https://linkedin.com/jobs/3", Processed: true, Source: "LinkedIn", JobDescription: "Develop backend services with Go and microservices architecture.", JobType: "Remote", Skills: "Go, gRPC, PostgreSQL, Docker", JobLink: "https://apply.linkedin.com/job/3"},
+        {JobID: "L017", Title: "DevOps Engineer", Company: "Google", Location: "Munich", PostedDate: "2024-04-02", Link: "https://linkedin.com/jobs/2", Processed: true, Source: "LinkedIn", JobDescription: "Join our DevOps team to manage CI/CD pipelines and cloud infrastructure.", JobType: "Full-time", Skills: "CI/CD, Jenkins, AWS, Docker, Kubernetes", JobLink: "https://apply.linkedin.com/job/2"},
+        {JobID: "L018", Title: "Software Engineer", Company: "LinkedIn", Location: "Berlin", PostedDate: "2024-04-01", Link: "https://linkedin.com/jobs/1", Processed: true, Source: "LinkedIn", JobDescription: "We are looking for a skilled Software Engineer to build scalable systems.", JobType: "Full-time", Skills: "Go, REST, Microservices, Docker", JobLink: "https://apply.linkedin.com/job/1"},
+        {JobID: "L019", Title: "Software Engineer", Company: "Meta", Location: "Hamburg", PostedDate: "2024-04-03", Link: "https://linkedin.com/jobs/3", Processed: true, Source: "LinkedIn", JobDescription: "Develop backend services with Go and microservices architecture.", JobType: "Remote", Skills: "Go, gRPC, PostgreSQL, Docker", JobLink: "https://apply.linkedin.com/job/3"},
+        {JobID: "L020", Title: "DevOps Engineer", Company: "Google", Location: "Munich", PostedDate: "2024-04-02", Link: "https://linkedin.com/jobs/2", Processed: true, Source: "LinkedIn", JobDescription: "Join our DevOps team to manage CI/CD pipelines and cloud infrastructure.", JobType: "Full-time", Skills: "CI/CD, Jenkins, AWS, Docker, Kubernetes", JobLink: "https://apply.linkedin.com/job/2"},
+        {JobID: "L021", Title: "Software Engineer", Company: "LinkedIn", Location: "Berlin", PostedDate: "2024-04-01", Link: "https://linkedin.com/jobs/1", Processed: true, Source: "LinkedIn", JobDescription: "We are looking for a skilled Software Engineer to build scalable systems.", JobType: "Full-time", Skills: "Go, REST, Microservices, Docker", JobLink: "https://apply.linkedin.com/job/1"},
     }
-	log.Printf("Successfully seeeded jobs")
+
+
+    var jobsToUpdate []mongo.WriteModel
+    for _, job := range jobs {
+        // Validate that jobID is not empty or null
+        if job.JobID == "" || strings.TrimSpace(job.JobID) == "" {
+            log.Printf("Skipping job with invalid or empty JobID: %s", job.JobID)
+            continue
+        }
+
+        // Create the BSON document for update
+        jobBson := bson.M{
+            "job_id":         job.JobID,
+            "title":          job.Title,
+            "company":        job.Company,
+            "location":       job.Location,
+            "posted_date":    job.PostedDate,
+            "link":           job.Link,
+            "processed":      job.Processed,
+            "source":         job.Source,
+            "job_description": job.JobDescription,
+            "job_type":       job.JobType,
+            "skills":         job.Skills,
+            "job_link":       job.JobLink,
+        }
+
+        // Debug: Print the BSON document for update
+
+
+        // Prepare the update operation (upsert to insert if not exists)
+        filter := bson.M{"job_id": job.JobID}
+        update := bson.M{"$set": jobBson}
+
+        // Add to jobsToUpdate array as a WriteModel
+        jobsToUpdate = append(jobsToUpdate, mongo.NewUpdateOneModel().
+            SetFilter(filter).
+            SetUpdate(update).
+            SetUpsert(true)) // Use upsert to insert if the document doesn't exist
+    }
+
+    // Debug: Print the total number of valid jobs to be updated/inserted
+    log.Printf("Total jobs to update/insert: %d", len(jobsToUpdate))
+
+    if len(jobsToUpdate) > 0 {
+        // Perform bulk update operation
+        result, err := collection.BulkWrite(context.Background(), jobsToUpdate)
+        if err != nil {
+            log.Printf("Error updating jobs: %v", err)
+        } else {
+            log.Printf("Successfully updated/inserted jobs. Matched %d, Modified %d, Inserted %d.",
+                result.MatchedCount, result.ModifiedCount, result.UpsertedCount)
+        }
+    } else {
+        log.Println("No valid jobs to update/insert.")
+    }
 }

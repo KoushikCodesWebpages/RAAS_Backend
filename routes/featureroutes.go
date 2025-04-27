@@ -20,28 +20,20 @@ func SetupFeatureRoutes(r *gin.Engine, client *mongo.Client, cfg *config.Config)
 	{
 		seekerProfileRoutes.GET("", seekerProfileHandler.GetSeekerProfile)
 	}
+	jobRetrievalRoutes := r.Group("/api/jobs")
+	jobRetrievalRoutes.Use(middleware.AuthMiddleware())      // Auth middleware for authentication
+	jobRetrievalRoutes.Use(middleware.PaginationMiddleware) // Pagination middleware for pagination logic
+	{
+		jobRetrievalRoutes.GET("", features.JobRetrievalHandler)
+	}
 
-	// // Initialize the SeekerHandler
-	// seekerHandler := repo.NewSeekerHandler(client)
-
-	// // Define the route for getting seeker profile
-	// r.GET("/seeker/profile", middleware.AuthMiddleware(), seekerHandler.GetSeeker)
-	// r.GET("/seeker", middleware.AuthMiddleware(), seekerHandler.GetAllSeekers)
-
-	// // JOB DATA routes
-	// jobRetrievalRoutes := r.Group("/api/jobs")
-	// jobRetrievalRoutes.Use(middleware.AuthMiddleware())
-	// {
-	// 	jobRetrievalRoutes.GET("", features.JobRetrievalHandler)
-	// }
-
-	// // JOB METADATA routes
-	// jobDataHandler := features.NewJobDataHandler(client)
-	// jobMetaRoutes := r.Group("/api/job-data")
-	// jobMetaRoutes.Use(middleware.AuthMiddleware())
-	// {
-	// 	jobMetaRoutes.GET("", jobDataHandler.GetAllJobs)
-	// }
+	// JOB METADATA routes
+	jobDataHandler := features.NewJobDataHandler()
+	jobMetaRoutes := r.Group("/api/job-data")
+	jobMetaRoutes.Use(middleware.AuthMiddleware())
+	{
+		jobMetaRoutes.GET("", jobDataHandler.GetAllJobs)
+	}
 
 	// selectedJobsHandler := features.NewSelectedJobsHandler(client)
 	// selectedJobsRoutes := r.Group("/selected-jobs")
