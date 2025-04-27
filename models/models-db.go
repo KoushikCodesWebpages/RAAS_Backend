@@ -43,8 +43,6 @@ func InitDB(cfg *config.Config) (*mongo.Client, *mongo.Database) {
 	collection := MongoDB.Collection("jobs") // Replace with your actual collection name
 	SeedJobs(collection)
 
-	
-
 
 	// Return the client and MongoDB database instances
 	return client, MongoDB
