@@ -48,7 +48,7 @@ func SetupRoutes(r *gin.Engine, client *mongo.Client, cfg *config.Config) {
 	// Call SetupAuthRoutes, SetupDataEntryRoutes, SetupFeatureRoutes
 	SetupAuthRoutes(r, cfg)
 	SetupDataEntryRoutes(r, client, cfg)
-	// SetupFeatureRoutes(r, client, cfg)
+	SetupFeatureRoutes(r, client, cfg)
 
 	// Reset DB route (update the handler to work with MongoDB)
 	r.POST("/api/reset-db", repo.ResetDBHandler)

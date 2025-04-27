@@ -80,7 +80,41 @@ func CreateSeekerIndexes(collection *mongo.Collection) error {
 		Options: options.Index().SetUnique(true),        
 	}
 	_, err := collection.Indexes().CreateOne(context.Background(), indexModel)
-	return err
+	if err != nil {
+		return err
+	}
+
+	// Create hashed index for primary_title
+	primaryTitleIndex := mongo.IndexModel{
+		Keys:    bson.D{{Key: "primary_title", Value: "hashed"}},
+		Options: options.Index().SetName("primary_title_hashed"),
+	}
+	_, err = collection.Indexes().CreateOne(context.Background(), primaryTitleIndex)
+	if err != nil {
+		return err
+	}
+
+	// Create hashed index for secondary_title
+	secondaryTitleIndex := mongo.IndexModel{
+		Keys:    bson.D{{Key: "secondary_title", Value: "hashed"}},
+		Options: options.Index().SetName("secondary_title_hashed"),
+	}
+	_, err = collection.Indexes().CreateOne(context.Background(), secondaryTitleIndex)
+	if err != nil {
+		return err
+	}
+
+	// Create hashed index for tertiary_title
+	tertiaryTitleIndex := mongo.IndexModel{
+		Keys:    bson.D{{Key: "tertiary_title", Value: "hashed"}},
+		Options: options.Index().SetName("tertiary_title_hashed"),
+	}
+	_, err = collection.Indexes().CreateOne(context.Background(), tertiaryTitleIndex)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 type Admin struct {

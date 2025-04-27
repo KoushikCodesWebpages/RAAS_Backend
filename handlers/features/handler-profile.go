@@ -1,148 +1,220 @@
 package features
 
-// import (
-// 	"github.com/gin-gonic/gin"
-// 	"gorm.io/gorm"
-// 	"github.com/google/uuid"
-// 	"net/http"
-// 	"time"
-// 	"encoding/json"
-// 	"fmt"
-// 	"RAAS/models"
-// 	"RAAS/dto"
-// )
+import (
+	"context"
+	"github.com/gin-gonic/gin"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"log"
+	"net/http"
+	"time"
+	"RAAS/dto"
+	"RAAS/models"
+)
 
-// // SeekerProfileHandler struct for managing seeker profile
-// type SeekerProfileHandler struct {
-// 	DB *gorm.DB
-// }
+type SeekerProfileHandler struct{}
 
-// // NewSeekerProfileHandler returns a new SeekerProfileHandler instance
-// func NewSeekerProfileHandler(db *gorm.DB) *SeekerProfileHandler {
-// 	return &SeekerProfileHandler{DB: db}
-// }
-// func (h *SeekerProfileHandler) GetSeekerProfile(c *gin.Context) {
-//     userID := c.MustGet("userID").(uuid.UUID)
+func NewSeekerProfileHandler() *SeekerProfileHandler {
+	return &SeekerProfileHandler{}
+}
 
-//     var seeker models.Seeker
-//     if err := h.DB.Where("auth_user_id = ?", userID).First(&seeker).Error; err != nil {
-//         c.JSON(http.StatusNoContent, gin.H{"error": "Seeker not found"})
-//         return
-//     }
+// GetSeekerProfile retrieves the profile for the authenticated user
+func (h *SeekerProfileHandler) GetSeekerProfile(c *gin.Context) {
+	// Get authenticated user ID and db from context
+	userID := c.MustGet("userID").(string)
+	db := c.MustGet("db").(*mongo.Database)
 
-//     // Unmarshal PersonalInfo
-//     var personalInfo struct {
-//         FirstName  string  `json:"firstName"`
-//         SecondName *string `json:"secondName"`
-//     }
-//     if err := json.Unmarshal(seeker.PersonalInfo, &personalInfo); err != nil {
-//         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse personal info"})
-//         return
-//     }
+	seekersCollection := db.Collection("seekers")
 
-//     // Unmarshal ProfessionalSummary
-//     var summary struct {
-//         Skills []string `json:"skills"`
-//     }
-//     if err := json.Unmarshal(seeker.ProfessionalSummary, &summary); err != nil {
-//         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse professional summary"})
-//         return
-//     }
+	// Set a timeout for the MongoDB operation
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
-//     // Unmarshal WorkExperiences
-//     var workExperiences []map[string]interface{}
-//     if len(seeker.WorkExperiences) > 0 {
-//         if err := json.Unmarshal(seeker.WorkExperiences, &workExperiences); err != nil {
-//             fmt.Printf("Failed to unmarshal work experiences: %v\n", err)
-//             c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse work experiences", "details": err.Error()})
-//             return
-//         }
-//     }
+	// Find the seeker by auth_user_id
+	var seeker models.Seeker
+	err := seekersCollection.FindOne(ctx, bson.M{"auth_user_id": userID}).Decode(&seeker)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Seeker profile not found"})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error retrieving seeker profile"})
+		}
+		log.Printf("Error retrieving seeker profile for auth_user_id: %s, Error: %v", userID, err)
+		return
+	}
 
-//     // Total experience in months
-//     totalExperienceInMonths := 0
-//     for _, w := range workExperiences {
-//         startDate, err := time.Parse("2006-01-02", w["startDate"].(string))
-//         if err != nil {
-//             fmt.Printf("Error parsing start date: %v\n", err)
-//             continue
-//         }
+	// Map seeker to SeekerProfileDTO
+	profile := dto.SeekerProfileDTO{
+		AuthUserID:                  seeker.AuthUserID,
+		FirstName:                   dereferenceString(getOptionalField(seeker.PersonalInfo, "first_name")),
+		SecondName:                  getOptionalField(seeker.PersonalInfo, "second_name"),
+		Skills:                      extractSkills(seeker.ProfessionalSummary),
+		TotalExperienceInMonths:     getExperienceInMonths(seeker.WorkExperiences),
+		Certificates:                extractCertificates(seeker.Certificates),
+		PreferredJobTitle:           seeker.PrimaryTitle,
+		SubscriptionTier:            seeker.SubscriptionTier,
+		DailySelectableJobsCount:    seeker.DailySelectableJobsCount,
+		DailyGeneratableCV:          seeker.DailyGeneratableCV,
+		DailyGeneratableCoverletter: seeker.DailyGeneratableCoverletter,
+		TotalApplications:           seeker.TotalApplications,
+		TotalJobsAvailable:          0, // For now, as you said
+		ProfileCompletion:           calculateProfileCompletion(seeker),
+	}
 
-//         var endDate time.Time
-//         if endStr, ok := w["endDate"].(string); ok && endStr != "" {
-//             endDate, err = time.Parse("2006-01-02", endStr)
-//             if err != nil {
-//                 fmt.Printf("Error parsing end date: %v\n", err)
-//                 continue
-//             }
-//         } else {
-//             endDate = time.Now() // Current time if end date is missing
-//         }
+	c.JSON(http.StatusOK, profile)
+}
 
-//         duration := endDate.Sub(startDate)
-//         totalExperienceInMonths += int(duration.Hours() / 24 / 30) // Convert to months
-//     }
 
-//     // Unmarshal Certificates
-//     var certificates []struct {
-//         CertificateName string `json:"certificateName"`
-//     }
-//     if err := json.Unmarshal(seeker.Certificates, &certificates); err != nil {
-//         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse certificates"})
-//         return
-//     }
 
-//     certNames := make([]string, 0, len(certificates))
-//     for _, cert := range certificates {
-//         certNames = append(certNames, cert.CertificateName)
-//     }
+func dereferenceString(str *string) string {
+	if str != nil {
+		return *str
+	}
+	return "" // Return an empty string if the pointer is nil
+}
 
-//     // Unmarshal Languages
-//     var languages []struct {
-//         LanguageName string `json:"languageName"`
-//     }
-//     if err := json.Unmarshal(seeker.Languages, &languages); err != nil {
-//         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse languages"})
-//         return
-//     }
 
-//     // Count total available jobs
-//     var totalJobs int64
-//     if err := h.DB.Model(&models.Job{}).Count(&totalJobs).Error; err != nil {
-//         c.JSON(http.StatusInternalServerError, gin.H{"error": "Error fetching total jobs"})
-//         return
-//     }
+// Helper function to get optional fields
+func getOptionalField(info bson.M, field string) *string {
+	if val, ok := info[field]; ok && val != nil {
+		v := val.(string)
+		return &v
+	}
+	return nil
+}
 
-//     // Profile completion logic
-//     completion := 70
-//     if seeker.SubscriptionTier != "" &&
-//         personalInfo.FirstName != "" &&
-//         len(summary.Skills) > 0 &&
-//         totalExperienceInMonths > 0 &&
-//         len(certNames) > 0 &&
-//         len(languages) > 0 &&
-//         seeker.PrimaryTitle != "" {
-//         completion = 100
-//     }
+// Extract skills safely
+func extractSkills(professionalSummary bson.M) []string {
+	if val, ok := professionalSummary["skills"].(primitive.A); ok {
+		var skills []string
+		for _, skill := range val {
+			if str, ok := skill.(string); ok {
+				skills = append(skills, str)
+			}
+		}
+		return skills
+	}
+	return nil
+}
 
-//     // Build and return DTO
-//     dto := dto.SeekerProfileDTO{
-//         ID:                          seeker.ID,
-//         AuthUserID:                  seeker.AuthUserID,
-//         FirstName:                   personalInfo.FirstName,
-//         SecondName:                  personalInfo.SecondName,
-//         Skills:                      summary.Skills,
-//         TotalExperienceInMonths:     totalExperienceInMonths,
-//         Certificates:                certNames,
-//         PreferredJobTitle:           seeker.PrimaryTitle,
-//         SubscriptionTier:            seeker.SubscriptionTier,
-//         DailySelectableJobsCount:    seeker.DailySelectableJobsCount,
-//         DailyGeneratableCV:          seeker.DailyGeneratableCV,
-//         DailyGeneratableCoverletter: seeker.DailyGeneratableCoverletter,
-//         TotalApplications:           seeker.TotalApplications,
-//         TotalJobsAvailable:          int(totalJobs),
-//         ProfileCompletion:           completion,
-//     }
+func getExperienceInMonths(workExperiences []bson.M) int {
+	totalMonths := 0
+	for i, exp := range workExperiences {
+		// Print the entire work experience first
+		log.Printf("[DEBUG] Work experience #%d: %v", i+1, exp)
 
-//     c.JSON(http.StatusOK, gin.H{"profile": dto})
-// }
+		if startDate, ok := exp["start_date"].(map[string]interface{}); ok {
+			// Directly extract the Unix timestamp (in milliseconds) from the start_date map
+			startTimeUnixMillis, startOk := startDate["time"].(float64)
+			if !startOk {
+				log.Printf("[WARN] No start time found for experience #%d", i+1)
+				continue // Skip if there's no start time
+			}
+
+			// Convert the Unix timestamp (in milliseconds) to seconds
+			startTimeUnixSecs := time.Unix(int64(startTimeUnixMillis/1000), 0)
+
+			// Log the parsed start time
+			log.Printf("[DEBUG] Start time for experience #%d: %s", i+1, startTimeUnixSecs)
+
+			// Default to current time if there's no end date
+			end := time.Now()
+
+			// Check if end date exists, if it does, use it
+			if endDate, ok := exp["end_date"].(map[string]interface{}); ok && endDate["time"] != nil {
+				endTimeUnixMillis, endOk := endDate["time"].(float64)
+				if endOk {
+					// Convert the Unix timestamp (in milliseconds) to seconds
+					end = time.Unix(int64(endTimeUnixMillis/1000), 0)
+				}
+			}
+
+			// Log the parsed end time
+			log.Printf("[DEBUG] End time for experience #%d: %s", i+1, end)
+
+			// Calculate duration in months
+			years := end.Year() - startTimeUnixSecs.Year()
+			months := int(end.Month()) - int(startTimeUnixSecs.Month())
+
+			durationInMonths := years*12 + months
+			if durationInMonths < 0 {
+				durationInMonths = 0 // just in case
+			}
+
+			// Debugging log
+			log.Printf("[DEBUG] Experience #%d duration: %d months", i+1, durationInMonths)
+
+			// Add to total
+			totalMonths += durationInMonths
+		} else {
+			// Log if start date is missing
+			log.Printf("[WARN] No start date found for experience #%d", i+1)
+		}
+	}
+
+	// Debugging total experience
+	log.Printf("[DEBUG] Total experience across all entries: %d months", totalMonths)
+	return totalMonths
+}
+
+
+
+
+// Helper function to extract certificates
+func extractCertificates(certificates []bson.M) []string {
+	var result []string
+	for _, cert := range certificates {
+		if certName, ok := cert["certificate_name"].(string); ok {
+			result = append(result, certName)
+		}
+	}
+	return result
+}
+
+// Helper function to calculate profile completion
+func calculateProfileCompletion(seeker models.Seeker) int {
+	completion := 0
+
+	// Personal Info
+	if seeker.PersonalInfo != nil {
+		if seeker.PersonalInfo["first_name"] != nil {
+			completion += 10
+		}
+		if seeker.PersonalInfo["second_name"] != nil {
+			completion += 10
+		}
+	}
+
+	// Skills
+	if skills := extractSkills(seeker.ProfessionalSummary); len(skills) > 0 {
+		completion += 20
+	}
+
+	// Work Experience
+	if len(seeker.WorkExperiences) > 0 {
+		completion += 20
+	}
+
+	// Certificates
+	if len(seeker.Certificates) > 0 {
+		completion += 20
+	}
+
+	// Preferred Job Title
+	if seeker.PrimaryTitle != "" {
+		completion += 20
+	}
+
+	// Subscription Tier
+	if seeker.SubscriptionTier != "" {
+		completion += 10
+	}
+
+	// Ensure completion is capped at 100
+	if completion > 100 {
+		completion = 100
+	}
+
+	return completion
+}

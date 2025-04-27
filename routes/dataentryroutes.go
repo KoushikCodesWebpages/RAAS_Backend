@@ -23,10 +23,10 @@ func SetupDataEntryRoutes(r *gin.Engine, client *mongo.Client, cfg *config.Confi
 	personalInfoRoutes := r.Group("/personal-info")
 	personalInfoRoutes.Use(middleware.AuthMiddleware())
 	{
-		personalInfoRoutes.POST("", personalInfoHandler.CreatePersonalInfo)  // Create Personal Info
-		personalInfoRoutes.GET("", personalInfoHandler.GetPersonalInfo)      // Get Personal Info
-		personalInfoRoutes.PUT("", personalInfoHandler.UpdatePersonalInfo)   // Update Personal Info
-		personalInfoRoutes.PATCH("", personalInfoHandler.PatchPersonalInfo)  // Partial Update Personal Info
+		personalInfoRoutes.POST("", personalInfoHandler.CreatePersonalInfo)
+		personalInfoRoutes.GET("", personalInfoHandler.GetPersonalInfo)    
+		personalInfoRoutes.PUT("", personalInfoHandler.UpdatePersonalInfo)   
+		personalInfoRoutes.PATCH("", personalInfoHandler.PatchPersonalInfo)  
 	}
 
 	// PROFESSIONAL SUMMARY routes
