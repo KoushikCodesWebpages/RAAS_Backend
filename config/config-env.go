@@ -17,15 +17,21 @@ type Config struct {
 var Cfg *Config
 
 func InitConfig() error {
-	// RemoveSystemEnv() // Optional: Uncomment if you want to clear system env vars in tests
-	viper.SetConfigFile(".env") // Load from .env in the root directory
-	viper.AutomaticEnv()         // Automatically read from environment variables
+	//RemoveSystemEnv()
+	// Check if we are on Railway
+	railwayEnv := os.Getenv("RAILWAY_ENV")
+	if railwayEnv != "" {
+		// On Railway, don't load the .env file
+		fmt.Println("Running on Railway, skipping .env file load")
+	} else {
+		// Load the .env file if not on Railway
+		viper.SetConfigFile(".env")
+		viper.AutomaticEnv()
 
-	// Attempt to read the configuration file
-	if err := viper.ReadInConfig(); err != nil {
-		// Print error and continue if .env is missing
-		// You could also handle this differently depending on whether .env is critical
-		fmt.Println("No .env file found or error reading it:", err)
+		// Attempt to read the configuration file
+		if err := viper.ReadInConfig(); err != nil {
+			fmt.Println("No .env file found or error reading it:", err)
+		}
 	}
 
 	// Load different configuration components
