@@ -12,7 +12,6 @@ type Config struct {
 	Server      *ServerConfig
 	Cloud       *CloudConfig
 	Project     *ProjectConfig
-	HuggingFace *HuggingFaceConfig
 }
 
 var Cfg *Config
@@ -42,17 +41,12 @@ func InitConfig() error {
 	if err != nil {
 		return fmt.Errorf("error loading project config: %v", err)
 	}
-	hf, err := LoadHuggingFaceConfig()
-	if err != nil {
-		return fmt.Errorf("error loading HuggingFace config: %v", err)
-	}
 
 	// Set the global config variable
 	Cfg = &Config{
 		Server:      server,
 		Cloud:       cloud,
 		Project:     project,
-		HuggingFace: hf,
 	}
 
 	return nil
