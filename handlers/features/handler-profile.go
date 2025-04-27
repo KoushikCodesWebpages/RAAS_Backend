@@ -44,7 +44,16 @@ func (h *SeekerProfileHandler) GetSeekerProfile(c *gin.Context) {
 		return
 	}
 
-	// Map seeker to SeekerProfileDTO
+	var languageNames []string
+	for _, language := range seeker.Languages {
+		// Ensure 'language' is a map (bson.M), and access the "language" key
+		if lang, ok := language["language"].(string); ok {
+			languageNames = append(languageNames, lang) // Collect the language name
+		} else {
+			log.Printf("[WARN] Invalid or missing 'language' field in languages array")
+		}
+	}
+	// Map seeker to Seeker	ProfileDTO
 	profile := dto.SeekerProfileDTO{
 		AuthUserID:                  seeker.AuthUserID,
 		FirstName:                   dereferenceString(getOptionalField(seeker.PersonalInfo, "first_name")),
@@ -60,6 +69,7 @@ func (h *SeekerProfileHandler) GetSeekerProfile(c *gin.Context) {
 		TotalApplications:           seeker.TotalApplications,
 		TotalJobsAvailable:          0, // For now, as you said
 		ProfileCompletion:           calculateProfileCompletion(seeker),
+		Languages:                  languageNames, 
 	}
 
 	c.JSON(http.StatusOK, profile)

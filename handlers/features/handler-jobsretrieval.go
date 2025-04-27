@@ -93,7 +93,7 @@ func JobRetrievalHandler(c *gin.Context) {
 			fmt.Println("Error decoding job:", err) 
 			continue
 		}
-		salaryRange := randomSalary()
+		salaryRange := randomsSalary()
 		var matchScore models.MatchScore
 		if err := seekerCollection.FindOne(c, bson.M{"auth_user_id": userID, "job_id": job.JobID}).Decode(&matchScore); err != nil {
 			if err == mongo.ErrNoDocuments {
@@ -156,7 +156,7 @@ func JobRetrievalHandler(c *gin.Context) {
 	})
 }
 
-func randomSalary() dto.SalaryRange {
+func randomsSalary() dto.SalaryRange {
 	minSalary := (rand.Intn(25) + 25) * 1000 
 	maxSalary := (rand.Intn(25) + 25) * 1000 
 	if minSalary > maxSalary {

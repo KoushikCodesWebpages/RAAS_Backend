@@ -1,7 +1,7 @@
 package dto
 
 import (
-    "go.mongodb.org/mongo-driver/bson/primitive"
+
 )
 
 // Job Retrieval
@@ -40,29 +40,32 @@ type MatchScoreResponse struct {
     MatchScore float64 `json:"match_score" bson:"match_score"`
 }
 
-// SelectedJobApplication represents a job selected by a seeker.
-type SelectedJobApplication struct {
-    ID                   primitive.ObjectID `bson:"_id,omitempty"`
-    AuthUserID           string             `bson:"auth_user_id"`            // Changed to string
-    Source               string             `bson:"source"`                 // "linkedin" or "xing"
-    JobID                string             `bson:"job_id"`                 // Platform-specific job ID
-    Title                string             `bson:"title"`
-    Company              string             `bson:"company"`
-    Location             string             `bson:"location"`
-    PostedDate           string             `bson:"posted_date"`
-    Processed            bool               `bson:"processed"`
-    JobType              string             `bson:"job_type"`
-    Skills               string             `bson:"skills"`                 // Comma-separated list of required skills
-    UserSkills           string             `bson:"user_skills"`            // Comma-separated list of user skills
-    MinSalary            int                `bson:"min_salary"`             // Minimum salary
-    MaxSalary            int                `bson:"max_salary"`             // Maximum salary
-    MatchScore           float64            `bson:"match_score"`            // Match score from 0 to 100
-    Description          string             `bson:"description"`           // Job description
-    Selected             bool               `bson:"selected" default:"false"`
-    CvGenerated          bool               `bson:"cv_generated" default:"false"`
-    CoverLetterGenerated bool               `bson:"cover_letter_generated" default:"false"`
-    ViewLink             bool               `bson:"view_link" default:"false"`
+type SelectedJobResponse struct {
+	AuthUserID            string             `json:"auth_user_id"`
+	Source                string             `json:"source"`
+	JobID                 string             `json:"job_id"`
+	Title                 string             `json:"title"`
+	Company               string             `json:"company"`
+	Location              string             `json:"location"`
+	PostedDate            string             `json:"posted_date"`
+	Processed             bool               `json:"processed"`
+	JobType               string             `json:"job_type"`
+	Skills                string             `json:"skills"`
+	UserSkills            []string           `json:"user_skills"`
+	ExpectedSalary        SalaryRange        `json:"expected_salary" bson:"expected_salary"`
+	MatchScore            float64            `json:"match_score"`
+	Description           string             `json:"description"`
+	Selected              bool               `json:"selected"`
+	CvGenerated           bool               `json:"cv_generated"`
+	CoverLetterGenerated  bool               `json:"cover_letter_generated"`
+	ViewLink              bool               `json:"view_link"`
+	SelectedDate          string             `json:"selected_date"`
 }
+
+type SelectedJobApplicationInput struct {
+	JobID string `json:"job_id" binding:"required"` // Only the job_id is required for input
+}
+
 
 type SeekerProfileDTO struct {
     ID                         uint      `json:"id" bson:"id"`
@@ -95,6 +98,7 @@ type SeekerProfileDTO struct {
 
     // New: Profile completion percentage
     ProfileCompletion int `json:"profile_completion" bson:"profile_completion"`
+    Languages []string `json:"languages" bson:"languages"` 
 }
 
 // LinkResponseDTO represents the response DTO for job application links

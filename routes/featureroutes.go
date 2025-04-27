@@ -20,6 +20,7 @@ func SetupFeatureRoutes(r *gin.Engine, client *mongo.Client, cfg *config.Config)
 	{
 		seekerProfileRoutes.GET("", seekerProfileHandler.GetSeekerProfile)
 	}
+
 	jobRetrievalRoutes := r.Group("/api/jobs")
 	jobRetrievalRoutes.Use(middleware.AuthMiddleware())      // Auth middleware for authentication
 	jobRetrievalRoutes.Use(middleware.PaginationMiddleware) // Pagination middleware for pagination logic
@@ -27,13 +28,29 @@ func SetupFeatureRoutes(r *gin.Engine, client *mongo.Client, cfg *config.Config)
 		jobRetrievalRoutes.GET("", features.JobRetrievalHandler)
 	}
 
-	// JOB METADATA routes
-	jobDataHandler := features.NewJobDataHandler()
-	jobMetaRoutes := r.Group("/api/job-data")
-	jobMetaRoutes.Use(middleware.AuthMiddleware())
+	selectedJobsHandler := features.NewSelectedJobsHandler()
+
+	selectedJobsRoutes := r.Group("/api/selected-jobs")
+	selectedJobsRoutes.Use(middleware.AuthMiddleware())      // Auth middleware
+	selectedJobsRoutes.Use(middleware.PaginationMiddleware)  // Pagination middleware
 	{
-		jobMetaRoutes.GET("", jobDataHandler.GetAllJobs)
+		// Define the route for getting selected jobs
+		selectedJobsRoutes.GET("", selectedJobsHandler.GetSelectedJobs)
+		selectedJobsRoutes.POST("",selectedJobsHandler.PostSelectedJob)
 	}
+
+
+
+
+
+	// // JOB METADATA routes
+	// jobDataHandler := features.NewJobDataHandler()
+	// jobMetaRoutes := r.Group("/api/job-data")
+	// jobMetaRoutes.Use(middleware.AuthMiddleware())
+	// {
+	// 	jobMetaRoutes.GET("", jobDataHandler.GetAllJobs)
+	// }
+
 
 	// selectedJobsHandler := features.NewSelectedJobsHandler(client)
 	// selectedJobsRoutes := r.Group("/selected-jobs")
