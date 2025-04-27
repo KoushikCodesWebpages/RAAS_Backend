@@ -67,9 +67,6 @@ func LoadCloudConfig() (*CloudConfig, error) {
         GEN_API_KEY:                viper.GetString("COVER_CV_API_KEY"),
     }
 
-    // Print loaded config
-    fmt.Printf("Loaded CloudConfig: %+v\n", dbConfig)
-
     // Validate required fields
     if dbConfig.AzureStorageAccount == "" {
         return nil, fmt.Errorf("AzureStorageAccount is required but not set")
