@@ -5,9 +5,8 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
-	"gorm.io/gorm"
-
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
 	"RAAS/models"
 )
 
@@ -19,18 +18,17 @@ type LinkResponseDTO struct {
 }
 
 // LinkProviderHandler handles requests for job application links
-type LinkProviderHandler struct {
-	db *gorm.DB
-}
-
+type LinkProviderHandler struct{}
 
 // NewLinkProviderHandler returns a new instance of LinkProviderHandler
-func NewLinkProviderHandler(db *gorm.DB) *LinkProviderHandler {
-	return &LinkProviderHandler{db: db}
+func NewLinkProviderHandler() *LinkProviderHandler {
+	return &LinkProviderHandler{}
 }
 
 // PostAndGetLink handles POST requests to retrieve job application links
 func (h *LinkProviderHandler) PostAndGetLink(c *gin.Context) {
+	db := c.MustGet("db").(*mongo.Database)
+
 	var req struct {
 		JobID string `json:"job_id" binding:"required"`
 	}
@@ -41,7 +39,7 @@ func (h *LinkProviderHandler) PostAndGetLink(c *gin.Context) {
 	}
 	jobID := req.JobID
 
-	authUserID, ok := c.MustGet("userID").(uuid.UUID)
+	authUserID, ok := c.MustGet("userID").(string)
 	if !ok {
 		fmt.Println("❌ Failed to get userID from context")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to extract user ID from JWT claims"})
@@ -49,9 +47,14 @@ func (h *LinkProviderHandler) PostAndGetLink(c *gin.Context) {
 	}
 
 	// Check if the job was selected by the user
+	selectedJobCollection := db.Collection("selected_job_applications")
 	var selectedJob models.SelectedJobApplication
-	if err := h.db.Where("auth_user_id = ? AND job_id = ?", authUserID, jobID).First(&selectedJob).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
+	err := selectedJobCollection.FindOne(c, bson.M{
+		"auth_user_id": authUserID,
+		"job_id":       jobID,
+	}).Decode(&selectedJob)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
 			fmt.Println("🚫 Job not selected by the user")
 			c.JSON(http.StatusForbidden, gin.H{"error": "Job not selected by the user"})
 			return
@@ -62,9 +65,11 @@ func (h *LinkProviderHandler) PostAndGetLink(c *gin.Context) {
 	}
 
 	// Retrieve JobLink from the unified Job model
+	jobCollection := db.Collection("jobs")
 	var job models.Job
-	if err := h.db.Where("job_id = ?", jobID).First(&job).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
+	err = jobCollection.FindOne(c, bson.M{"job_id": jobID}).Decode(&job)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
 			fmt.Println("🚫 Job not found in jobs table")
 			c.JSON(http.StatusNotFound, gin.H{"error": "Job not found"})
 			return
@@ -82,9 +87,16 @@ func (h *LinkProviderHandler) PostAndGetLink(c *gin.Context) {
 	}
 
 	// Update view_link = true
-	if err := h.db.Model(&models.SelectedJobApplication{}).
-		Where("auth_user_id = ? AND job_id = ?", authUserID, jobID).
-		Update("view_link", true).Error; err != nil {
+	_, err = selectedJobCollection.UpdateOne(c,
+		bson.M{
+			"auth_user_id": authUserID,
+			"job_id":       jobID,
+		},
+		bson.M{
+			"$set": bson.M{"view_link": true},
+		},
+	)
+	if err != nil {
 		fmt.Println("⚠️ Failed to update view_link field:", err)
 	}
 

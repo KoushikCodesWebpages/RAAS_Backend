@@ -39,6 +39,14 @@ func SetupFeatureRoutes(r *gin.Engine, client *mongo.Client, cfg *config.Config)
 		selectedJobsRoutes.POST("",selectedJobsHandler.PostSelectedJob)
 	}
 
+	LinkProviderHandler := features.NewLinkProviderHandler()
+
+	// Link provider route (authenticated)
+	linkProviderRoutes := r.Group("/provide-link")
+	linkProviderRoutes.Use(middleware.AuthMiddleware())
+	{
+		linkProviderRoutes.POST("", LinkProviderHandler.PostAndGetLink)
+	}
 
 
 
@@ -102,12 +110,5 @@ func SetupFeatureRoutes(r *gin.Engine, client *mongo.Client, cfg *config.Config)
 	// 	cvRoutes.GET("", cvMetaHandler.GetCVMetadata)
 	// }
 
-	// LinkProviderHandler := features.NewLinkProviderHandler(client)
 
-	// // Link provider route (authenticated)
-	// linkProviderRoutes := r.Group("/provide-link")
-	// linkProviderRoutes.Use(middleware.AuthMiddleware())
-	// {
-	// 	linkProviderRoutes.POST("", LinkProviderHandler.PostAndGetLink)
-	// }
 }
