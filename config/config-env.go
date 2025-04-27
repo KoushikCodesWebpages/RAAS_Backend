@@ -2,37 +2,35 @@ package config
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"strings"
 
+	"github.com/joho/godotenv"
 	"github.com/spf13/viper"
 )
 
 type Config struct {
-	Server      *ServerConfig
-	Cloud       *CloudConfig
-	Project     *ProjectConfig
+	Server  *ServerConfig
+	Cloud   *CloudConfig
+	Project *ProjectConfig
 }
 
 var Cfg *Config
 
 func InitConfig() error {
-	//RemoveSystemEnv()
-	// Check if we are on Railway
-	railwayEnv := os.Getenv("RAILWAY_ENV")
-	if railwayEnv != "" {
-		// On Railway, don't load the .env file
-		fmt.Println("Running on Railway, skipping .env file load")
-	} else {
-		// Load the .env file if not on Railway
-		viper.SetConfigFile(".env")
-		viper.AutomaticEnv()
+	// RemoveSystemEnv()
 
-		// Attempt to read the configuration file
-		if err := viper.ReadInConfig(); err != nil {
-			fmt.Println("No .env file found or error reading it:", err)
+	// Load the .env file only if not running in Railway
+	if _, exists := os.LookupEnv("RAILWAY_ENVIRONMENT"); !exists {
+		err := godotenv.Load()
+		if err != nil {
+			log.Println("No .env file found, relying on system environment variables")
 		}
 	}
+
+	// Always enable Viper to read from environment variables
+	viper.AutomaticEnv()
 
 	// Load different configuration components
 	server, err := LoadServerConfig()
@@ -50,9 +48,9 @@ func InitConfig() error {
 
 	// Set the global config variable
 	Cfg = &Config{
-		Server:      server,
-		Cloud:       cloud,
-		Project:     project,
+		Server:  server,
+		Cloud:   cloud,
+		Project: project,
 	}
 
 	return nil
