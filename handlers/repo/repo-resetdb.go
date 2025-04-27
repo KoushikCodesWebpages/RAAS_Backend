@@ -67,7 +67,7 @@ func ResetDBHandler(c *gin.Context) {
 		"user_entry_timelines", 
 		"cover_letters", 
 		"cv", 
-		"selected_job_applications", 
+		"selected_job_applications",
 		"jobs", 
 		"admins",
 		"match_scores", 

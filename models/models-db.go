@@ -54,6 +54,8 @@ func resetCollections() {
 		"match_scores",
 		"user_entry_timelines",
 		"selected_job_applications",
+		"selected_jobs_applications",
+		"selected_jobs", 
 		"cover_letters",
 		"jobs",
 		"cv",

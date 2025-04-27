@@ -33,7 +33,7 @@ func (h *SelectedJobsHandler) PostSelectedJob(c *gin.Context) {
 	// Get the database from the context
 	db := c.MustGet("db").(*mongo.Database)
 	jobCollection := db.Collection("jobs")   // Collection where job data is stored
-	selectedJobsCollection := db.Collection("selected_jobs_applications") // Collection where selected jobs are stored
+	selectedJobsCollection := db.Collection("selected_job_applications") // Collection where selected jobs are stored
 	seekerCollection := db.Collection("seekers") // Collection where seeker data is stored
 
 	// Retrieve the user ID from the context
@@ -168,7 +168,7 @@ func (h *SelectedJobsHandler) PostSelectedJob(c *gin.Context) {
 func (h *SelectedJobsHandler) GetSelectedJobs(c *gin.Context) {
 	// Get the database from the context
 	db := c.MustGet("db").(*mongo.Database)
-	selectedJobsCollection := db.Collection("selected_jobs") // Collection where selected jobs are stored
+	selectedJobsCollection := db.Collection("selected_job_applications") // Collection where selected jobs are stored
 
 	// Retrieve the user ID from the context
 	userID := c.MustGet("userID").(string)
