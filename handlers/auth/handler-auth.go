@@ -49,7 +49,7 @@ func SeekerSignUp(c *gin.Context) {
 
 		err := db.Collection("auth_users").FindOne(ctx, bson.M{"email": input.Email}).Decode(&user)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "database_error", "details": err.Error()})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "email taken", "details": err.Error()})
 			return
 		}
 

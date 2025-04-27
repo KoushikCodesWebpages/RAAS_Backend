@@ -12,11 +12,11 @@ import (
 	"math/rand"
 )
 
-// JobRetrievalHandler handles the retrieval of jobs based on user's preferences and skills
+
 func JobRetrievalHandler(c *gin.Context) {
-	// Retrieve MongoDB database client and userID from the claims (context)
-	db := c.MustGet("db").(*mongo.Database)  // MongoDB database from context
-	userID := c.MustGet("userID").(string)    // User ID from claims in context (as string)
+
+	db := c.MustGet("db").(*mongo.Database)  
+	userID := c.MustGet("userID").(string)
 
 	// Define the MongoDB collections
 	seekerCollection := db.Collection("seekers")
@@ -27,7 +27,7 @@ func JobRetrievalHandler(c *gin.Context) {
 	// Fetch user's Seeker data from the MongoDB collection
 	var seeker models.Seeker
 	if err := seekerCollection.FindOne(c, bson.M{"auth_user_id": userID}).Decode(&seeker); err != nil {
-		fmt.Println("Error fetching seeker data:", err) // Log error for debugging
+		fmt.Println("Error fetching seeker data:", err)
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error fetching seeker data",
 		})
@@ -59,14 +59,10 @@ func JobRetrievalHandler(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "No preferred job titles set for user."})
 		return
 	}
-
-	// Extract skills from ProfessionalSummary (if present)
 	var skills []string
 	if seeker.ProfessionalSummary != nil {
-		skills = extractSkills(seeker.ProfessionalSummary) // Use helper function to extract skills
+		skills = extractSkills(seeker.ProfessionalSummary)
 	}
-
-	// Title filtering (case-insensitive)
 	var filter bson.M
 	conditions := []bson.M{}
 	for _, title := range preferredTitles {
@@ -77,24 +73,13 @@ func JobRetrievalHandler(c *gin.Context) {
 		filter = bson.M{"$or": conditions}
 	}
 
-	// Use pagination middleware's `page` and `limit`
-	page, limit := c.GetInt("page"), c.GetInt("limit")
-	if page < 1 {
-		page = 1
-	}
-	if limit < 1 {
-		limit = 10
-	}
+	pagination := c.MustGet("pagination").(gin.H)
+	offset := pagination["offset"].(int)
+	limit := pagination["limit"].(int)
 
-	// Calculate the skip value
-	fmt.Println("Page and limit",page,limit)
-	skip := (page - 1) * limit
-	fmt.Println("Skip value:", skip)
-
-	// Query jobs from MongoDB collection with pagination
-	cursor, err := jobCollection.Find(c, filter, options.Find().SetSkip(int64(skip)).SetLimit(int64(limit)))
+	cursor, err := jobCollection.Find(c, filter, options.Find().SetSkip(int64(offset)).SetLimit(int64(limit)))
 	if err != nil {
-		fmt.Println("Error fetching job data:", err) // Log error for debugging
+		fmt.Println("Error fetching job data:", err) 
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error fetching job data",
 		})
@@ -102,25 +87,19 @@ func JobRetrievalHandler(c *gin.Context) {
 	}
 	defer cursor.Close(c)
 
-	// Parse the job data into DTO
 	for cursor.Next(c) {
 		var job models.Job
 		if err := cursor.Decode(&job); err != nil {
-			fmt.Println("Error decoding job:", err) // Log error for debugging
+			fmt.Println("Error decoding job:", err) 
 			continue
 		}
-
-		// Generate a random salary range
 		salaryRange := randomSalary()
-
-		// Check the match score for this user and job pair
 		var matchScore models.MatchScore
 		if err := seekerCollection.FindOne(c, bson.M{"auth_user_id": userID, "job_id": job.JobID}).Decode(&matchScore); err != nil {
-			// If no match score is found, set default to 50
 			if err == mongo.ErrNoDocuments {
 				matchScore.MatchScore = 50
 			} else {
-				fmt.Println("Error fetching match score:", err) // Log error for debugging
+				fmt.Println("Error fetching match score:", err) 
 				c.JSON(http.StatusInternalServerError, gin.H{
 					"error": "Error fetching match score",
 				})
@@ -128,9 +107,8 @@ func JobRetrievalHandler(c *gin.Context) {
 			}
 		}
 
-		// Add job to jobs list with match score
 		jobs = append(jobs, dto.JobDTO{
-			Source:         "seeker", // All jobs are now stored under "seeker" in the Seeker model
+			Source:         "seeker",
 			JobID:          job.JobID,
 			Title:          job.Title,
 			Company:        job.Company,
@@ -138,54 +116,51 @@ func JobRetrievalHandler(c *gin.Context) {
 			PostedDate:     job.PostedDate,
 			Processed:      job.Processed,
 			JobType:        job.JobType,
-			Skills:         job.Skills, // Assuming Skills is part of the Job model stored in Seeker
-			UserSkills:     skills, // Use extracted skills from the ProfessionalSummary
+			Skills:         job.Skills,
+			UserSkills:     skills, 
 			ExpectedSalary: salaryRange,
-			MatchScore:     matchScore.MatchScore, // Use the fetched or default match score
-			Description:    job.JobDescription,    // Assuming Description is part of the Job model stored in Seeker
+			MatchScore:     matchScore.MatchScore, 
+			Description:    job.JobDescription,   
 		})
 	}
 
 	// Get total count of jobs for pagination
 	totalCount, err := jobCollection.CountDocuments(c, filter)
 	if err != nil {
-		fmt.Println("Error counting job data:", err) // Log error for debugging
+		fmt.Println("Error counting job data:", err) 
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error counting job data",
 		})
 		return
 	}
 
-		// Calculate next and previous page links
-		nextPage := ""
-		if int64(page)*int64(limit) < totalCount {
-			nextPage = fmt.Sprintf("/api/jobs?page=%d&limit=%d", page+1, limit)
-		}
-
-	prevPage := ""
-	if page > 1 {
-		prevPage = fmt.Sprintf("/api/jobs?page=%d&limit=%d", page-1, limit)
+	nextPage := ""
+	if int64(offset+limit) < totalCount {
+		nextPage = fmt.Sprintf("/api/jobs?offset=%d&limit=%d", offset+limit, limit)
 	}
 
-	// Respond with the filtered jobs, pagination, and links
+	prevPage := ""
+	if offset > 0 {
+		prevPage = fmt.Sprintf("/api/jobs?offset=%d&limit=%d", offset-limit, limit)
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"jobs": jobs,
 		"pagination": gin.H{
 			"total":     totalCount,
 			"next":      nextPage,
 			"prev":      prevPage,
-			"current":   page,
+			"current":   (offset / limit) + 1,
 			"per_page":  limit,
 		},
 	})
 }
 
-// Helper function to generate a random salary range (between 25k and 50k)
 func randomSalary() dto.SalaryRange {
-	minSalary := (rand.Intn(25) + 25) * 1000 // Random min salary between 25k and 50k
-	maxSalary := (rand.Intn(25) + 25) * 1000 // Random max salary between 25k and 50k
+	minSalary := (rand.Intn(25) + 25) * 1000 
+	maxSalary := (rand.Intn(25) + 25) * 1000 
 	if minSalary > maxSalary {
-		minSalary, maxSalary = maxSalary, minSalary // Ensure min is always less than max
+		minSalary, maxSalary = maxSalary, minSalary 
 	}
 	return dto.SalaryRange{Min: minSalary, Max: maxSalary}
 }
