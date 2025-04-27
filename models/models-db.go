@@ -31,7 +31,7 @@ func InitDB(cfg *config.Config) (*mongo.Client, *mongo.Database) {
 	log.Println("✅ MongoDB connection established")
 
 	// Print all collections (optional)
-	PrintAllCollections()
+	// PrintAllCollections()
 
 	// Optionally reset collections (this function could be defined elsewhere if needed)
 	// resetCollections()
@@ -40,8 +40,8 @@ func InitDB(cfg *config.Config) (*mongo.Client, *mongo.Database) {
 	CreateAllIndexes()
 
 	// Now, select the "jobs" collection
-	collection := MongoDB.Collection("jobs") // Replace with your actual collection name
-	SeedJobs(collection)
+	// collection := MongoDB.Collection("jobs") // Replace with your actual collection name
+	// SeedJobs(collection)
 
 
 	// Return the client and MongoDB database instances
@@ -51,14 +51,18 @@ func InitDB(cfg *config.Config) (*mongo.Client, *mongo.Database) {
 // Reset collections if necessary
 func resetCollections() {
 	collections := []string{
+		"admins",
+		"auth_users",
+		"seekers", 
 		"match_scores",
 		"user_entry_timelines",
 		"selected_job_applications",
 		"selected_jobs_applications",
 		"selected_jobs", 
-		"cover_letters",
-		"jobs",
-		"cv",
+		"cover_letters", 
+		"cv", 
+		"jobs", 
+		
 	}
 
 	for _, col := range collections {
@@ -141,7 +145,7 @@ func CreateAllIndexes() {
 		if err := task.CreateIndexesFunc(collection); err != nil {
 			log.Fatalf("Failed to create indexes for %s: %v", task.CollectionName, err)
 		} else {
-			log.Printf("Indexes for %s created successfully!", task.CollectionName)
+			// log.Printf("Indexes for %s created successfully!", task.CollectionName)
 		}
 	}
 }
