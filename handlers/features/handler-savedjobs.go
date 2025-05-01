@@ -54,7 +54,6 @@ func (h *SavedJobsHandler) SaveJob(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"message": "Job saved successfully"})
 }
 
-// GET /saved-jobs
 func (h *SavedJobsHandler) GetSavedJobs(c *gin.Context) {
 	db := c.MustGet("db").(*mongo.Database)
 	userID := c.MustGet("userID").(string)
@@ -66,16 +65,7 @@ func (h *SavedJobsHandler) GetSavedJobs(c *gin.Context) {
 	}
 
 	if len(savedJobIDs) == 0 {
-		c.JSON(http.StatusOK, gin.H{
-			"pagination": gin.H{
-				"total":    0,
-				"next":     "",
-				"prev":     "",
-				"current":  1,
-				"per_page": 10,
-			},
-			"jobs": []dto.JobDTO{},
-		})
+		c.JSON(http.StatusNoContent, gin.H{"message": "No saved jobs found"})
 		return
 	}
 
@@ -143,6 +133,7 @@ func (h *SavedJobsHandler) GetSavedJobs(c *gin.Context) {
 		"jobs": jobs,
 	})
 }
+
 
 // Helper function to fetch saved job IDs
 func fetchSavedJobIDs(c *gin.Context, col *mongo.Collection, userID string) ([]string, error) {
