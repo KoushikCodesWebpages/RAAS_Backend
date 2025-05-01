@@ -121,6 +121,7 @@ func CreateAllIndexes() {
 			CollectionName:    "selected_job_applications",
 			CreateIndexesFunc: CreateSelectedJobApplicationIndexes,
 		},
+		
 		{
 			CollectionName:    "cover_letters",
 			CreateIndexesFunc: CreateCoverLetterIndexes, // Add CoverLetter index creation

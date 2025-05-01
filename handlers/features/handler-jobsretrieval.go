@@ -1,7 +1,7 @@
 package features
-
 import (
 	"RAAS/dto"
+	"RAAS/handlers"
 	"RAAS/models"
 	"fmt"
 	"net/http"
@@ -16,12 +16,9 @@ func JobRetrievalHandler(c *gin.Context) {
 	db := c.MustGet("db").(*mongo.Database)
 	userID := c.MustGet("userID").(string)
 
-	seekerCollection := db.Collection("seekers")
-	jobCollection := db.Collection("jobs")
-	selectedJobCollection := db.Collection("selected_job_applications")
-
-	var seeker models.Seeker
-	if err := seekerCollection.FindOne(c, bson.M{"auth_user_id": userID}).Decode(&seeker); err != nil {
+	// --- Fetch seeker and skills using helper ---
+	seeker, skills, err := handlers.GetSeekerData(db, userID)
+	if err != nil {
 		fmt.Println("Error fetching seeker data:", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error fetching seeker data"})
 		return
@@ -32,37 +29,31 @@ func JobRetrievalHandler(c *gin.Context) {
 		return
 	}
 
-	// Collect preferred job titles
+	// --- Collect preferred titles using helper ---
 	preferredTitles := collectPreferredTitles(seeker)
 	if len(preferredTitles) == 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "No preferred job titles set for user."})
 		return
 	}
 
-	// Extract skills
-	var skills []string
-	if seeker.ProfessionalSummary != nil {
-		skills = extractSkills(seeker.ProfessionalSummary)
-	}
-
-	// Get previously selected jobs to exclude
-	appliedJobIDs, err := fetchAppliedJobIDs(c, selectedJobCollection, userID)
+	// --- Get applied jobs using helper ---
+	appliedJobIDs, err := fetchAppliedJobIDs(c, db.Collection("selected_job_applications"), userID)
 	if err != nil {
 		fmt.Println("Error fetching applied jobs:", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error fetching applied job data"})
 		return
 	}
 
-	// Build MongoDB query filter
+	// --- Build MongoDB query ---
 	filter := buildJobFilter(preferredTitles, appliedJobIDs)
 
-	// Pagination
+	// --- Pagination ---
 	pagination := c.MustGet("pagination").(gin.H)
 	offset := pagination["offset"].(int)
 	limit := pagination["limit"].(int)
 
-	// Find matching jobs
-	cursor, err := jobCollection.Find(c, filter, options.Find().SetSkip(int64(offset)).SetLimit(int64(limit)))
+	// --- Query jobs ---
+	cursor, err := db.Collection("jobs").Find(c, filter, options.Find().SetSkip(int64(offset)).SetLimit(int64(limit)))
 	if err != nil {
 		fmt.Println("Error fetching job data:", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error fetching job data"})
@@ -78,29 +69,7 @@ func JobRetrievalHandler(c *gin.Context) {
 			continue
 		}
 
-			// Generate a random salary range
-		minSalary, maxSalary := randomSalary()
-
-		// Create SalaryRange struct
-		expectedSalary := models.SalaryRange{
-			Min: minSalary,
-			Max: maxSalary,
-		}
-
-
-		// Default match score
-		matchScore := 50
-
-		// // Try fetching match score (optional)
-		// var match models.MatchScore
-		// err := seekerCollection.FindOne(c, bson.M{"auth_user_id": userID, "job_id": job.JobID}).Decode(&match)
-		// if err == nil {
-		// 	matchScore = match.MatchScore
-		// } else if err != mongo.ErrNoDocuments {
-		// 	fmt.Println("Error fetching match score:", err)
-		// 	c.JSON(http.StatusInternalServerError, gin.H{"error": "Error fetching match score"})
-		// 	return
-		// }
+		expectedSalary := dto.SalaryRange(handlers.GenerateSalaryRange())
 
 		jobs = append(jobs, dto.JobDTO{
 			Source:         "seeker",
@@ -113,21 +82,21 @@ func JobRetrievalHandler(c *gin.Context) {
 			JobType:        job.JobType,
 			Skills:         job.Skills,
 			UserSkills:     skills,
-			ExpectedSalary: dto.SalaryRange(expectedSalary),
-			MatchScore:     float64(matchScore),
+			ExpectedSalary: expectedSalary,
+			MatchScore:     50,
 			Description:    job.JobDescription,
 		})
 	}
 
-	// Total job count for pagination
-	totalCount, err := jobCollection.CountDocuments(c, filter)
+	// --- Count total jobs ---
+	totalCount, err := db.Collection("jobs").CountDocuments(c, filter)
 	if err != nil {
 		fmt.Println("Error counting job data:", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error counting job data"})
 		return
 	}
 
-	// Pagination links
+	// --- Build pagination response ---
 	nextPage := ""
 	if int64(offset+limit) < totalCount {
 		nextPage = fmt.Sprintf("/api/jobs?offset=%d&limit=%d", offset+limit, limit)
@@ -137,14 +106,14 @@ func JobRetrievalHandler(c *gin.Context) {
 		prevPage = fmt.Sprintf("/api/jobs?offset=%d&limit=%d", offset-limit, limit)
 	}
 
-	// Response
+	// --- Send response ---
 	c.JSON(http.StatusOK, gin.H{
 		"pagination": gin.H{
-			"total":     totalCount,
-			"next":      nextPage,
-			"prev":      prevPage,
-			"current":   (offset / limit) + 1,
-			"per_page":  limit,
+			"total":    totalCount,
+			"next":     nextPage,
+			"prev":     prevPage,
+			"current":  (offset / limit) + 1,
+			"per_page": limit,
 		},
 		"jobs": jobs,
 	})

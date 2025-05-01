@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	"RAAS/handlers"
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -30,140 +31,75 @@ func randomSalary() (int, int) {
 }
 // PostSelectedJob saves the selected job for the authenticated user
 func (h *SelectedJobsHandler) PostSelectedJob(c *gin.Context) {
-	// Get the database from the context
 	db := c.MustGet("db").(*mongo.Database)
-	jobCollection := db.Collection("jobs")   // Collection where job data is stored
-	selectedJobsCollection := db.Collection("selected_job_applications") // Collection where selected jobs are stored
-	seekerCollection := db.Collection("seekers") // Collection where seeker data is stored
-
-	// Retrieve the user ID from the context
 	userID := c.MustGet("userID").(string)
 
-	// Input: Expect a JobID as input to retrieve the job data
 	var input struct {
 		JobID string `json:"job_id"`
 	}
 	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Invalid request payload",
-		})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request payload"})
 		return
 	}
 
-	// Check if the job has already been selected by the user
-	var existingSelection models.SelectedJobApplication
-	err := selectedJobsCollection.FindOne(c, bson.M{"auth_user_id": userID, "job_id": input.JobID}).Decode(&existingSelection)
+	selectedJobsCollection := db.Collection("selected_job_applications")
+
+	// Prevent duplicates
+	var existing models.SelectedJobApplication
+	err := selectedJobsCollection.FindOne(c, bson.M{"auth_user_id": userID, "job_id": input.JobID}).Decode(&existing)
 	if err != mongo.ErrNoDocuments {
-		c.JSON(http.StatusConflict, gin.H{
-			"error": "You have already selected this job",
-		})
+		c.JSON(http.StatusConflict, gin.H{"error": "You have already selected this job"})
 		return
 	}
 
-	// Retrieve the job data based on the jobID
-	var job models.Job
-	if err := jobCollection.FindOne(c, bson.M{"job_id": input.JobID}).Decode(&job); err != nil {
-		fmt.Println("Error retrieving job data:", err)
-		c.JSON(http.StatusNotFound, gin.H{
-			"error": "Job not found",
-		})
+	// Reuse helper functions
+	_, skills, err := handlers.GetSeekerData(db, userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error fetching seeker data"})
 		return
 	}
 
-	// Retrieve the seeker data based on the authenticated user
-	var seeker models.Seeker
-	if err := seekerCollection.FindOne(c, bson.M{"auth_user_id": userID}).Decode(&seeker); err != nil {
-		fmt.Println("Error fetching seeker data:", err)
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Error fetching seeker data",
-		})
+	job, err := handlers.GetJobByID(db, input.JobID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Job not found"})
 		return
 	}
 
-	// Map the professional summary to skills
-	var skills []string
-	if seeker.ProfessionalSummary != nil {
-		skills = extractSkills(seeker.ProfessionalSummary)
-	}
+	expectedSalary := handlers.GenerateSalaryRange()
 
-	// Generate a random salary range
-	minSalary, maxSalary := randomSalary()
-
-	// Create SalaryRange struct
-	expectedSalary := models.SalaryRange{
-		Min: minSalary,
-		Max: maxSalary,
-	}
-
-	// Prepare the selected job data to save into the selected_jobs collection
 	selectedJob := models.SelectedJobApplication{
-		AuthUserID:            userID,
-		JobID:                 job.JobID,
-		Title:                 job.Title,
-		Company:               job.Company,
-		Location:              job.Location,
-		PostedDate:            job.PostedDate,
-		Processed:             true, // Set processed to always true
-		JobType:               job.JobType,
-		Skills:                job.Skills,
-		UserSkills:            skills, // Populating user skills from seeker profile
-		ExpectedSalary:        expectedSalary, // Set SalaryRange
-		MatchScore:            80, // Always set to 80
-		Description:           job.JobDescription,
-		Selected:              true,
-		CvGenerated:           false, // Or set to true if the CV was generated
-		CoverLetterGenerated:  false, // Or set to true if cover letter was generated
-		ViewLink:              false, // Set view link true based on your business logic
-		SelectedDate:          time.Now(),
+		AuthUserID:           userID,
+		JobID:                job.JobID,
+		Title:                job.Title,
+		Company:              job.Company,
+		Location:             job.Location,
+		PostedDate:           job.PostedDate,
+		Processed:            true,
+		JobType:              job.JobType,
+		Skills:               job.Skills,
+		UserSkills:           skills,
+		ExpectedSalary:       expectedSalary,
+		MatchScore:           80,
+		Description:          job.JobDescription,
+		Selected:             true,
+		CvGenerated:          false,
+		CoverLetterGenerated: false,
+		ViewLink:             false,
+		SelectedDate:         time.Now(),
 	}
 
-	// Insert the selected job data into the selected_jobs collection
-	_, err = selectedJobsCollection.InsertOne(c, selectedJob)
-	if err != nil {
-		fmt.Println("Error saving selected job:", err)
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to save selected job",
-		})
+	if _, err := selectedJobsCollection.InsertOne(c, selectedJob); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save selected job"})
 		return
 	}
 
-	// Update the Seeker's DailySelectableJobsCount
-	updateSeeker := bson.M{
-		"$inc": bson.M{
-			"daily_selectable_jobs_count": -1, // Reduce the count by 1
-		},
-	}
+	// Update seeker & job stats
+	_, _ = db.Collection("seekers").UpdateOne(c, bson.M{"auth_user_id": userID}, bson.M{"$inc": bson.M{"daily_selectable_jobs_count": -1}})
+	_, _ = db.Collection("jobs").UpdateOne(c, bson.M{"job_id": job.JobID}, bson.M{"$inc": bson.M{"selected_count": 1}})
 
-	_, err = seekerCollection.UpdateOne(c, bson.M{"auth_user_id": userID}, updateSeeker)
-	if err != nil {
-		fmt.Println("Error updating seeker data:", err)
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to update seeker data",
-		})
-		return
-	}
-
-	// Increment the SelectedCount in the Job model
-	updateJob := bson.M{
-		"$inc": bson.M{
-			"selected_count": 1, // Increment the selected count by 1
-		},
-	}
-
-	_, err = jobCollection.UpdateOne(c, bson.M{"job_id": job.JobID}, updateJob)
-	if err != nil {
-		fmt.Println("Error updating job data:", err)
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to update job data",
-		})
-		return
-	}
-
-	// Respond with success
-	c.JSON(http.StatusCreated, gin.H{
-		"message": "Selected job saved successfully",
-	})
+	c.JSON(http.StatusCreated, gin.H{"message": "Selected job saved successfully"})
 }
+
 
 func (h *SelectedJobsHandler) GetSelectedJobs(c *gin.Context) {
 	// Get the database from the context
