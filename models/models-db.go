@@ -31,7 +31,8 @@ func InitDB(cfg *config.Config) (*mongo.Client, *mongo.Database) {
 	log.Println("✅ MongoDB connection established")
 
 	// Print all collections (optional)
-	PrintAllCollections()
+	// air
+	
 
 	// Optionally reset collections (this function could be defined elsewhere if needed)
 	// resetCollections()
@@ -110,6 +111,10 @@ func CreateAllIndexes() {
 		{
 			CollectionName:    "admins",
 			CreateIndexesFunc: CreateAdminIndexes,
+		},
+		{
+			CollectionName: "saved_jobs",
+			CreateIndexesFunc: CreateSavedJobApplicationIndexes,
 		},
 		{
 			CollectionName:    "user_entry_timelines",

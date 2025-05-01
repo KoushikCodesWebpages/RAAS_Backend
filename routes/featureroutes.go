@@ -33,6 +33,7 @@ func SetupFeatureRoutes(r *gin.Engine, client *mongo.Client, cfg *config.Config)
 	// Saved jobs routes (authenticated)
 	savedJobsRoutes := r.Group("/saved-jobs")
 	savedJobsRoutes.Use(middleware.AuthMiddleware())
+	savedJobsRoutes.Use(middleware.PaginationMiddleware)
 	{
 		savedJobsRoutes.POST("", savedJobsHandler.SaveJob)
 		savedJobsRoutes.GET("", savedJobsHandler.GetSavedJobs)

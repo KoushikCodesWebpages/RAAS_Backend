@@ -143,6 +143,7 @@ type SavedJob struct {
 	AuthUserID            string             `bson:"auth_user_id" json:"auth_user_id"`
 	Source                string             `bson:"source" json:"source"`
 	JobID                 string             `bson:"job_id" json:"job_id"`
+	// SavedDate          time.Time          `bson:"savedDate" json:"selected_date"`
 }
 
 func CreateSavedJobApplicationIndexes(collection *mongo.Collection) error {
