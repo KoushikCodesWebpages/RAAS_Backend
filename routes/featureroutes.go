@@ -28,8 +28,19 @@ func SetupFeatureRoutes(r *gin.Engine, client *mongo.Client, cfg *config.Config)
 		jobRetrievalRoutes.GET("", features.JobRetrievalHandler)
 	}
 
-	selectedJobsHandler := features.NewSelectedJobsHandler()
+	savedJobsHandler := features.NewSavedJobsHandler()
 
+	// Saved jobs routes (authenticated)
+	savedJobsRoutes := r.Group("/saved-jobs")
+	savedJobsRoutes.Use(middleware.AuthMiddleware())
+	{
+		savedJobsRoutes.POST("", savedJobsHandler.SaveJob)
+		savedJobsRoutes.GET("", savedJobsHandler.GetSavedJobs)
+	}
+
+
+
+	selectedJobsHandler := features.NewSelectedJobsHandler()
 	selectedJobsRoutes := r.Group("/api/selected-jobs")
 	selectedJobsRoutes.Use(middleware.AuthMiddleware())      // Auth middleware
 	selectedJobsRoutes.Use(middleware.PaginationMiddleware)  // Pagination middleware

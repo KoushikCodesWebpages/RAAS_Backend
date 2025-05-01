@@ -31,7 +31,7 @@ func InitDB(cfg *config.Config) (*mongo.Client, *mongo.Database) {
 	log.Println("✅ MongoDB connection established")
 
 	// Print all collections (optional)
-	// PrintAllCollections()
+	PrintAllCollections()
 
 	// Optionally reset collections (this function could be defined elsewhere if needed)
 	// resetCollections()
@@ -57,8 +57,6 @@ func resetCollections() {
 		"match_scores",
 		"user_entry_timelines",
 		"selected_job_applications",
-		"selected_jobs_applications",
-		"selected_jobs", 
 		"cover_letters", 
 		"cv", 
 		"jobs", 

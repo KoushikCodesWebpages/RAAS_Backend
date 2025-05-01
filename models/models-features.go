@@ -143,22 +143,6 @@ type SavedJob struct {
 	AuthUserID            string             `bson:"auth_user_id" json:"auth_user_id"`
 	Source                string             `bson:"source" json:"source"`
 	JobID                 string             `bson:"job_id" json:"job_id"`
-	Title                 string             `bson:"title" json:"title"`
-	Company               string             `bson:"company" json:"company"`
-	Location              string             `bson:"location" json:"location"`
-	PostedDate            string             `bson:"posted_date" json:"posted_date"`
-	Processed             bool               `bson:"processed" json:"processed"`
-	JobType               string             `bson:"job_type" json:"job_type"`
-	Skills                string             `bson:"skills" json:"skills"`
-	UserSkills            []string           `bson:"user_skills" json:"user_skills"`
-	ExpectedSalary        SalaryRange        `json:"expected_salary" bson:"expected_salary"`
-	MatchScore            float64            `bson:"match_score" json:"match_score"`
-	Description           string             `bson:"description" json:"description"`
-	Selected              bool               `bson:"selected" json:"selected"`
-	CvGenerated           bool               `bson:"cv_generated" json:"cv_generated"`
-	CoverLetterGenerated  bool               `bson:"cover_letter_generated" json:"cover_letter_generated"`
-	ViewLink              bool               `bson:"view_link" json:"view_link"`
-	SavedDate             time.Time          `bson:"saved_date" json:"saved_date"`
 }
 
 func CreateSavedJobApplicationIndexes(collection *mongo.Collection) error {
@@ -174,15 +158,10 @@ func CreateSavedJobApplicationIndexes(collection *mongo.Collection) error {
 	}
 
 	indexModel3 := mongo.IndexModel{
-		Keys:    bson.D{{Key: "match_score", Value: "hashed"}}, 
-		Options: options.Index().SetUnique(false),
+		Keys: bson.D{{Key: "auth_user_id", Value: 1}},
 	}
-	indexModel4 := mongo.IndexModel{
-		Keys:    bson.D{{Key: "selected_date", Value: -1}},
-		Options: options.Index().SetUnique(false),
-	}
+	
 
-
-	_, err := collection.Indexes().CreateMany(context.Background(), []mongo.IndexModel{indexModel1, indexModel2, indexModel3, indexModel4})
+	_, err := collection.Indexes().CreateMany(context.Background(), []mongo.IndexModel{indexModel1, indexModel2,indexModel3})
 	return err
 }
