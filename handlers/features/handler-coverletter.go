@@ -1,348 +1,171 @@
 package features
 
-// import (
-// 	"encoding/json"
-// 	"fmt"
-// 	"net/http"
-// 	"io"
-// 	"log"
-// 	"github.com/gin-gonic/gin"
-// 	"github.com/google/uuid"
-// 	"gorm.io/gorm"
-// 	"bytes"
-// 	"strings"
+import (
+	"RAAS/handlers"
+	"RAAS/models"
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"os"
+	// "time"
 
-// 	"RAAS/models"
-// 	"RAAS/config"
-// 	"RAAS/handlers/repo"
-// )
+	"github.com/gin-gonic/gin"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+)
 
-// // CoverLetterRequest struct to receive JobID
-// type CoverLetterAndCVRequest struct {
-// 	JobID string `json:"job_id" binding:"required"`
-// }
+type CoverLetterAndCVRequest struct {
+	JobID string `json:"job_id" binding:"required"`
+}
 
-// // CoverLetterHandler struct
-// type CoverLetterHandler struct {
-// 	db     *gorm.DB
-// }
+type CoverLetterHandler struct{}
 
-// func NewCoverLetterHandler(db *gorm.DB, cfg *config.Config) *CoverLetterHandler {
-// 	return &CoverLetterHandler{
-// 		db:     db,
-// 	}
-// }
+func NewCoverLetterHandler() *CoverLetterHandler {
+	return &CoverLetterHandler{}
+}
 
-// // GenerateCoverLetterBody function to generate a cover letter body based on user and job data
-// func (h *CoverLetterHandler) PostCoverLetter(c *gin.Context) {
-// 	var req CoverLetterAndCVRequest
-// 	if err := c.ShouldBindJSON(&req); err != nil {
-// 		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing or invalid job_id in request body"})
-// 		return
-// 	}
-// 	jobID := req.JobID
-// 	userID := c.MustGet("userID").(uuid.UUID)
+func (h *CoverLetterHandler) PostCoverLetter(c *gin.Context) {
+	// Get the database and collections
+	db := c.MustGet("db").(*mongo.Database)
+	jobCollection := db.Collection("jobs")
+	seekerCollection := db.Collection("seekers")
+	AuthUserCollection := db.Collection("auth_users")
 
-// 	// Step 1: Fetch seeker
-// 	var seeker models.Seeker
-// 	if err := h.db.Where("auth_user_id = ?", userID).First(&seeker).Error; err != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve seeker data"})
-// 		return
-// 	}
+	// Get the authenticated user's ID
+	userID := c.MustGet("userID").(string)
 
-// 	if seeker.DailyGeneratableCoverletter > 0 {
-// 		seeker.DailyGeneratableCoverletter -= 1
-// 		if err := h.db.Save(&seeker).Error; err != nil {
-// 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update seeker data"})
-// 			return
-// 		}
-// 	} else {
-// 		c.JSON(http.StatusBadRequest, gin.H{"error": "Daily cover letter generation limit exceeded"})
-// 		return
-// 	}
+	// Input: Expect a JobID to retrieve job details
+	var input struct {
+		JobID string `json:"job_id"`
+	}
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid request payload",
+		})
+		return
+	}
 
-// 	// Step 2: Parse personal info
-// 	var personalInfo struct {
-// 		FirstName   string  `json:"firstName"`
-// 		SecondName  *string `json:"secondName"`
-// 		Address     string  `json:"address"`
-// 	}
-// 	if err := json.Unmarshal(seeker.PersonalInfo, &personalInfo); err != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse personal info"})
-// 		return
-// 	}
-// 	fullName := personalInfo.FirstName
-// 	if personalInfo.SecondName != nil {
-// 		fullName += " " + *personalInfo.SecondName
-// 	}
+	// Fetch the job
+	var job models.Job
+	if err := jobCollection.FindOne(c, bson.M{"job_id": input.JobID}).Decode(&job); err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"error": "Job not found",
+		})
+		return
+	}
 
-// 	// Step 3: Get email & phone from AuthUser
-// 	var authUser models.AuthUser
-// 	if err := h.db.Where("id = ?", userID).First(&authUser).Error; err != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve auth user info"})
-// 		return
-// 	}
-// 	email := authUser.Email
-// 	phone := authUser.Phone
-// 	address := personalInfo.Address
+	// Fetch the seeker
+	var seeker models.Seeker
+	if err := seekerCollection.FindOne(c, bson.M{"auth_user_id": userID}).Decode(&seeker); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Error fetching seeker data",
+		})
+		return
+	}
 
-// 	// Step 4: Parse professional summary
-// 	var summary struct {
-// 		About  string   `json:"about"`
-// 		Skills []string `json:"skills"`
-// 	}
-// 	if err := json.Unmarshal(seeker.ProfessionalSummary, &summary); err != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse professional summary"})
-// 		return
-// 	}
-// 	skillsStr := joinStrings(summary.Skills, ", ")
+	var authuser models.AuthUser
+	if err := AuthUserCollection.FindOne(c, bson.M{"auth_user_id": userID}).Decode(&authuser); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Error fetching authuser data",
+		})
+		return
+	}
 
-// 	// Step 5: Work experience
-// 	var workExperiences []map[string]interface{}
-// 	if err := json.Unmarshal(seeker.WorkExperiences, &workExperiences); err != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse work experiences"})
-// 		return
-// 	}
-// 	var workExpText string
-// 	for _, we := range workExperiences {
-// 		workExpText += fmt.Sprintf("Job Title: %s at %s. Responsibilities: %s. ",
-// 			getStr(we["jobTitle"]), getStr(we["companyName"]), getStr(we["keyResponsibilities"]))
-// 	}
+	// Get various details from seeker
+	personalInfo, _ := handlers.GetPersonalInfo(&seeker)
+	professionalSummary, _ := handlers.GetProfessionalSummary(&seeker)
+	workExperience, _ := handlers.GetWorkExperience(&seeker)
+	education, _ := handlers.GetEducation(&seeker)
+	certificates, _ := handlers.GetCertificates(&seeker)
+	languages, _ := handlers.GetLanguages(&seeker)
 
-// 	// Step 6: Education
-// 	var educations []map[string]interface{}
-// 	if err := json.Unmarshal(seeker.Educations, &educations); err != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse education"})
-// 		return
-// 	}
-// 	var eduText string
-// 	for _, edu := range educations {
-// 		eduText += fmt.Sprintf("Degree: %s from %s in %s. Achievements: %s. ",
-// 			getStr(edu["degree"]), getStr(edu["institution"]), getStr(edu["fieldOfStudy"]), getStr(edu["achievements"]))
-// 	}
+	// Construct the request body to match the API's expected format
+	apiRequestData := map[string]interface{}{
+		"user_details": map[string]interface{}{
+			"firstname":        personalInfo.FirstName,
+			"designation": seeker.PrimaryTitle,
+			"address":     personalInfo.Address,
+			"contact":     authuser.Phone,
+			"email":       authuser.Email,
+			// "portfolio":   personalInfo.Portfolio,
+			"linkedin":    personalInfo.LinkedInProfile,
+			// "tools":       seeker.Tools, // Assuming Tools field is populated correctly
+			"skills":      professionalSummary.Skills, // Assuming Skills field is populated correctly
+			"education":   education,
+			"experience_summary": workExperience,
+			"certifications": certificates,
+			"languages":    languages,
+		},
+		"job_description": map[string]interface{}{
+			"job_title":    job.Title,
+			"company":      job.Company,
+			"location":     job.Location,
+			"job_type":     job.JobType, // Assuming JobType exists in the Job model
+			"description": job.JobDescription, // Assuming Responsibilities exists in the Job model
+			// "qualifications": job.Qualifications, // Assuming Qualifications exists in the Job model
+			"skills":        job.Skills,
+			// "benefits":      job.Benefits, // Assuming Benefits exists in the Job model
+		},
+	}
 
-// 	// Step 7: Get job metadata from a single table
-// 	var companyName, jobTitle string
-// 	var job models.Job // Assuming a unified JobMetaData model
+	// Call the external API to generate the cover letter DOCX
+	docxContent, err := h.generateCoverLetter(apiRequestData)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Error generating cover letter",
+		})
+		return
+	}
 
-// 	if err := h.db.Where("job_id = ?", jobID).First(&job).Error; err != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve job metadata", "details": err.Error()})
-// 		return
-// 	}
+	// Optionally, save the DOCX file or return it to the user
+	// For now, sending the DOCX content back as response
+	c.Data(http.StatusOK, "application/vnd.openxmlformats-officedocument.wordprocessingml.document", docxContent)
+}
 
-// 	companyName = job.Company
-// 	jobTitle = job.Title
+// Helper function to send POST request to the external cover letter generation API
+func (h *CoverLetterHandler) generateCoverLetter(apiRequestData map[string]interface{}) ([]byte, error) {
+	// Load environment variables
+	apiURL := os.Getenv("COVER_LETTER_API_URL")
+	apiKey := os.Getenv("COVER_CV_API_KEY")
 
-// 	// Step 8: Generate cover letter body
-// 	coverLetterBody := generateCoverLetterBody(
-// 		fullName,
-// 		eduText,
-// 		workExpText,
-// 		skillsStr,
-// 		companyName,
-// 		jobTitle,
-// 	)
-// 	index := strings.Index(coverLetterBody, "\n\n")
-// 	if index != -1 {
-// 		coverLetterBody = coverLetterBody[index+2:]
-// 	}
-// 	coverLetterBody = strings.Split(coverLetterBody, "Sincerely")[0]
+	// Marshal cover letter data to JSON
+	jsonData, err := json.Marshal(apiRequestData)
+	if err != nil {
+		return nil, fmt.Errorf("error marshalling cover letter data: %v", err)
+	}
 
-// 	// Step 10: Generate cover letter document (commented out)
-// 		docInput := repo.CoverLetterInput{
-// 			Name:            fullName,
-// 			Email:           email,
-// 			Phone:           phone,
-// 			Address:         address,
-// 			RecipientTitle:  fmt.Sprintf("Hiring Manager at %s", companyName),
-// 			CompanyName:     companyName,
-// 			CompanyLocation: "Germany", // Or fetch this from jobMetaData if available
-// 			Body:            coverLetterBody,
-// 			Closing:         "Sincerely",
-// 		}
+	// Create a POST request to the API
+	req, err := http.NewRequest("POST", apiURL, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return nil, fmt.Errorf("error creating request: %v", err)
+	}
 
-// 		docData, err := repo.GenerateCoverLetterDocx(docInput, config.Cfg)
-// 		if err != nil {
-// 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate cover letter document", "details": err.Error()})
-// 			return
-// 		}
-// 		result := h.db.Model(&models.SelectedJobApplication{}).Where("auth_user_id = ? AND job_id = ?", userID, jobID).Update("cover_letter_generated", true)
-// 		if result.Error != nil {
-// 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update CvGenerated field"})
-// 			return
-// 		}
-// 		c.Header("Content-Disposition", "attachment; filename=cover_letter.docx")
-// 		c.Data(http.StatusOK, "application/vnd.openxmlformats-officedocument.wordprocessingml.document", docData)
+	// Set headers
+	req.Header.Set("Authorization", "Bearer "+apiKey)
+	req.Header.Set("Content-Type", "application/json")
 
-// }
+	// Send the request to the cover letter API
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("error sending request: %v", err)
+	}
+	defer resp.Body.Close()
 
+	// Check if the response status is OK
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("error response from API: %v", string(body))
+	}
 
+	// Read the DOCX content from the response
+	docxFileContent, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("error reading DOCX content: %v", err)
+	}
 
-// // Helper function to join strings with commas
-// func joinStrings(arr []string, delimiter string) string {
-// 	return fmt.Sprintf("%s", arr)
-// }
-
-
-// func getStr(value interface{}) string {
-//     if str, ok := value.(string); ok {
-//         return str
-//     }
-//     return ""
-// }
-
-
-
-
-// // Global variables
-// var (
-// 	RoundRobinModelIndex int
-// 	HFModels             []string
-// 	APIKey               string
-// 	HFBaseAPIURL         string
-// )
-
-// func LoadHFModels() ([]string, error) {
-// 	models := []string{
-// 		config.Cfg.HuggingFace.HFModelForCL1,
-// 		config.Cfg.HuggingFace.HFModelForCL2,
-// 		config.Cfg.HuggingFace.HFModelForCL3,
-// 		config.Cfg.HuggingFace.HFModelForCL4,
-// 		config.Cfg.HuggingFace.HFModelForCL5,
-// 		config.Cfg.HuggingFace.HFModelForCL6,
-// 		config.Cfg.HuggingFace.HFModelForCL7,
-// 		config.Cfg.HuggingFace.HFModelForCL8,
-// 		config.Cfg.HuggingFace.HFModelForCL9,
-// 		config.Cfg.HuggingFace.HFModelForCL10,
-// 	}
-
-// 	for _, model := range models {
-// 		if model == "" {
-// 			log.Printf("Error loading Hugging Face models: one or more models are not defined")
-// 			return nil, fmt.Errorf("one or more models are not defined")
-// 		}
-// 	}
-
-// 	//log.Printf("Loaded Hugging Face models: %+v", models)
-
-// 	return models, nil
-// }
-
-
-// // prepareCoverLetterPrompt prepares the input prompt and API URL for the Hugging Face API
-// func prepareCoverLetterPrompt(name, education, experience, skills, company, role string) (string, string, error) {
-// 	if name == "" || education == "" || experience == "" || skills == "" || company == "" || role == "" {
-// 		//log.Println("Error: Missing required field. All input fields must be provided.")
-// 		return "", "", fmt.Errorf("error: Missing required information")
-// 	}
-
-// 	HFModels, err := LoadHFModels()
-// 	if err != nil {
-// 		//log.Printf("Failed to load models: %v", err)
-// 		return "", "", fmt.Errorf("error loading Hugging Face models: %w", err)
-// 	}
-
-// 	if len(HFModels) == 0 {
-// 		//log.Println("Error: HFModels is empty. Cannot generate cover letter.")
-// 		return "", "", fmt.Errorf("error: No Hugging Face models available")
-// 	}
-
-// 	//log.Printf("Loaded Hugging Face models: %v", HFModels)
-
-// 	modelToUse := HFModels[RoundRobinModelIndex]
-// 	//log.Printf("Selected model: %s", modelToUse)
-
-// 	if config.Cfg.HuggingFace.HFBaseAPIUrl == "" {
-// 		//log.Println("Error: Hugging Face base API URL is not set")
-// 		return "", "", fmt.Errorf("error: Hugging Face base API URL is not set")
-// 	}
-// 	apiURL := fmt.Sprintf("%s/%s", config.Cfg.HuggingFace.HFBaseAPIUrl, modelToUse)
-
-// 	RoundRobinModelIndex = (RoundRobinModelIndex + 1) % len(HFModels)
-// 	prompt := fmt.Sprintf(`
-// 	Do not include greeting or Sincerely(Closing)) when you have to
-// 	Write the body of a professional cover letter for %s applying for the %s role at %s.
-// 	Education: %s. Experience: %s. Skills: %s.
-// 	Write at only 2 well-structured paragraphs focusing on motivation, qualifications, and alignment with the role.
-// 	.
-// 	`, name, role, company, education, experience, skills)
-
-// 	log.Printf("Generated prompt: %s", prompt)
-
-// 	return prompt, apiURL, nil
-// }
-
-// // callHuggingFaceAPI sends a request to the Hugging Face API and returns the generated text
-// func callHuggingFaceAPI(prompt, apiURL string) (string, error) {
-//     requestBody, err := json.Marshal(map[string]interface{}{
-//         "inputs": prompt,
-//         "parameters": map[string]interface{}{
-//             "max_length": 1000,    // Increase the length of the response
-//         },
-//     })
-//     if err != nil {
-//         log.Printf("Error creating JSON request: %v", err)
-//         return "", fmt.Errorf("error: Failed to create request")
-//     }
-
-//     req, err := http.NewRequest("POST", apiURL, bytes.NewBuffer(requestBody))
-//     if err != nil {
-//         log.Printf("Error creating request: %v", err)
-//         return "", fmt.Errorf("error: Failed to create API request")
-//     }
-
-//     req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", config.Cfg.HuggingFace.HFAPIKey))
-//     req.Header.Set("Content-Type", "application/json")
-
-//     client := &http.Client{}
-//     resp, err := client.Do(req)
-//     if err != nil {
-//         log.Printf("Error making API request: %v", err)
-//         return "", fmt.Errorf("error: Failed to reach AI service")
-//     }
-//     defer resp.Body.Close()
-
-//     log.Printf("API Response Status: %s", resp.Status)
-
-//     body, err := io.ReadAll(resp.Body)
-//     if err != nil {
-//         log.Printf("Error reading response: %v", err)
-//         return "", fmt.Errorf("error: Failed to read AI response")
-//     }
-
-//     log.Printf("Raw API Response: %s", body)
-
-//     var response []struct {
-//         GeneratedText string `json:"generated_text"`
-//     }
-
-//     if err := json.Unmarshal(body, &response); err != nil {
-//         log.Printf("Error parsing JSON response: %v", err)
-//         return "", fmt.Errorf("error: Failed to parse AI response")
-//     }
-
-//     if len(response) > 0 && response[0].GeneratedText != "" {
-//         log.Printf("Generated Text: %s", response[0].GeneratedText)
-//         return strings.TrimPrefix(response[0].GeneratedText, prompt), nil
-//     }
-
-//     log.Println("Error: No text generated.")
-//     return "", fmt.Errorf("error: No text generated")
-// }
-
-
-// func generateCoverLetterBody(name, education, experience, skills, company, role string) string {
-// 	prompt, apiURL, err := prepareCoverLetterPrompt(name, education, experience, skills, company, role)
-// 	if err != nil {
-// 		log.Println("Error:", err)
-// 		return err.Error()
-// 	}
-
-// 	coverLetter, err := callHuggingFaceAPI(prompt, apiURL)
-// 	if err != nil {
-// 		log.Println("Error:", err)
-// 		return err.Error()
-// 	}
-
-// 	return coverLetter
-// }
+	// Return the DOCX file content
+	return docxFileContent, nil
+}

@@ -9,7 +9,7 @@ import (
 func PaginationMiddleware(c *gin.Context) {
 	// Get the "offset" and "limit" query parameters
 	offset := c.DefaultQuery("offset", "0") // Default to 0 if not provided
-	limit := c.DefaultQuery("limit", "10")  // Default to 10 if not provided
+	limit := c.DefaultQuery("limit", "20")  // Default to 10 if not provided
 
 	// Convert offset and limit to integers
 	offsetInt, err := strconv.Atoi(offset)

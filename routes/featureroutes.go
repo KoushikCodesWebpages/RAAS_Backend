@@ -48,6 +48,13 @@ func SetupFeatureRoutes(r *gin.Engine, client *mongo.Client, cfg *config.Config)
 		linkProviderRoutes.POST("", LinkProviderHandler.PostAndGetLink)
 	}
 
+	CoverLetterHandler := features.NewCoverLetterHandler()
+	// CoverLetter generation route (authenticated)
+	coverLetterRoutes := r.Group("/generate-cover-letter")
+	coverLetterRoutes.Use(middleware.AuthMiddleware())
+	{
+		coverLetterRoutes.POST("", CoverLetterHandler.PostCoverLetter)
+	}
 
 
 
@@ -79,13 +86,6 @@ func SetupFeatureRoutes(r *gin.Engine, client *mongo.Client, cfg *config.Config)
 	// 	matchScoreRoutes.GET("", matchScoreHandler.GetAllMatchScores)
 	// }
 
-	// CoverLetterHandler := features.NewCoverLetterHandler(client, cfg)
-	// // CoverLetter generation route (authenticated)
-	// coverLetterRoutes := r.Group("/generate-cover-letter")
-	// coverLetterRoutes.Use(middleware.AuthMiddleware())
-	// {
-	// 	coverLetterRoutes.POST("", CoverLetterHandler.PostCoverLetter)
-	// }
 
 	// cvHandler := features.NewCVHandler(client, cfg)
 	// // CV generation route (authenticated)

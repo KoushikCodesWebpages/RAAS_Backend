@@ -3,140 +3,105 @@ package features
 import (
 	"RAAS/dto"
 	"RAAS/models"
-	"net/http"
 	"fmt"
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"math/rand"
 )
 
 func JobRetrievalHandler(c *gin.Context) {
 	db := c.MustGet("db").(*mongo.Database)
 	userID := c.MustGet("userID").(string)
 
-	// Define the MongoDB collections
 	seekerCollection := db.Collection("seekers")
 	jobCollection := db.Collection("jobs")
-	selectedJobCollection := db.Collection("selected_job_applications") // This is where we store the job applications
+	selectedJobCollection := db.Collection("selected_job_applications")
 
-	var jobs []dto.JobDTO
-
-	// Fetch user's Seeker data from the MongoDB collection
 	var seeker models.Seeker
 	if err := seekerCollection.FindOne(c, bson.M{"auth_user_id": userID}).Decode(&seeker); err != nil {
 		fmt.Println("Error fetching seeker data:", err)
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Error fetching seeker data",
-		})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error fetching seeker data"})
 		return
 	}
 
-	// Check if PrimaryTitle is empty or nil
 	if seeker.PrimaryTitle == "" {
-		// If PrimaryTitle is empty, return 204 No Content
 		c.JSON(http.StatusNoContent, gin.H{"error": "No preferred job title set for user."})
 		return
 	}
 
-	// Collect preferred titles from the Seeker model
-	var preferredTitles []string
-	if seeker.PrimaryTitle != "" {
-		preferredTitles = append(preferredTitles, seeker.PrimaryTitle)
-	}
-	if seeker.SecondaryTitle != nil && *seeker.SecondaryTitle != "" {
-		preferredTitles = append(preferredTitles, *seeker.SecondaryTitle)
-	}
-	if seeker.TertiaryTitle != nil && *seeker.TertiaryTitle != "" {
-		preferredTitles = append(preferredTitles, *seeker.TertiaryTitle)
-	}
-
-	// Check if there are preferred titles
+	// Collect preferred job titles
+	preferredTitles := collectPreferredTitles(seeker)
 	if len(preferredTitles) == 0 {
-		fmt.Println("No preferred job titles set for user.") // Log for debugging
 		c.JSON(http.StatusBadRequest, gin.H{"error": "No preferred job titles set for user."})
 		return
 	}
 
+	// Extract skills
 	var skills []string
 	if seeker.ProfessionalSummary != nil {
 		skills = extractSkills(seeker.ProfessionalSummary)
 	}
 
-	// Fetch applied job IDs to avoid
-	var appliedJobIDs []string
-	cursor, err := selectedJobCollection.Find(c, bson.M{"auth_user_id": userID})
+	// Get previously selected jobs to exclude
+	appliedJobIDs, err := fetchAppliedJobIDs(c, selectedJobCollection, userID)
 	if err != nil {
-		fmt.Println("Error fetching applied job data:", err)
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Error fetching applied job data",
-		})
+		fmt.Println("Error fetching applied jobs:", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error fetching applied job data"})
 		return
 	}
-	defer cursor.Close(c)
-	for cursor.Next(c) {
-		var application models.SelectedJobApplication
-		if err := cursor.Decode(&application); err != nil {
-			fmt.Println("Error decoding applied job:", err)
-			continue
-		}
-		appliedJobIDs = append(appliedJobIDs, application.JobID)
-	}
 
-	// Prepare filter to avoid jobs that are already applied for
-	var filter bson.M
-	conditions := []bson.M{}
-	for _, title := range preferredTitles {
-		conditions = append(conditions, bson.M{"title": bson.M{"$regex": title, "$options": "i"}}) // Case-insensitive search
-	}
+	// Build MongoDB query filter
+	filter := buildJobFilter(preferredTitles, appliedJobIDs)
 
-	// Exclude applied jobs from the filter
-	if len(appliedJobIDs) > 0 {
-		conditions = append(conditions, bson.M{"job_id": bson.M{"$nin": appliedJobIDs}})
-	}
-
-	if len(conditions) > 0 {
-		filter = bson.M{"$or": conditions}
-	}
-
-	// Pagination parameters
+	// Pagination
 	pagination := c.MustGet("pagination").(gin.H)
 	offset := pagination["offset"].(int)
 	limit := pagination["limit"].(int)
 
-	// Fetch jobs using the constructed filter and pagination
-	cursor, err = jobCollection.Find(c, filter, options.Find().SetSkip(int64(offset)).SetLimit(int64(limit)))
+	// Find matching jobs
+	cursor, err := jobCollection.Find(c, filter, options.Find().SetSkip(int64(offset)).SetLimit(int64(limit)))
 	if err != nil {
 		fmt.Println("Error fetching job data:", err)
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Error fetching job data",
-		})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error fetching job data"})
 		return
 	}
 	defer cursor.Close(c)
 
+	var jobs []dto.JobDTO
 	for cursor.Next(c) {
 		var job models.Job
 		if err := cursor.Decode(&job); err != nil {
 			fmt.Println("Error decoding job:", err)
 			continue
 		}
-		salaryRange := randomsSalary()
-		var matchScore models.MatchScore
-		if err := seekerCollection.FindOne(c, bson.M{"auth_user_id": userID, "job_id": job.JobID}).Decode(&matchScore); err != nil {
-			if err == mongo.ErrNoDocuments {
-				matchScore.MatchScore = 50
-			} else {
-				fmt.Println("Error fetching match score:", err)
-				c.JSON(http.StatusInternalServerError, gin.H{
-					"error": "Error fetching match score",
-				})
-				return
-			}
+
+			// Generate a random salary range
+		minSalary, maxSalary := randomSalary()
+
+		// Create SalaryRange struct
+		expectedSalary := models.SalaryRange{
+			Min: minSalary,
+			Max: maxSalary,
 		}
 
-		// Add job details to response
+
+		// Default match score
+		matchScore := 50
+
+		// // Try fetching match score (optional)
+		// var match models.MatchScore
+		// err := seekerCollection.FindOne(c, bson.M{"auth_user_id": userID, "job_id": job.JobID}).Decode(&match)
+		// if err == nil {
+		// 	matchScore = match.MatchScore
+		// } else if err != mongo.ErrNoDocuments {
+		// 	fmt.Println("Error fetching match score:", err)
+		// 	c.JSON(http.StatusInternalServerError, gin.H{"error": "Error fetching match score"})
+		// 	return
+		// }
+
 		jobs = append(jobs, dto.JobDTO{
 			Source:         "seeker",
 			JobID:          job.JobID,
@@ -148,19 +113,17 @@ func JobRetrievalHandler(c *gin.Context) {
 			JobType:        job.JobType,
 			Skills:         job.Skills,
 			UserSkills:     skills,
-			ExpectedSalary: salaryRange,
-			MatchScore:     matchScore.MatchScore,
+			ExpectedSalary: dto.SalaryRange(expectedSalary),
+			MatchScore:     float64(matchScore),
 			Description:    job.JobDescription,
 		})
 	}
 
-	// Get total count of jobs for pagination
+	// Total job count for pagination
 	totalCount, err := jobCollection.CountDocuments(c, filter)
 	if err != nil {
 		fmt.Println("Error counting job data:", err)
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Error counting job data",
-		})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error counting job data"})
 		return
 	}
 
@@ -169,15 +132,13 @@ func JobRetrievalHandler(c *gin.Context) {
 	if int64(offset+limit) < totalCount {
 		nextPage = fmt.Sprintf("/api/jobs?offset=%d&limit=%d", offset+limit, limit)
 	}
-
 	prevPage := ""
 	if offset > 0 {
 		prevPage = fmt.Sprintf("/api/jobs?offset=%d&limit=%d", offset-limit, limit)
 	}
 
-	// Respond with job data and pagination
+	// Response
 	c.JSON(http.StatusOK, gin.H{
-		"jobs": jobs,
 		"pagination": gin.H{
 			"total":     totalCount,
 			"next":      nextPage,
@@ -185,15 +146,56 @@ func JobRetrievalHandler(c *gin.Context) {
 			"current":   (offset / limit) + 1,
 			"per_page":  limit,
 		},
+		"jobs": jobs,
 	})
 }
 
-// Function to generate random salary range
-func randomsSalary() dto.SalaryRange {
-	minSalary := (rand.Intn(25) + 25) * 1000 
-	maxSalary := (rand.Intn(25) + 25) * 1000 
-	if minSalary > maxSalary {
-		minSalary, maxSalary = maxSalary, minSalary 
+// Extract preferred titles from seeker
+func collectPreferredTitles(seeker models.Seeker) []string {
+	var titles []string
+	if seeker.PrimaryTitle != "" {
+		titles = append(titles, seeker.PrimaryTitle)
 	}
-	return dto.SalaryRange{Min: minSalary, Max: maxSalary}
+	if seeker.SecondaryTitle != nil && *seeker.SecondaryTitle != "" {
+		titles = append(titles, *seeker.SecondaryTitle)
+	}
+	if seeker.TertiaryTitle != nil && *seeker.TertiaryTitle != "" {
+		titles = append(titles, *seeker.TertiaryTitle)
+	}
+	return titles
 }
+
+// Fetch applied job IDs to exclude
+func fetchAppliedJobIDs(c *gin.Context, col *mongo.Collection, userID string) ([]string, error) {
+	var jobIDs []string
+	cursor, err := col.Find(c, bson.M{"auth_user_id": userID})
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(c)
+
+	for cursor.Next(c) {
+		var application models.SelectedJobApplication
+		if err := cursor.Decode(&application); err == nil {
+			jobIDs = append(jobIDs, application.JobID)
+		}
+	}
+	return jobIDs, nil
+}
+
+// Construct the job query filter
+func buildJobFilter(preferredTitles, appliedJobIDs []string) bson.M {
+	var titleConditions []bson.M
+	for _, title := range preferredTitles {
+		titleConditions = append(titleConditions, bson.M{"title": bson.M{"$regex": title, "$options": "i"}})
+	}
+
+	filter := bson.M{
+		"$and": []bson.M{
+			{"$or": titleConditions},
+			{"job_id": bson.M{"$nin": appliedJobIDs}},
+		},
+	}
+	return filter
+}
+

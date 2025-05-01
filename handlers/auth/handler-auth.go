@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"time"
-
+	"errors"
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
 	"go.mongodb.org/mongo-driver/bson"
@@ -18,7 +18,6 @@ import (
 	"RAAS/security"
 	"RAAS/utils"
 )
-
 func SeekerSignUp(c *gin.Context) {
 	var input dto.SeekerSignUpInput
 
@@ -35,7 +34,7 @@ func SeekerSignUp(c *gin.Context) {
 		return
 	}
 
-	// Check if email or phone already exists
+	// Check for duplicate email or phone
 	emailTaken, phoneTaken, err := userRepo.CheckDuplicateEmailOrPhone(input.Email, input.Number)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "check_duplicate_failed", "details": err.Error()})
@@ -43,56 +42,62 @@ func SeekerSignUp(c *gin.Context) {
 	}
 
 	if emailTaken || phoneTaken {
+		// Try to fetch the existing user to decide how to respond
 		var user models.AuthUser
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
 		err := db.Collection("auth_users").FindOne(ctx, bson.M{"email": input.Email}).Decode(&user)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "email taken", "details": err.Error()})
+		if err == nil {
+			if user.EmailVerified {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "email_already_verified"})
+				return
+			}
+
+			// Resend verification email
+			verificationLink := fmt.Sprintf("%s/auth/verify-email?token=%s", config.Cfg.Project.FrontendBaseUrl, user.VerificationToken)
+			emailBody := fmt.Sprintf(`
+				<p>Hello %s,</p>
+				<p>Thanks for signing up! Please verify your email by clicking the link below:</p>
+				<p><a href="%s">Verify Email</a></p>
+				<p>If you did not sign up, you can ignore this email.</p>
+			`, input.Email, verificationLink)
+
+			emailCfg := utils.EmailConfig{
+				Host:     config.Cfg.Cloud.EmailHost,
+				Port:     config.Cfg.Cloud.EmailPort,
+				Username: config.Cfg.Cloud.EmailHostUser,
+				Password: config.Cfg.Cloud.EmailHostPassword,
+				From:     config.Cfg.Cloud.DefaultFromEmail,
+				UseTLS:   config.Cfg.Cloud.EmailUseTLS,
+			}
+
+			if err := utils.SendEmail(emailCfg, input.Email, "Verify your email", emailBody); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "failed_to_send_verification_email", "details": err.Error()})
+				return
+			}
+
+			c.JSON(http.StatusOK, gin.H{"message": "verification_email_resent"})
 			return
 		}
 
-		if user.EmailVerified {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "email_already_verified"})
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			c.JSON(http.StatusConflict, gin.H{"error": "email_taken_but_user_not_found"})
 			return
 		}
 
-		// Resend verification email
-		verificationLink := fmt.Sprintf("%s/auth/verify-email?token=%s", config.Cfg.Project.FrontendBaseUrl, user.VerificationToken)
-		emailBody := fmt.Sprintf(`
-			<p>Hello %s,</p>
-			<p>Thanks for signing up! Please verify your email by clicking the link below:</p>
-			<p><a href="%s">Verify Email</a></p>
-			<p>If you did not sign up, you can ignore this email.</p>
-		`, input.Email, verificationLink)
-
-		emailCfg := utils.EmailConfig{
-			Host:     config.Cfg.Cloud.EmailHost,
-			Port:     config.Cfg.Cloud.EmailPort,
-			Username: config.Cfg.Cloud.EmailHostUser,
-			Password: config.Cfg.Cloud.EmailHostPassword,
-			From:     config.Cfg.Cloud.DefaultFromEmail,
-			UseTLS:   config.Cfg.Cloud.EmailUseTLS,
-		}
-
-		if err := utils.SendEmail(emailCfg, input.Email, "Verify your email", emailBody); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed_to_send_verification_email", "details": err.Error()})
-			return
-		}
-
-		c.JSON(http.StatusOK, gin.H{"message": "verification_email_resent"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "db_error", "details": err.Error()})
 		return
 	}
 
-	// Hash password
+	// Hash the password
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "password_hash_error"})
 		return
 	}
 
-	// Create the seeker
+	// Create the seeker account
 	if err := userRepo.CreateSeeker(input, string(hashedPassword)); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "create_seeker_failed", "details": err.Error()})
 		return
@@ -100,6 +105,7 @@ func SeekerSignUp(c *gin.Context) {
 
 	c.JSON(http.StatusCreated, gin.H{"message": "seeker_registered_successfully"})
 }
+
 
 func VerifyEmail(c *gin.Context) {
 	token := c.Query("token")

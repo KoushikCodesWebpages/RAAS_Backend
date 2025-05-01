@@ -101,7 +101,7 @@ func (r *UserRepo) CreateSeeker(input dto.SeekerSignUpInput, hashedPassword stri
 	seeker := models.Seeker{
 		AuthUserID:                  authUserID,
 		SubscriptionTier:            "free",
-		DailySelectableJobsCount:    5,
+		DailySelectableJobsCount:    10,
 		DailyGeneratableCV:          100,
 		DailyGeneratableCoverletter: 100,
 		TotalApplications:           0,

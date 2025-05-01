@@ -8,7 +8,7 @@ import (
 type SeekerSignUpInput struct {
     Email    string `json:"email" binding:"required,email"`
     Password string `json:"password" binding:"required,min=8"`
-    Number   string `json:"number" binding:"required,len=10"`
+    Number   string `json:"number" binding:"required,min=10,max=15"`
 }
 
 type LoginInput struct {
