@@ -72,6 +72,7 @@ func ResetDBHandler(c *gin.Context) {
 		"admins",
 		"match_scores", 
 		"auth_users",
+		"saved_jobs",
 	}
 
 	// Delete user data from each collection

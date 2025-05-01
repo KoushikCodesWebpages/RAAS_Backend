@@ -32,7 +32,7 @@ func InitDB(cfg *config.Config) (*mongo.Client, *mongo.Database) {
 
 	// Print all collections (optional)
 	// air
-	
+
 
 	// Optionally reset collections (this function could be defined elsewhere if needed)
 	// resetCollections()
@@ -60,7 +60,7 @@ func resetCollections() {
 		"selected_job_applications",
 		"cover_letters", 
 		"cv", 
-		"jobs", 
+		"saved_jobs", 
 		
 	}
 

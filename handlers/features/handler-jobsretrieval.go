@@ -1,4 +1,5 @@
 package features
+
 import (
 	"RAAS/dto"
 	"RAAS/handlers"
@@ -42,6 +43,11 @@ func JobRetrievalHandler(c *gin.Context) {
 		fmt.Println("Error fetching applied jobs:", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error fetching applied job data"})
 		return
+	}
+
+	// --- Ensure appliedJobIDs is not nil ---
+	if appliedJobIDs == nil {
+		appliedJobIDs = []string{}
 	}
 
 	// --- Build MongoDB query ---
@@ -136,7 +142,8 @@ func collectPreferredTitles(seeker models.Seeker) []string {
 
 // Fetch applied job IDs to exclude
 func fetchAppliedJobIDs(c *gin.Context, col *mongo.Collection, userID string) ([]string, error) {
-	var jobIDs []string
+	jobIDs := []string{} // Always return a non-nil slice
+
 	cursor, err := col.Find(c, bson.M{"auth_user_id": userID})
 	if err != nil {
 		return nil, err
@@ -162,9 +169,8 @@ func buildJobFilter(preferredTitles, appliedJobIDs []string) bson.M {
 	filter := bson.M{
 		"$and": []bson.M{
 			{"$or": titleConditions},
-			{"job_id": bson.M{"$nin": appliedJobIDs}},
+			{"job_id": bson.M{"$nin": appliedJobIDs}}, // safe now
 		},
 	}
 	return filter
 }
-
