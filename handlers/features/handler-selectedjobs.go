@@ -79,7 +79,7 @@ func (h *SelectedJobsHandler) PostSelectedJob(c *gin.Context) {
 		Skills:               job.Skills,
 		UserSkills:           skills,
 		ExpectedSalary:       expectedSalary,
-		MatchScore:           80,
+		MatchScore:           70,
 		Description:          job.JobDescription,
 		Selected:             true,
 		CvGenerated:          false,

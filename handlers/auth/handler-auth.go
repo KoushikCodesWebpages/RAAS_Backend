@@ -57,10 +57,22 @@ func SeekerSignUp(c *gin.Context) {
 			// Resend verification email
 			verificationLink := fmt.Sprintf("%s/auth/verify-email?token=%s", config.Cfg.Project.FrontendBaseUrl, user.VerificationToken)
 			emailBody := fmt.Sprintf(`
-				<p>Hello %s,</p>
-				<p>Thanks for signing up! Please verify your email by clicking the link below:</p>
-				<p><a href="%s">Verify Email</a></p>
-				<p>If you did not sign up, you can ignore this email.</p>
+			<html>
+			<body style="font-family: Arial, sans-serif; background-color: #f9f9f9; margin: 0; padding: 0;">
+				<div style="max-width: 600px; margin: 40px auto; background: #ffffff; padding: 30px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+				<h2 style="color: #4CAF50; text-align: center;">Welcome to Our Platform!</h2>
+				<p>Hi %s,</p>
+				<p>Thanks for signing up! To get started, please confirm your email address by clicking the button below:</p>
+				<div style="text-align: center; margin: 30px 0;">
+					<a href="%s" style="background-color: #4CAF50; color: #ffffff; padding: 14px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">
+					Verify Email
+					</a>
+				</div>
+				<p>If you didn’t create this account, you can safely ignore this email.</p>
+				<p>Cheers,<br><strong>The Team</strong></p>
+				</div>
+			</body>
+			</html>
 			`, input.Email, verificationLink)
 
 			emailCfg := utils.EmailConfig{
@@ -163,7 +175,7 @@ func VerifyEmail(c *gin.Context) {
 			<div class="card">
 				<h1>✅ Email Verified</h1>
 				<p>Your email has been successfully verified.</p>
-				<a href="http://localhost:3000/login">Go to Login</a>
+				<a href="raasbackend-production.up.railway.app/user/login">Go to Login</a>
 			</div>
 		</body>
 		</html>

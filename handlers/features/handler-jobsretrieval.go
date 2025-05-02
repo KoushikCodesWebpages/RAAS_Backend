@@ -89,7 +89,7 @@ func JobRetrievalHandler(c *gin.Context) {
 			Skills:         job.Skills,
 			UserSkills:     skills,
 			ExpectedSalary: expectedSalary,
-			MatchScore:     50,
+			MatchScore:     70,
 			Description:    job.JobDescription,
 		})
 	}
