@@ -28,6 +28,7 @@ func NewLinkProviderHandler() *LinkProviderHandler {
 // PostAndGetLink handles POST requests to retrieve job application links
 func (h *LinkProviderHandler) PostAndGetLink(c *gin.Context) {
 	db := c.MustGet("db").(*mongo.Database)
+	authUserID, ok := c.MustGet("userID").(string)
 
 	var req struct {
 		JobID string `json:"job_id" binding:"required"`
@@ -39,7 +40,7 @@ func (h *LinkProviderHandler) PostAndGetLink(c *gin.Context) {
 	}
 	jobID := req.JobID
 
-	authUserID, ok := c.MustGet("userID").(string)
+
 	if !ok {
 		fmt.Println("❌ Failed to get userID from context")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to extract user ID from JWT claims"})

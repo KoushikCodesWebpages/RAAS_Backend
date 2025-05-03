@@ -69,6 +69,14 @@ func SetupFeatureRoutes(r *gin.Engine, client *mongo.Client, cfg *config.Config)
 	}
 
 
+	ResumeHandler := features.NewResumeHandler()
+	// CV generation route (authenticated)
+	cvRoutes := r.Group("/generate-resume")
+	cvRoutes.Use(middleware.AuthMiddleware())
+	{
+		cvRoutes.POST("", ResumeHandler.PostResume)
+	}
+
 
 	// // JOB METADATA routes
 	// jobDataHandler := features.NewJobDataHandler()
@@ -98,14 +106,6 @@ func SetupFeatureRoutes(r *gin.Engine, client *mongo.Client, cfg *config.Config)
 	// 	matchScoreRoutes.GET("", matchScoreHandler.GetAllMatchScores)
 	// }
 
-
-	// cvHandler := features.NewCVHandler(client, cfg)
-	// // CV generation route (authenticated)
-	// cvRoutes := r.Group("/generate-cv")
-	// cvRoutes.Use(middleware.AuthMiddleware())
-	// {
-	// 	cvRoutes.POST("", cvHandler.PostCV)
-	// }
 
 	// CVHandler := features.NewCVDownloadHandler(client) // assuming constructor exists like NewCVHandler(client)
 

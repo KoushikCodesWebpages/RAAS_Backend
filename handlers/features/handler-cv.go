@@ -1,434 +1,212 @@
 package features
 
-// import (
-// 	"encoding/json"
-// 	"fmt"
-// 	"net/http"
-// 	"strings"
-
-
-// 	"github.com/gin-gonic/gin"
-// 	"github.com/google/uuid"
-// 	"gorm.io/gorm"
-
-// 	"RAAS/models"
-// 	"RAAS/config"
-
-// 	"time"
-// 	"RAAS/handlers/repo"
-// 	"log"
-// 	// "bytes"
-// 	// "log"
-// )
-
-// type CVData struct {
-// 	JobID            string                 `json:"job_id"`
-// 	Name             string                 `json:"name"`
-// 	Designation      string                 `json:"designation"`
-// 	Contact          string                 `json:"contact"`
-// 	ProfileSummary   string                 `json:"profile_summary"`
-// 	SkillsAndTools   []string               `json:"skills_and_tools"`
-// 	Education        []EducationData        `json:"education"`
-// 	ExperienceSummary []ExperienceSummaryData `json:"experience_summary"`
-// 	Languages        []string               `json:"languages"`
-// }
-
-
-// type EducationData struct {
-// 	Years       string   `json:"years"`
-// 	Institution string   `json:"institution"`
-// 	Details     []string `json:"details"`
-// }
-
-// type ExperienceSummaryData struct {
-// 	Title  string   `json:"title"`
-// 	Bullets []string `json:"bullets"`
-// }
-
-
-
-// // CVRequest struct to receive CV generation request
-// type CVRequest struct {
-// 	// Add any required fields here
-// }
-
-// // CVHandler struct
-// type CVHandler struct {
-// 	db     *gorm.DB
-// }
-
-// func NewCVHandler(db *gorm.DB, cfg *config.Config) *CVHandler {
-// 	return &CVHandler{
-// 		db:     db,
-// 	}
-// }
-// func (h *CVHandler) PostCV(c *gin.Context) {
-
-// 	var req CoverLetterAndCVRequest
-// 	if err := c.ShouldBindJSON(&req); err != nil {
-// 		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing or invalid job_id in request body"})
-// 		return
-// 	}
-// 	jobID := req.JobID
-// 	// Step 1: Extract user information from JWT claims
-// 	userID := c.MustGet("userID").(uuid.UUID)
-
-// 	// Step 2: Get Contact details
-
-
-// 	var authUser models.AuthUser
-// 	if err := h.db.Where("id = ?", userID).First(&authUser).Error; err != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve auth user info"})
-// 		return
-// 	}
-
-// 	//Email PHONE
-// 	email := authUser.Email
-// 	phone := authUser.Phone
-
-
-// 	//Step 3: Get seeker model
-
-// 	var seeker models.Seeker
-// 	if err := h.db.Where("auth_user_id = ?", userID).First(&seeker).Error; err != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve seeker data"})
-// 		return
-// 	}
-
-// 	if seeker.DailyGeneratableCV > 0 {
-// 		seeker.DailyGeneratableCV -= 1
-// 		if err := h.db.Save(&seeker).Error; err != nil {
-// 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update seeker data"})
-// 			return
-// 		}
-// 	} else {
-// 		c.JSON(http.StatusBadRequest, gin.H{"error": "Daily CV generation limit exceeded"})
-// 		return
-// 	}
-
-//     // Step 3: Get personal info from seeker
-
-// 	type PersonalInfo struct {
-// 		FirstName      string `json:"firstName"`
-// 		SecondName     string `json:"secondName"`
-// 		Address        string `json:"address"`
-// 		LinkedInProfile string `json:"linkedInProfile"`
-// 		DateOfBirth    string `json:"dateOfBirth"`
-// 	}
-// 	var personalInfo PersonalInfo
-// 	if err := json.Unmarshal(seeker.PersonalInfo, &personalInfo); err != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse personal information", "details": err.Error()})
-// 		return
-// 	}	
-
-	
-//     // Name and contact details
-//     var fullName string
-//     if personalInfo.SecondName != "" {
-//         fullName = fmt.Sprintf("%s %s", personalInfo.FirstName, personalInfo.SecondName)
-//     } else {
-//         fullName = personalInfo.FirstName
-//     }
-
-//     // Address and LinkedIn profile
-//     address := personalInfo.Address
-//     linkedin := personalInfo.LinkedInProfile
-
-
-
-// 	// Step 4: Get professional summary (includes skills)
-
-// 	type ProfessionalSummary struct {
-// 		About  string   `json:"about"`
-// 		Skills []string `json:"skills"`
-// 	}
-
-// 	var summary ProfessionalSummary
-// 	if err := json.Unmarshal(seeker.ProfessionalSummary, &summary); err != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse professional summary", "details": err.Error()})
-// 		return
-// 	}
-
-// 	// Profile summary
-// 	profile_summary := summary.About
-
-// 	// Skills
-// 	skills := summary.Skills
-
-// // Step 6: Get education details
-// type Education struct {
-// 	Degree       string    `json:"degree"`
-// 	StartDate    string    `json:"startDate"`
-// 	EndDate      string    `json:"endDate"`
-// 	Institution  string    `json:"institution"`
-// 	Achievements string    `json:"achievements"`
-// }
-
-// var educations []Education
-// if err := json.Unmarshal(seeker.Educations, &educations); err != nil {
-// 	c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse education details", "details": err.Error()})
-// 	return
-// }
-
-// // Validate and parse start and end dates
-// educationData := make([]struct {
-// 	Years      string   `json:"years"`
-// 	Institution string  `json:"institution"`
-// 	Details    []string `json:"details"`
-// }, 0)
-
-// for _, edu := range educations {
-// 	// Parse start date
-// 	startDate, err := time.Parse("2006-01-02", edu.StartDate)
-// 	if err != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid start date format", "details": err.Error()})
-// 		return
-// 	}
-
-// 	// Parse end date (if available)
-// 	endDate := "Present"
-// 	if edu.EndDate != "" {
-// 		endDateParsed, err := time.Parse("2006-01-02", edu.EndDate)
-// 		if err != nil {
-// 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid end date format", "details": err.Error()})
-// 			return
-// 		}
-// 		endDate = endDateParsed.Format("2006")
-// 	}
-
-// 	// Prepare education details
-// 	details := []string{edu.Degree}
-// 	if edu.Achievements != "" {
-// 		details = append(details, edu.Achievements)
-// 	}
-
-// 	educationData = append(educationData, struct {
-// 		Years      string   `json:"years"`
-// 		Institution string  `json:"institution"`
-// 		Details    []string `json:"details"`
-// 	}{
-// 		Years:      fmt.Sprintf("%s - %s", startDate.Format("2006"), endDate),
-// 		Institution: edu.Institution,
-// 		Details:    details,
-// 	})
-// }
-
-	
-	
-// 		// Step 7: Get work experience details
-// 	type WorkExperience struct {
-// 		JobTitle           string `json:"jobTitle"`
-// 		CompanyName        string `json:"companyName"`
-// 		EmploymentType     string `json:"employmentType"`
-// 		StartDate          string `json:"startDate"`
-// 		EndDate            string `json:"endDate"` // Required
-// 		KeyResponsibilities string `json:"keyResponsibilities"`
-// 	}
-
-// 	var workExperiences []WorkExperience
-// 	if err := json.Unmarshal(seeker.WorkExperiences, &workExperiences); err != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse work experience", "details": err.Error()})
-// 		return
-// 	}
-
-// 	// Validate and parse work experience dates
-// 	var workExpText string
-// 	experienceSummaryData := make([]struct {
-// 		Title   string   `json:"title"`
-// 		Bullets []string `json:"bullets"`
-// 	}, 0)
-
-// 	for _, we := range workExperiences {
-// 		// Parse start date
-// 		startDate, err := time.Parse("2006-01-02", we.StartDate)
-// 		if err != nil {
-// 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid start date format for work experience", "details": err.Error()})
-// 			return
-// 		}
-
-// 		// Parse end date (if available)
-// 		endDate := "Present"
-// 		if we.EndDate != "" {
-// 			endDateParsed, err := time.Parse("2006-01-02", we.EndDate)
-// 			if err != nil {
-// 				c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid end date format for work experience", "details": err.Error()})
-// 				return
-// 			}
-// 			endDate = endDateParsed.Format("2006")
-// 		}
-
-// 		// Append work experience summary text
-// 		workExpText += fmt.Sprintf("Job Title: %s at %s. Responsibilities: %s. ", we.JobTitle, we.CompanyName, we.KeyResponsibilities)
-
-// 		// Split key responsibilities into bullets
-// 		bullets := strings.Split(we.KeyResponsibilities, ".")
-// 		for i, bullet := range bullets {
-// 			bullets[i] = strings.TrimSpace(bullet)
-// 		}
-// 		bullets = removeEmptyStrings(bullets) // Remove empty strings
-
-// 		// Add to experience summary data
-// 		experienceSummaryData = append(experienceSummaryData, struct {
-// 			Title   string   `json:"title"`
-// 			Bullets []string `json:"bullets"`
-// 		}{
-// 			Title:   fmt.Sprintf("%s at %s (%s - %s)", we.JobTitle, we.CompanyName, startDate.Format("2006"), endDate),
-// 			Bullets: bullets,
-// 		})
-// 	}
-
-
-// 	// Step 8: Get languages details
-// 	type Language struct {
-// 		LanguageName     string `json:"language"`
-// 		ProficiencyLevel string `json:"proficiency"`
-// 	}
-
-// 	var languages []Language
-// 	if err := json.Unmarshal(seeker.Languages, &languages); err != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse language details", "details": err.Error()})
-// 		return
-// 	}
-
-// 	// Format the language data for the CV
-// 	languageData := make([]string, 0)
-// 	for _, lang := range languages {
-// 		// Print every language's name and proficiency level for debugging
-// 		fmt.Printf("Language Name: %s, Proficiency Level: %s\n", lang.LanguageName, lang.ProficiencyLevel)
-		
-// 		languageData = append(languageData, fmt.Sprintf("%s - %s", lang.LanguageName, lang.ProficiencyLevel))
-// 	}
-
-// 	// Print the formatted language data to the console for debugging
-// 	fmt.Println("Formatted Language Data:", languageData)
-
-
-// 	// Step 9 Get Job Title
-
-// 	var job models.Job
-// 	if err := h.db.Where("job_id = ?", jobID).First(&job).Error; err != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve job metadata"})
-// 		return
-// 	}
-	
-// 	// Job details are now in jobMetaData
-// 	jobTitle := job.Title
-
-// 	contact := fmt.Sprintf("Email: %s\nPhone: %s\nAddress: %s\nLinkedIn: %s", email, phone, address, linkedin)
-
-// 	cvInput := repo.CVInput{
-//         Name:             fullName,
-//         Designation:      jobTitle,
-//         Contact:          contact,
-//         ProfileSummary:   profile_summary,
-//         SkillsAndTools:   skills,
-//         Education:        educationData,
-//         ExperienceSummary: experienceSummaryData,
-//         Languages:        languageData,
-//     }
-    
-//     // Generate CV (docx)
-//     cvData, err := repo.GenerateCVDocx(cvInput)
-//     if err != nil {
-//         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate CV document", "details": err.Error()})
-//         return
-//     }
-
-//     // Initialize the media upload handler with the Azure Blob Storage service client
-//     mediaUploadHandler := NewMediaUploadHandler(GetBlobServiceClient())
-
-//     // Upload the CV document (cvData) directly to Azure Blob Storage
-//     cvFileURL, err := mediaUploadHandler.UploadGeneratedFile(c, "cv-container", "cv.docx", cvData)
-//     if err != nil {
-//         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to upload CV to Azure", "details": err.Error()})
-//         return
-//     }
-//     // Update the job application record to mark CV as generated
-//     result := h.db.Model(&models.SelectedJobApplication{}).Where("auth_user_id = ? AND job_id = ?", userID, jobID).Update("cv_generated", true)
-//     if result.Error != nil {
-//         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update CvGenerated field"})
-//         return
-//     }
-
-//     // Now, send the CV file as an attachment
-//     c.Header("Content-Disposition", "attachment; filename=cv.docx")
-//     c.Data(http.StatusOK, "application/vnd.openxmlformats-officedocument.wordprocessingml.document", cvData)
-
-//     // Optionally, you can also update the database model with cv_url (in case you want to store the link)
-//     cvRecord := models.CV{
-//         AuthUserID: userID,
-//         JobID:      jobID,
-//         CVUrl:      cvFileURL, // URL of the uploaded CV
-//     }
-
-//     if err := h.db.Create(&cvRecord).Error; err != nil {
-//         log.Printf("[ERROR] Failed to create CV record: %v", err)
-//     }
-// }
-
-// func (h *CVHandler) GetCV(c *gin.Context) {
-//     // Retrieve the user ID from the context
-//     userID := c.MustGet("userID").(uuid.UUID)
-
-//     // Retrieve the Job ID from the query parameters (or you could use c.PostForm if it's a POST request)
-//     jobID := c.DefaultQuery("jobID", "") // If it's a query parameter, use c.DefaultQuery to get the jobID
-
-//     if jobID == "" {
-//         c.JSON(http.StatusBadRequest, gin.H{"error": "Job ID is required"})
-//         return
-//     }
-
-//     var cv models.CV
-
-//     // Query the CV table for the specified AuthUserID and JobID
-//     if err := h.db.Where("auth_user_id = ? AND job_id = ?", userID, jobID).First(&cv).Error; err != nil {
-//         // Return error if no CV is found
-//         c.JSON(http.StatusNotFound, gin.H{"error": "CV not found"})
-//         return
-//     }
-
-//     // Check if the CV URL exists
-//     if cv.CVUrl == "" {
-//         c.JSON(http.StatusNotFound, gin.H{"error": "CV file URL not found"})
-//         return
-//     }
-
-//     // Attempt to download the CV from the provided URL
-//     fileURL := cv.CVUrl
-//     response, err := http.Get(fileURL)
-//     if err != nil {
-//         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to download the file", "details": err.Error()})
-//         return
-//     }
-//     defer response.Body.Close()
-
-//     // Check if the file was successfully fetched
-//     if response.StatusCode != http.StatusOK {
-//         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to download the file, received status: " + response.Status})
-//         return
-//     }
-
-//     // Set headers to indicate a file download response
-//     c.Header("Content-Disposition", "attachment; filename=cv.docx")
-    
-//     // Custom headers map (optional)
-//     headers := map[string]string{
-//         "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-//     }
-
-//     // Send the file to the user with the required headers
-//     c.DataFromReader(http.StatusOK, response.ContentLength, "application/vnd.openxmlformats-officedocument.wordprocessingml.document", response.Body, headers)
-// }
-
-
-// func removeEmptyStrings(s []string) []string {
-// 	var r []string
-// 	for _, str := range s {
-// 		if str != "" {
-// 			r = append(r, str)
-// 		}
-// 	}
-// 	return r
-// }
+import (
+	"RAAS/config"
+	"RAAS/handlers"
+	"RAAS/models"
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+)
+
+type ResumeHandler struct{}
+
+func NewResumeHandler() *ResumeHandler {
+	return &ResumeHandler{}
+}
+func (h *ResumeHandler) PostResume(c *gin.Context) {
+	db := c.MustGet("db").(*mongo.Database)
+	jobCollection := db.Collection("jobs")
+	seekerCollection := db.Collection("seekers")
+	authUserCollection := db.Collection("auth_users")
+	selectedJobCollection := db.Collection("selected_jobs")
+
+	userID := c.MustGet("userID").(string)
+
+	var input struct {
+		JobID string `json:"job_id" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request payload"})
+		return
+	}
+
+	var job models.Job
+	if err := jobCollection.FindOne(c, bson.M{"job_id": input.JobID}).Decode(&job); err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Job not found"})
+		return
+	}
+
+	var seeker models.Seeker
+	if err := seekerCollection.FindOne(c, bson.M{"auth_user_id": userID}).Decode(&seeker); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error fetching seeker data"})
+		return
+	}
+
+	var authUser models.AuthUser
+	if err := authUserCollection.FindOne(c, bson.M{"auth_user_id": userID}).Decode(&authUser); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error fetching auth user data"})
+		return
+	}
+
+	// Check if daily CV quota is exhausted
+	if seeker.DailyGeneratableCV <= 0 {
+		c.JSON(http.StatusTooManyRequests, gin.H{
+			"error":             "CV generation limit reached for today",
+			"limit_exhausted":   true,
+			"daily_quota_limit": 0,
+		})
+		return
+	}
+
+	// Gather details from seeker
+	personalInfo, _ := handlers.GetPersonalInfo(&seeker)
+	professionalSummary, _ := handlers.GetProfessionalSummary(&seeker)
+	workExperience, _ := handlers.GetWorkExperience(&seeker)
+	educationObjs, _ := handlers.GetEducation(&seeker)
+	certificateObjs, _ := handlers.GetCertificates(&seeker)
+	languageObjs, _ := handlers.GetLanguages(&seeker)
+
+	// Simplify education
+	education := []string{}
+	for _, e := range educationObjs {
+		degree, _ := e["degree"].(string)
+		institution, _ := e["institution"].(string)
+		years, _ := e["years"].(string)
+		education = append(education, fmt.Sprintf("%s, %s, %s", degree, institution, years))
+	}
+
+	// Simplify certifications
+	certifications := []string{}
+	for _, cert := range certificateObjs {
+		name, _ := cert["name"].(string)
+		certifications = append(certifications, name)
+	}
+
+	// Simplify languages
+	languages := []string{}
+	for _, lang := range languageObjs {
+		langName, _ := lang["language"].(string)
+		proficiency, _ := lang["proficiency"].(string)
+		languages = append(languages, fmt.Sprintf("%s: %s", langName, proficiency))
+	}
+
+	// Construct the API payload for CV generation
+	resumeRequest := map[string]interface{}{
+		"user_details": map[string]interface{}{
+			"name":               personalInfo.FirstName + " " + *personalInfo.SecondName,
+			"designation":        seeker.PrimaryTitle,
+			"address":            personalInfo.Address,
+			"contact":            authUser.Phone,
+			"email":              authUser.Email,
+			"portfolio":          "",
+			"linkedin":           personalInfo.LinkedInProfile,
+			"tools":              "", // optional
+			"skills":             professionalSummary.Skills,
+			"education":          education,
+			"experience_summary": workExperience,
+			"certifications":     certifications,
+			"languages":          languages,
+		},
+		"job_description": map[string]interface{}{
+			"job_title":        job.Title,
+			"company":          job.Company,
+			"location":         job.Location,
+			"job_type":         job.JobType,
+			"responsibilities": "",
+			"skills":           job.Skills,
+			"qualifications":   job.JobDescription,
+			"benefits":         "",
+		},
+	}
+
+	// Generate the resume (docxContent)
+	docxContent, err := h.generateResume(resumeRequest)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Resume generation failed: %v", err)})
+		return
+	}
+
+	// Reduce the daily generatable CV count
+	updateData := bson.M{
+		"$inc": bson.M{"daily_generatable_cv": -1},
+	}
+
+	// Update the user's daily generatable CV count
+	if _, err := seekerCollection.UpdateOne(c, bson.M{"auth_user_id": userID}, updateData); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error updating daily CV count"})
+		return
+	}
+
+	// Mark the job as having the CV generated
+	_, err = selectedJobCollection.UpdateOne(c, bson.M{
+		"auth_user_id": userID,
+		"job_id":       input.JobID,
+	}, bson.M{
+		"$set": bson.M{
+			"cv_generated": true,
+		},
+	})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update selected job status for CV"})
+		return
+	}
+
+	// Send the resume back to the user
+	c.Header("Content-Disposition", "attachment; filename=resume.docx")
+	c.Data(http.StatusOK, "application/vnd.openxmlformats-officedocument.wordprocessingml.document", docxContent)
+}
+
+// Helper function to send POST request to the external resume generation API
+func (h *ResumeHandler) generateResume(apiRequestData map[string]interface{}) ([]byte, error) {
+	// Load environment variables
+	apiURL := config.Cfg.Cloud.CV_Url
+	apiKey := config.Cfg.Cloud.GEN_API_KEY
+
+	// Marshal resume data to JSON
+	jsonData, err := json.Marshal(apiRequestData)
+	if err != nil {
+		return nil, fmt.Errorf("error marshalling resume data: %v", err)
+	}
+
+	// Create a POST request to the API
+	req, err := http.NewRequest("POST", apiURL, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return nil, fmt.Errorf("error creating request: %v", err)
+	}
+
+	// Set headers
+	req.Header.Set("Authorization", "Bearer "+apiKey)
+	req.Header.Set("Content-Type", "application/json")
+
+	// Send the request to the resume API
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("error sending request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	// Check if the response status is OK
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("error response from API: %v", string(body))
+	}
+
+	// Read the DOCX content from the response
+	docxFileContent, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("error reading DOCX content: %v", err)
+	}
+
+	// Return the DOCX file content
+	return docxFileContent, nil
+}
 
 

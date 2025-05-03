@@ -1,6 +1,7 @@
 package features
 
 import (
+	"RAAS/config"
 	"RAAS/handlers"
 	"RAAS/models"
 	"bytes"
@@ -8,8 +9,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
-	// "time"
 
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
@@ -32,6 +31,7 @@ func (h *CoverLetterHandler) PostCoverLetter(c *gin.Context) {
 	jobCollection := db.Collection("jobs")
 	seekerCollection := db.Collection("seekers")
 	AuthUserCollection := db.Collection("auth_users")
+	selectedJobCollection := db.Collection("selected_jobs")
 
 	// Get the authenticated user's ID
 	userID := c.MustGet("userID").(string)
@@ -41,39 +41,42 @@ func (h *CoverLetterHandler) PostCoverLetter(c *gin.Context) {
 		JobID string `json:"job_id"`
 	}
 	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Invalid request payload",
-		})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request payload"})
 		return
 	}
 
-	// Fetch the job
+	// Fetch job details
 	var job models.Job
 	if err := jobCollection.FindOne(c, bson.M{"job_id": input.JobID}).Decode(&job); err != nil {
-		c.JSON(http.StatusNotFound, gin.H{
-			"error": "Job not found",
-		})
+		c.JSON(http.StatusNotFound, gin.H{"error": "Job not found"})
 		return
 	}
 
-	// Fetch the seeker
+	// Fetch seeker details
 	var seeker models.Seeker
 	if err := seekerCollection.FindOne(c, bson.M{"auth_user_id": userID}).Decode(&seeker); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Error fetching seeker data",
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error fetching seeker data"})
+		return
+	}
+
+	// Check if daily cover letter quota is exhausted
+	if seeker.DailyGeneratableCoverletter <= 0 {
+		c.JSON(http.StatusTooManyRequests, gin.H{
+			"error":             "Cover letter generation limit reached for today",
+			"limit_exhausted":   true,
+			"daily_quota_limit": 0,
 		})
 		return
 	}
 
+	// Fetch auth user details
 	var authuser models.AuthUser
 	if err := AuthUserCollection.FindOne(c, bson.M{"auth_user_id": userID}).Decode(&authuser); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Error fetching authuser data",
-		})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error fetching authuser data"})
 		return
 	}
 
-	// Get various details from seeker
+	// Gather details from seeker
 	personalInfo, _ := handlers.GetPersonalInfo(&seeker)
 	professionalSummary, _ := handlers.GetProfessionalSummary(&seeker)
 	workExperience, _ := handlers.GetWorkExperience(&seeker)
@@ -81,54 +84,76 @@ func (h *CoverLetterHandler) PostCoverLetter(c *gin.Context) {
 	certificates, _ := handlers.GetCertificates(&seeker)
 	languages, _ := handlers.GetLanguages(&seeker)
 
-	// Construct the request body to match the API's expected format
+	// Construct the API payload for cover letter generation
 	apiRequestData := map[string]interface{}{
 		"user_details": map[string]interface{}{
-			"firstname":        personalInfo.FirstName,
-			"designation": seeker.PrimaryTitle,
-			"address":     personalInfo.Address,
-			"contact":     authuser.Phone,
-			"email":       authuser.Email,
-			// "portfolio":   personalInfo.Portfolio,
-			"linkedin":    personalInfo.LinkedInProfile,
-			// "tools":       seeker.Tools, // Assuming Tools field is populated correctly
-			"skills":      professionalSummary.Skills, // Assuming Skills field is populated correctly
-			"education":   education,
+			"name":          fmt.Sprintf("%s %s", personalInfo.FirstName, *personalInfo.SecondName),
+			"designation":   seeker.PrimaryTitle,
+			"address":       personalInfo.Address,
+			"contact":       authuser.Phone,
+			"email":         authuser.Email,
+			"portfolio":     "",
+			"linkedin":      personalInfo.LinkedInProfile,
+			"tools":         "",
+			"skills":        professionalSummary.Skills,
+			"education":     education,
 			"experience_summary": workExperience,
 			"certifications": certificates,
-			"languages":    languages,
+			"languages":     languages,
 		},
 		"job_description": map[string]interface{}{
-			"job_title":    job.Title,
-			"company":      job.Company,
-			"location":     job.Location,
-			"job_type":     job.JobType, // Assuming JobType exists in the Job model
-			"description": job.JobDescription, // Assuming Responsibilities exists in the Job model
-			// "qualifications": job.Qualifications, // Assuming Qualifications exists in the Job model
-			"skills":        job.Skills,
-			// "benefits":      job.Benefits, // Assuming Benefits exists in the Job model
+			"job_title":     job.Title,
+			"company":       job.Company,
+			"location":      job.Location,
+			"job_type":      job.JobType,
+			"responsibilities": "",
+			"qualifications":   job.JobDescription,
+			"skills":           job.Skills,
+			"benefits":         "",
 		},
 	}
 
-	// Call the external API to generate the cover letter DOCX
+	// Call the external API to generate the cover letter (DOCX)
 	docxContent, err := h.generateCoverLetter(apiRequestData)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Error generating cover letter",
-		})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Cover letter generation failed: %v", err)})
 		return
 	}
 
-	// Optionally, save the DOCX file or return it to the user
-	// For now, sending the DOCX content back as response
+	// Reduce the daily generatable cover letter count
+	updateData := bson.M{
+		"$inc": bson.M{"daily_generatable_coverletter": -1},
+	}
+
+	// Update the user's daily generatable cover letter count
+	if _, err := seekerCollection.UpdateOne(c, bson.M{"auth_user_id": userID}, updateData); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error updating daily cover letter count"})
+		return
+	}
+
+	_, err = selectedJobCollection.UpdateOne(c, bson.M{
+		"auth_user_id": userID,
+		"job_id":       input.JobID,
+	}, bson.M{
+		"$set": bson.M{
+			"cover_letter_generated": true,
+		},
+	})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update selected job status for cover letter"})
+		return
+	}
+
+	// Set headers and return the .docx file to the user
+	c.Header("Content-Disposition", "attachment; filename=cover_letter.docx")
 	c.Data(http.StatusOK, "application/vnd.openxmlformats-officedocument.wordprocessingml.document", docxContent)
 }
 
 // Helper function to send POST request to the external cover letter generation API
 func (h *CoverLetterHandler) generateCoverLetter(apiRequestData map[string]interface{}) ([]byte, error) {
 	// Load environment variables
-	apiURL := os.Getenv("COVER_LETTER_API_URL")
-	apiKey := os.Getenv("COVER_CV_API_KEY")
+	apiURL := config.Cfg.Cloud.CL_Url
+	apiKey := config.Cfg.Cloud.GEN_API_KEY
 
 	// Marshal cover letter data to JSON
 	jsonData, err := json.Marshal(apiRequestData)
