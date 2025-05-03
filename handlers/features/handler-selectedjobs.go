@@ -25,8 +25,8 @@ func NewSelectedJobsHandler() *SelectedJobsHandler {
 // Random salary range generator
 func randomSalary() (int, int) {
 	// Example random salary range logic, adjust as needed
-	minSalary := 50000 // Example minimum salary
-	maxSalary := 100000 // Example maximum salary
+	minSalary := 20000 // Example minimum salary
+	maxSalary := 35000 // Example maximum salary
 	return minSalary, maxSalary
 }
 // PostSelectedJob saves the selected job for the authenticated user
