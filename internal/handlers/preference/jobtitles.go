@@ -1,4 +1,4 @@
-package dataentry
+package preference
 
 import (
 	"RAAS/internal/models"

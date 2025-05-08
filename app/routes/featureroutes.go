@@ -2,81 +2,59 @@ package routes
 
 import (
 	"RAAS/core/config"
-	"RAAS/internal/handlers/features"
-	// "RAAS/handlers/repo"
 	"RAAS/core/middlewares"
+	"RAAS/internal/handlers/features/generation"
+	"RAAS/internal/handlers/features/jobs"
+	"RAAS/internal/handlers/features/user"
 
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
 func SetupFeatureRoutes(r *gin.Engine, client *mongo.Client, cfg *config.Config) {
-
+	// Inject MongoDB into context
 	r.Use(middleware.InjectDB(client))
-	// PROFILE routes
-	seekerProfileHandler := features.NewSeekerProfileHandler()
-	seekerProfileRoutes := r.Group("/profile")
-	seekerProfileRoutes.Use(middleware.AuthMiddleware())
-	{
-		seekerProfileRoutes.GET("", seekerProfileHandler.GetSeekerProfile)
-	}
 
-	jobRetrievalRoutes := r.Group("/api/jobs")
-	jobRetrievalRoutes.Use(middleware.AuthMiddleware())      // Auth middleware for authentication
-	jobRetrievalRoutes.Use(middleware.PaginationMiddleware) // Pagination middleware for pagination logic
-	{
-		jobRetrievalRoutes.GET("", features.JobRetrievalHandler)
-	}
+	// Auth Middleware + Pagination helpers
+	auth := middleware.AuthMiddleware()
+	paginate := middleware.PaginationMiddleware
 
-	savedJobsHandler := features.NewSavedJobsHandler()
+	// === USER ===
 
-	// Saved jobs routes (authenticated)
-	savedJobsRoutes := r.Group("/saved-jobs")
-	savedJobsRoutes.Use(middleware.AuthMiddleware())
-	savedJobsRoutes.Use(middleware.PaginationMiddleware)
-	{
-		savedJobsRoutes.POST("", savedJobsHandler.SaveJob)
-		savedJobsRoutes.GET("", savedJobsHandler.GetSavedJobs)
-	}
+	seekerProfileHandler := user.NewSeekerProfileHandler()
+	r.Group("/profile", auth).
+		GET("", seekerProfileHandler.GetSeekerProfile)
 
+	savedJobsHandler := user.NewSavedJobsHandler()
+	r.Group("/saved-jobs", auth, paginate).
+		POST("", savedJobsHandler.SaveJob).
+		GET("", savedJobsHandler.GetSavedJobs)
 
+	selectedJobsHandler := user.NewSelectedJobsHandler()
+	r.Group("/api/selected-jobs", auth, paginate).
+		POST("", selectedJobsHandler.PostSelectedJob).
+		GET("", selectedJobsHandler.GetSelectedJobs)
 
-	selectedJobsHandler := features.NewSelectedJobsHandler()
-	selectedJobsRoutes := r.Group("/api/selected-jobs")
-	selectedJobsRoutes.Use(middleware.AuthMiddleware())      // Auth middleware
-	selectedJobsRoutes.Use(middleware.PaginationMiddleware)  // Pagination middleware
-	{
-		// Define the route for getting selected jobs
-		selectedJobsRoutes.GET("", selectedJobsHandler.GetSelectedJobs)
-		selectedJobsRoutes.POST("",selectedJobsHandler.PostSelectedJob)
-	}
+	// === JOBS ===
 
-	LinkProviderHandler := features.NewLinkProviderHandler()
+	r.Group("/api/jobs", auth, paginate).
+		GET("", jobs.JobRetrievalHandler)
 
-	// Link provider route (authenticated)
-	linkProviderRoutes := r.Group("/provide-link")
-	linkProviderRoutes.Use(middleware.AuthMiddleware())
-	{
-		linkProviderRoutes.POST("", LinkProviderHandler.PostAndGetLink)
-	}
+	linkProviderHandler := jobs.NewLinkProviderHandler()
+	r.Group("/provide-link", auth).
+		POST("", linkProviderHandler.PostAndGetLink)
 
-	CoverLetterHandler := features.NewCoverLetterHandler()
-	// CoverLetter generation route (authenticated)
-	coverLetterRoutes := r.Group("/generate-cover-letter")
-	coverLetterRoutes.Use(middleware.AuthMiddleware())
-	{
-		coverLetterRoutes.POST("", CoverLetterHandler.PostCoverLetter)
-	}
+	// === GENERATION ===
 
+	coverLetterHandler := generation.NewCoverLetterHandler()
+	r.Group("/generate-cover-letter", auth).
+		POST("", coverLetterHandler.PostCoverLetter)
 
-	ResumeHandler := features.NewResumeHandler()
-	// CV generation route (authenticated)
-	cvRoutes := r.Group("/generate-resume")
-	cvRoutes.Use(middleware.AuthMiddleware())
-	{
-		cvRoutes.POST("", ResumeHandler.PostResume)
-	}
+	resumeHandler := generation.NewResumeHandler()
+	r.Group("/generate-resume", auth).
+		POST("", resumeHandler.PostResume)
 
+		
 
 	// // JOB METADATA routes
 	// jobDataHandler := features.NewJobDataHandler()

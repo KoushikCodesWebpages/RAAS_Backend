@@ -1,10 +1,9 @@
-package dataentry
+package preference
 
 import (
 	"RAAS/core/config"
 	"RAAS/internal/dto"
 	"RAAS/internal/handlers/repository"
-	"RAAS/internal/handlers/features"
 	"RAAS/internal/models"
 
 
@@ -40,7 +39,7 @@ func (h *LanguageHandler) CreateLanguage(c *gin.Context) {
 
 	// Upload file if present
 	var fileURL string
-	mediaUploadHandler := features.NewMediaUploadHandler(features.GetBlobServiceClient())
+	mediaUploadHandler := repository.NewMediaUploadHandler(repository.GetBlobServiceClient())
 
 	_, header, err := c.Request.FormFile("file")
 	if err == nil && header != nil {

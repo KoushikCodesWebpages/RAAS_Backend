@@ -1,9 +1,8 @@
-package dataentry
+package preference
 
 import (
 	"RAAS/core/config"
 	"RAAS/internal/dto"
-	"RAAS/internal/handlers/features"
 	"RAAS/internal/models"
 	"RAAS/internal/handlers/repository"
 
@@ -39,7 +38,7 @@ func (h *CertificateHandler) CreateCertificate(c *gin.Context) {
 
 	// Upload file if present
 	var fileURL string
-	mediaUploadHandler := features.NewMediaUploadHandler(features.GetBlobServiceClient())
+	mediaUploadHandler := repository.NewMediaUploadHandler(repository.GetBlobServiceClient())
 
 	_, header, err := c.Request.FormFile("file")
 	if err == nil && header != nil {

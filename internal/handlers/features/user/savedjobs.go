@@ -1,8 +1,9 @@
-package features
+package user
+
 import (
 	"RAAS/internal/dto"
+	"RAAS/internal/handlers/repository"
 	"RAAS/internal/models"
-	"RAAS/internal/handlers"
 
 	"fmt"
 	"net/http"
@@ -81,7 +82,7 @@ func (h *SavedJobsHandler) GetSavedJobs(c *gin.Context) {
 	}
 	defer cursor.Close(c)
 
-	_, skills, err := handlers.GetSeekerData(db, userID)
+	_, skills, err := repository.GetSeekerData(db, userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error fetching user data"})
 		return
@@ -94,7 +95,7 @@ func (h *SavedJobsHandler) GetSavedJobs(c *gin.Context) {
 			continue
 		}
 
-		expectedSalary := dto.SalaryRange(handlers.GenerateSalaryRange())
+		expectedSalary := dto.SalaryRange(repository.GenerateSalaryRange())
 		jobs = append(jobs, dto.JobDTO{
 			Source:         "saved",
 			JobID:          job.JobID,

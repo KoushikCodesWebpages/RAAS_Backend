@@ -2,10 +2,10 @@ package routes
 
 import (
 	"RAAS/core/config"
-	"RAAS/internal/handlers/dataentry"
-	"RAAS/internal/handlers/features"
 	"RAAS/core/middlewares"
 
+	"RAAS/internal/handlers/features/user"
+	"RAAS/internal/handlers/preference"
 
 
 	"github.com/gin-gonic/gin"
@@ -19,10 +19,10 @@ func SetupDataEntryRoutes(r *gin.Engine, client *mongo.Client, cfg *config.Confi
 	timeline.Use(middleware.AuthMiddleware()) // Middleware to authenticate JWT
 
 	// Define the route for getting the next entry step
-	timeline.GET("", features.GetNextEntryStep())
+	timeline.GET("", user.GetNextEntryStep())
 
 	// PERSONAL INFO routes
-	personalInfoHandler := dataentry.NewPersonalInfoHandler()
+	personalInfoHandler := preference.NewPersonalInfoHandler()
 	personalInfoRoutes := r.Group("/personal-info")
 	personalInfoRoutes.Use(middleware.AuthMiddleware())
 	{
@@ -33,7 +33,7 @@ func SetupDataEntryRoutes(r *gin.Engine, client *mongo.Client, cfg *config.Confi
 	}
 
 	// PROFESSIONAL SUMMARY routes
-	professionalSummaryHandler := dataentry.NewProfessionalSummaryHandler()
+	professionalSummaryHandler := preference.NewProfessionalSummaryHandler()
 	professionalSummaryRoutes := r.Group("/professional-summary")
 	professionalSummaryRoutes.Use(middleware.AuthMiddleware())
 	{
@@ -43,7 +43,7 @@ func SetupDataEntryRoutes(r *gin.Engine, client *mongo.Client, cfg *config.Confi
 	}
 
 
-	workExperienceHandler := dataentry.NewWorkExperienceHandler()
+	workExperienceHandler := preference.NewWorkExperienceHandler()
 	workExperienceRoutes := r.Group("/work-experience")
 	workExperienceRoutes.Use(middleware.AuthMiddleware())
 	{
@@ -53,7 +53,7 @@ func SetupDataEntryRoutes(r *gin.Engine, client *mongo.Client, cfg *config.Confi
 	}
 
 
-	educationHandler := dataentry.NewEducationHandler()
+	educationHandler := preference.NewEducationHandler()
 	educationRoutes := r.Group("/education")
 	educationRoutes.Use(middleware.AuthMiddleware())
 	{
@@ -64,7 +64,7 @@ func SetupDataEntryRoutes(r *gin.Engine, client *mongo.Client, cfg *config.Confi
 
 
 	// CERTIFICATES routes
-	certificateHandler := dataentry.NewCertificateHandler()
+	certificateHandler := preference.NewCertificateHandler()
 	certificateRoutes := r.Group("/certificates")
 	certificateRoutes.Use(middleware.AuthMiddleware())
 	{
@@ -75,7 +75,7 @@ func SetupDataEntryRoutes(r *gin.Engine, client *mongo.Client, cfg *config.Confi
 	}
 
 	// LANGUAGES routes	
-	languageHandler := dataentry.NewLanguageHandler()
+	languageHandler := preference.NewLanguageHandler()
 	languageRoutes := r.Group("/languages")
 	languageRoutes.Use(middleware.AuthMiddleware())
 	{
@@ -86,7 +86,7 @@ func SetupDataEntryRoutes(r *gin.Engine, client *mongo.Client, cfg *config.Confi
 	}
 
 	// JOB TITLES routes
-	jobTitleHandler := dataentry.NewJobTitleHandler()
+	jobTitleHandler := preference.NewJobTitleHandler()
 	jobTitleRoutes := r.Group("/jobtitles")
 	jobTitleRoutes.Use(middleware.AuthMiddleware())
 	{

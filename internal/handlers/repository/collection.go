@@ -1,4 +1,4 @@
-package features
+package repository
 
 import (
 	"context"
@@ -33,29 +33,6 @@ func GetJobByID(db *mongo.Database, jobID string) (models.Job, error) {
 	return job, nil
 }
 
-// Generate expected salary range
-func GenerateSalaryRange() models.SalaryRange {
-	min, max := randomSalary() // Use your existing function
-	return models.SalaryRange{Min: min, Max: max}
-}
-
-func dereferenceString(str *string) string {
-	if str != nil {
-		return *str
-	}
-	return "" // Return an empty string if the pointer is nil
-}
-
-
-// Helper function to get optional fields
-func getOptionalField(info bson.M, field string) *string {
-	if val, ok := info[field]; ok && val != nil {
-		v := val.(string)
-		return &v
-	}
-	return nil
-}
-
 // Extract skills safely
 func extractSkills(professionalSummary bson.M) []string {
 	if val, ok := professionalSummary["skills"].(primitive.A); ok {
@@ -70,9 +47,3 @@ func extractSkills(professionalSummary bson.M) []string {
 	return nil
 }
 
-func randomSalary() (int, int) {
-	// Example random salary range logic, adjust as needed
-	minSalary := 25000 // Example minimum salary
-	maxSalary := 35000 // Example maximum salary
-	return minSalary, maxSalary
-}

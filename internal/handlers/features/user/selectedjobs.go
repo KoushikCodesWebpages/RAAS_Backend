@@ -1,9 +1,9 @@
-package features
+package user
 
 import (
 	"RAAS/internal/dto"
 	"RAAS/internal/models"
-	"RAAS/internal/handlers"
+	"RAAS/internal/handlers/repository"
 
 	"fmt"
 	"net/http"
@@ -23,13 +23,6 @@ func NewSelectedJobsHandler() *SelectedJobsHandler {
 	return &SelectedJobsHandler{}
 }
 
-// Random salary range generator
-func randomSalary() (int, int) {
-	// Example random salary range logic, adjust as needed
-	minSalary := 20000 // Example minimum salary
-	maxSalary := 35000 // Example maximum salary
-	return minSalary, maxSalary
-}
 // PostSelectedJob saves the selected job for the authenticated user
 func (h *SelectedJobsHandler) PostSelectedJob(c *gin.Context) {
 	db := c.MustGet("db").(*mongo.Database)
@@ -54,19 +47,19 @@ func (h *SelectedJobsHandler) PostSelectedJob(c *gin.Context) {
 	}
 
 	// Reuse helper functions
-	_, skills, err := handlers.GetSeekerData(db, userID)
+	_, skills, err := repository.GetSeekerData(db, userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error fetching seeker data"})
 		return
 	}
 
-	job, err := handlers.GetJobByID(db, input.JobID)
+	job, err := repository.GetJobByID(db, input.JobID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Job not found"})
 		return
 	}
 
-	expectedSalary := handlers.GenerateSalaryRange()
+	expectedSalary := repository.GenerateSalaryRange()
 
 	selectedJob := models.SelectedJobApplication{
 		AuthUserID:           userID,

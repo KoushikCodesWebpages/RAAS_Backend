@@ -3,18 +3,19 @@ package routes
 import (
 	"RAAS/core/config"
 	"RAAS/core/middlewares"
-	"RAAS/internal/handlers/repo"
+	"RAAS/internal/handlers/features/user"
 
 
-	"github.com/gin-gonic/gin"
-	"github.com/gin-contrib/cors"
-	"go.mongodb.org/mongo-driver/mongo"
-	"time"
 	"strings"
+	"time"
+
+	"github.com/gin-contrib/cors"
+	"github.com/gin-gonic/gin"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 func SetupRoutes(r *gin.Engine, client *mongo.Client, cfg *config.Config) {
-	// Set up allowed CORS origins
+	// CORS
 	origins := strings.Split(cfg.Project.CORSAllowedOrigins, ",")
 	for i, origin := range origins {
 		origins[i] = strings.TrimSpace(origin)
@@ -28,31 +29,27 @@ func SetupRoutes(r *gin.Engine, client *mongo.Client, cfg *config.Config) {
 		MaxAge: 12 * time.Hour,
 	}
 
-	// Apply CORS middleware
+	//INJECT
 	r.Use(cors.New(corsConfig))
-
-	// Middleware: Inject MongoDB client into context (adjusted for MongoDB)
 	r.Use(middleware.InjectDB(client))
 
-	// Serve static files from the dist folder
-	r.Static("/assets", "./public/dist/assets")
 
-	// Serve React app's index.html
+	//STATIC
+	r.Static("/assets", "/public/dist/assets")
 	r.GET("/", func(c *gin.Context) {
-		c.File("./public/dist/index.html")
+		c.File("/public/dist/index.html")
 	})
-
-	// Catch-all route for client-side routing
 	r.NoRoute(func(c *gin.Context) {
-		c.File("./public/dist/index.html")
+		c.File("/app/templates/noroutes.html")
 	})
+	
 
-	// Call SetupAuthRoutes, SetupDataEntryRoutes, SetupFeatureRoutes
+	// SETUP
 	SetupAuthRoutes(r, cfg)
 	SetupDataEntryRoutes(r, client, cfg)
 	SetupFeatureRoutes(r, client, cfg)
 
-	// Reset DB route (update the handler to work with MongoDB)
-	r.POST("/api/reset-db", repo.ResetDBHandler)
-	r.POST("/api/print-all-collections", repo.PrintAllCollectionsHandler)
+	// EXPOSED
+	r.POST("/api/reset-db", user.ResetDBHandler)
+	r.POST("/api/print-all-collections", user.PrintAllCollectionsHandler)
 }

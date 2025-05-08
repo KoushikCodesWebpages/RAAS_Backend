@@ -1,4 +1,4 @@
-package features
+package generation
 
 import (
     "RAAS/core/config" 
@@ -8,7 +8,6 @@ import (
 	"fmt"
 
 	"net/http"
-	
 
 	"io"
 )

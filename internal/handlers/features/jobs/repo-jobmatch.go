@@ -1,4 +1,4 @@
-package features
+package jobs
 // import (
 // 	"RAAS/models"
 // 	"gorm.io/gorm"

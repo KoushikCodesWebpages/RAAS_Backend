@@ -18,8 +18,8 @@ func SetupAuthRoutes(r *gin.Engine, cfg *config.Config) {
 	// Rate limiter configurations
 	signupLimiter := middleware.RateLimiterMiddleware(5, time.Minute)
 	loginLimiter := middleware.RateLimiterMiddleware(10, time.Minute)
-	forgotPassLimiter := middleware.RateLimiterMiddleware(3, time.Minute)
-	resetPassLimiter := middleware.RateLimiterMiddleware(3, time.Minute)
+	// forgotPassLimiter := middleware.RateLimiterMiddleware(3, time.Minute)
+	// resetPassLimiter := middleware.RateLimiterMiddleware(3, time.Minute)
 	verifyEmailLimiter := middleware.RateLimiterMiddleware(10, time.Minute)
 	// googleLoginLimiter := middleware.RateLimiterMiddleware(10, time.Minute)
 	// googleCallbackLimiter := middleware.RateLimiterMiddleware(20, time.Minute)
@@ -36,9 +36,9 @@ func SetupAuthRoutes(r *gin.Engine, cfg *config.Config) {
 		authGroup.POST("/login", loginLimiter, auth.Login)
 
 		
-		authGroup.POST("/forgot-password", forgotPassLimiter, auth.ForgotPasswordHandler)
-		authGroup.POST("/admin-reset-token", auth.SystemInitiatedResetTokenHandler) // No limiter
-		authGroup.GET("/reset-password", auth.ResetPasswordPage)                     // Optional
-		authGroup.POST("/reset-password", resetPassLimiter, auth.ResetPasswordHandler)
+		// authGroup.POST("/forgot-password", forgotPassLimiter, auth.ForgotPasswordHandler)
+		// authGroup.POST("/admin-reset-token", auth.SystemInitiatedResetTokenHandler) // No limiter
+		// authGroup.GET("/reset-password", auth.ResetPasswordPage)                     // Optional
+		// authGroup.POST("/reset-password", resetPassLimiter, auth.ResetPasswordHandler)
 	}
 }

@@ -1,4 +1,4 @@
-package features
+package generation
 
 import (
 	"RAAS/core/config"

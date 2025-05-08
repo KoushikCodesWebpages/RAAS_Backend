@@ -1,4 +1,4 @@
-package features
+package jobs
 
 import (
 	"RAAS/internal/dto"
@@ -8,8 +8,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/service"
-	"github.com/Azure/azure-sdk-for-go/services"
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -21,7 +19,7 @@ func JobRetrievalHandler(c *gin.Context) {
 	userID := c.MustGet("userID").(string)
 
 	// --- Fetch seeker and skills using helper ---
-	seeker, skills, err := GetSeekerData(db, userID)
+	seeker, skills, err := repository.GetSeekerData(db, userID)
 	if err != nil {
 		fmt.Println("Error fetching seeker data:", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error fetching seeker data"})
@@ -78,7 +76,7 @@ func JobRetrievalHandler(c *gin.Context) {
 			continue
 		}
 
-		expectedSalary := dto.SalaryRange(handlers.GenerateSalaryRange())
+		expectedSalary := dto.SalaryRange(repository.GenerateSalaryRange())
 
 		jobs = append(jobs, dto.JobDTO{
 			Source:         "seeker",
