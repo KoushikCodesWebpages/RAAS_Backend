@@ -1,6 +1,13 @@
 package main
 
 import (
+	"github.com/gin-gonic/gin"
+	"RAAS/core/config"
+	"RAAS/app/routes"
+	// "RAAS/workers"
+	"RAAS/internal/models" 
+
+
 	"fmt"
 	"log"
 	"os"
@@ -8,11 +15,7 @@ import (
 	"syscall"
 	"context"
 
-	"github.com/gin-gonic/gin"
-	"RAAS/config"
-	"RAAS/routes"
-	// "RAAS/workers"
-	"RAAS/models" // Import the models package to use InitDB
+	// Import the models package to use InitDB
 
 	// "go.mongodb.org/mongo-driver/mongo"
 )
