@@ -193,6 +193,12 @@ func (r *UserRepo) AuthenticateUser(ctx context.Context, email, password string)
 	err := r.DB.Collection("auth_users").FindOne(ctx, bson.M{"email": email}).Decode(&user)
 	if err == mongo.ErrNoDocuments {
 		return nil, errors.New("user not found")
+	} else if err != nil {
+		return nil, err
+	}
+
+	if !user.EmailVerified {
+		return nil, errors.New("email not verified")
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {

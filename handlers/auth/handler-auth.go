@@ -198,7 +198,7 @@ func Login(c *gin.Context) {
 
 	user, err := userRepo.AuthenticateUser(ctx, input.Email, input.Password)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid_credentials"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 
