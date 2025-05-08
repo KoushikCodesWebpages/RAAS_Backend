@@ -1,0 +1,51 @@
+name: Deploy Go App to VPS
+
+on:
+  push:
+    branches:
+      - prod
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Add VPS to known_hosts to avoid SSH verification issues
+      - name: Add VPS to known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.VPS_IP }} >> ~/.ssh/known_hosts
+
+      # Deploy via SSH using the VPS password
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v0.1.0
+        with:
+          host: ${{ secrets.VPS_IP }}
+          username: ${{ secrets.VPS_USER }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          port: 22
+          script: |
+            set -x
+            APP_DIR="/root/websites/${{ secrets.APP_NAME }}"
+            mkdir -p /root/websites
+
+            if [ ! -d "$APP_DIR" ]; then
+              echo "Cloning repository..."
+              git clone https://github.com/KoushikCodesWebpages/GO-Backend.git "$APP_DIR"
+            else
+              cd "$APP_DIR"
+              echo "Repository already exists. Pulling latest code..."
+              git fetch origin
+              git reset --hard origin/prod
+            fi
+
+            cd "$APP_DIR"
+
+            echo "Killing existing app process if running..."
+            pkill -f ${{ secrets.APP_NAME }} || true
+
+            echo "Building Go executable..."
+            go build -o ${{ secrets.APP_NAME }}
+
+            echo "Running app in background..."
+            nohup ./${{ secrets.APP_NAME }} > output.log 2>&1 &
