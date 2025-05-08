@@ -3,7 +3,7 @@ package auth
 import (
 	"RAAS/core/config"
 	"RAAS/internal/models"
-	"RAAS/internal/utils"
+	"RAAS/utils"
 
 	"fmt"
 	"github.com/gin-gonic/gin"

@@ -4,7 +4,7 @@ import (
 
 	"RAAS/internal/dto"
 	"RAAS/internal/models"
-	"RAAS/internal/handlers"
+	"RAAS/internal/handlers/repository"
 
 	"context"
 	"log"
@@ -61,7 +61,7 @@ func (h *PersonalInfoHandler) CreatePersonalInfo(c *gin.Context) {
 	}
 
 	// Process and set personal info using the new reusable function
-	if err := handlers.SetPersonalInfo(&seeker, &input); err != nil {
+	if err := repository.SetPersonalInfo(&seeker, &input); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process personal info"})
 		log.Printf("Failed to process personal info for auth_user_id: %s, Error: %s", userID, err.Error())
 		return
@@ -84,7 +84,7 @@ func (h *PersonalInfoHandler) CreatePersonalInfo(c *gin.Context) {
 
 	// Determine the message based on whether we were creating or updating
 	message := "Personal info created"
-	if handlers.IsFieldFilled(seeker.PersonalInfo) {
+	if repository.IsFieldFilled(seeker.PersonalInfo) {
 		message = "Personal info updated"
 	}
 
@@ -128,13 +128,13 @@ func (h *PersonalInfoHandler) GetPersonalInfo(c *gin.Context) {
 	}
 
 	// Check if personal info is empty
-	if seeker.PersonalInfo == nil || !handlers.IsFieldFilled(seeker.PersonalInfo) {
+	if seeker.PersonalInfo == nil || !repository.IsFieldFilled(seeker.PersonalInfo) {
 		// Respond with 204 No Content and a custom message
 		c.JSON(http.StatusNoContent, gin.H{"message": "Personal information not filled"})
 		return
 	}
 
-	personalInfo, err := handlers.GetPersonalInfo(&seeker)
+	personalInfo, err := repository.GetPersonalInfo(&seeker)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to unmarshal personal info"})
 		return
@@ -168,7 +168,7 @@ func (h *PersonalInfoHandler) UpdatePersonalInfo(c *gin.Context) {
 	}
 
 	// Process and set personal info using the reusable function
-	if err := handlers.SetPersonalInfo(&seeker, &input); err != nil {
+	if err := repository.SetPersonalInfo(&seeker, &input); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process personal info"})
 		return
 	}
@@ -215,7 +215,7 @@ func (h *PersonalInfoHandler) PatchPersonalInfo(c *gin.Context) {
 		return
 	}
 
-	personalInfo, err := handlers.GetPersonalInfo(&seeker)
+	personalInfo, err := repository.GetPersonalInfo(&seeker)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve personal info"})
 		return
@@ -233,7 +233,7 @@ func (h *PersonalInfoHandler) PatchPersonalInfo(c *gin.Context) {
 	}
 
 	// Set updated personal info in the Seeker object
-	if err := handlers.SetPersonalInfo(&seeker, personalInfo); err != nil {
+	if err :=repository.SetPersonalInfo(&seeker, personalInfo); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update personal info"})
 		return
 	}

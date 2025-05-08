@@ -1,4 +1,4 @@
-package repo
+package auth
 
 // import (
 // 	"net/http"

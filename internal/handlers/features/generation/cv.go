@@ -2,7 +2,7 @@ package features
 
 import (
 	"RAAS/core/config"
-	"RAAS/internal/handlers"
+	"RAAS/internal/handlers/repository"
 	"RAAS/internal/models"
 
 
@@ -68,12 +68,12 @@ func (h *ResumeHandler) PostResume(c *gin.Context) {
 	}
 
 	// Gather details from seeker
-	personalInfo, _ := handlers.GetPersonalInfo(&seeker)
-	professionalSummary, _ := handlers.GetProfessionalSummary(&seeker)
-	workExperience, _ := handlers.GetWorkExperience(&seeker)
-	educationObjs, _ := handlers.GetEducation(&seeker)
-	certificateObjs, _ := handlers.GetCertificates(&seeker)
-	languageObjs, _ := handlers.GetLanguages(&seeker)
+	personalInfo, _ := repository.GetPersonalInfo(&seeker)
+	professionalSummary, _ := repository.GetProfessionalSummary(&seeker)
+	workExperience, _ := repository.GetWorkExperience(&seeker)
+	educationObjs, _ := repository.GetEducation(&seeker)
+	certificateObjs, _ := repository.GetCertificates(&seeker)
+	languageObjs, _ := repository.GetLanguages(&seeker)
 
 	// Simplify education
 	education := []string{}

@@ -4,10 +4,9 @@ import (
 
 	"RAAS/core/config"
 	"RAAS/internal/dto"
-	"RAAS/internal/handlers/repo"
 	"RAAS/internal/models"
 	"RAAS/core/security"
-	"RAAS/internal/utils"
+	"RAAS/utils"
 
 
 	"context"
@@ -29,7 +28,7 @@ func SeekerSignUp(c *gin.Context) {
 	}
 
 	db := c.MustGet("db").(*mongo.Database)
-	userRepo := repo.NewUserRepo(db)
+	userRepo := NewUserRepo(db)
 
 	if err := userRepo.ValidateSeekerSignUpInput(input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "validation_error", "details": err.Error()})
@@ -188,7 +187,7 @@ func Login(c *gin.Context) {
 	var input dto.LoginInput
 
 	db := c.MustGet("db").(*mongo.Database)
-	userRepo := repo.NewUserRepo(db)
+	userRepo := NewUserRepo(db)
 
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_input", "details": err.Error()})

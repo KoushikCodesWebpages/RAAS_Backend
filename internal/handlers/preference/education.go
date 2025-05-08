@@ -12,7 +12,7 @@ import (
 
 	"RAAS/internal/dto"
 	"RAAS/internal/models"
-	"RAAS/internal/handlers"
+	"RAAS/internal/handlers/repository"
 )
 
 type EducationHandler struct{}
@@ -61,7 +61,7 @@ func (h *EducationHandler) CreateEducation(c *gin.Context) {
 	}
 
 	// Use AppendToEducation to add the new education
-	if err := handlers.AppendToEducation(&seeker, education); err != nil {
+	if err := repository.AppendToEducation(&seeker, education); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process education"})
 		log.Printf("Failed to process education for auth_user_id: %s, Error: %v", userID, err)
 		return
@@ -135,7 +135,7 @@ func (h *EducationHandler) GetEducation(c *gin.Context) {
     }
 
     // Fetch the education data (could be a function similar to GetWorkExperience)
-    educations, err := handlers.GetEducation(&seeker)
+    educations, err := repository.GetEducation(&seeker)
     if err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": "Error processing education records"})
         log.Printf("Error processing education records for auth_user_id: %s, Error: %v", userID, err)

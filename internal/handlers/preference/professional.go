@@ -3,7 +3,7 @@ package dataentry
 import (
 
 	"RAAS/internal/dto"
-	"RAAS/internal/handlers"
+	"RAAS/internal/handlers/repository"
 	"RAAS/internal/models"
 
 
@@ -45,7 +45,7 @@ func (h *ProfessionalSummaryHandler) CreateProfessionalSummary(c *gin.Context) {
 	}
 
 	// Process and set professional summary
-	if err := handlers.SetProfessionalSummary(&seeker, &input); err != nil {
+	if err := repository.SetProfessionalSummary(&seeker, &input); err != nil {
 		handleProcessingError(err, c, "Failed to process professional summary", userID)
 		return
 	}
@@ -57,7 +57,7 @@ func (h *ProfessionalSummaryHandler) CreateProfessionalSummary(c *gin.Context) {
 	}
 
 	message := "Professional summary created"
-	if handlers.IsFieldFilled(seeker.ProfessionalSummary) {
+	if repository.IsFieldFilled(seeker.ProfessionalSummary) {
 		message = "Professional summary updated"
 	}
 
@@ -86,12 +86,12 @@ func (h *ProfessionalSummaryHandler) GetProfessionalSummary(c *gin.Context) {
 		return
 	}
 
-	if !handlers.IsFieldFilled(seeker.ProfessionalSummary) {
+	if !repository.IsFieldFilled(seeker.ProfessionalSummary) {
 		c.JSON(http.StatusNoContent, gin.H{"error": "Professional summary not yet filled"})
 		return
 	}
 
-	profSummary, err := handlers.GetProfessionalSummary(&seeker)
+	profSummary, err := repository.GetProfessionalSummary(&seeker)
 	if err != nil {
 		handleProcessingError(err, c, "Failed to parse professional summary", userID)
 		return
@@ -128,7 +128,7 @@ func (h *ProfessionalSummaryHandler) UpdateProfessionalSummary(c *gin.Context) {
 		return
 	}
 
-	if err := handlers.SetProfessionalSummary(&seeker, &input); err != nil {
+	if err := repository.SetProfessionalSummary(&seeker, &input); err != nil {
 		handleProcessingError(err, c, "Failed to update professional summary", userID)
 		return
 	}

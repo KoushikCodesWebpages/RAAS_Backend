@@ -3,7 +3,7 @@ package dataentry
 import (
 	"RAAS/core/config"
 	"RAAS/internal/dto"
-	"RAAS/internal/handlers"
+	"RAAS/internal/handlers/repository"
 	"RAAS/internal/handlers/features"
 	"RAAS/internal/models"
 
@@ -73,7 +73,7 @@ func (h *LanguageHandler) CreateLanguage(c *gin.Context) {
 	}
 
 	// Append the new language
-	if err := handlers.AppendToLanguages(&seeker, input, fileURL); err != nil {
+	if err := repository.AppendToLanguages(&seeker, input, fileURL); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process language"})
 		log.Printf("Failed to process language for auth_user_id: %s, Error: %v", userID, err)
 		return
@@ -142,7 +142,7 @@ func (h *LanguageHandler) GetLanguages(c *gin.Context) {
 		return
 	}
 
-	languages, err := handlers.GetLanguages(&seeker)
+	languages, err := repository.GetLanguages(&seeker)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error processing languages"})
 		log.Printf("Error processing languages for auth_user_id: %s, Error: %v", userID, err)

@@ -1,4 +1,4 @@
-package repo
+package auth
 
 import (
 
@@ -6,7 +6,7 @@ import (
 	"RAAS/core/config"
 	"RAAS/internal/dto"
 	"RAAS/internal/models"
-	"RAAS/internal/utils"
+	"RAAS/utils"
 
 	"context"
 	"errors"

@@ -2,12 +2,14 @@ package features
 
 import (
 	"RAAS/internal/dto"
-	"RAAS/internal/handlers"
+	"RAAS/internal/handlers/repository"
 	"RAAS/internal/models"
 
 	"fmt"
 	"net/http"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/service"
+	"github.com/Azure/azure-sdk-for-go/services"
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -19,7 +21,7 @@ func JobRetrievalHandler(c *gin.Context) {
 	userID := c.MustGet("userID").(string)
 
 	// --- Fetch seeker and skills using helper ---
-	seeker, skills, err := handlers.GetSeekerData(db, userID)
+	seeker, skills, err := GetSeekerData(db, userID)
 	if err != nil {
 		fmt.Println("Error fetching seeker data:", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error fetching seeker data"})

@@ -4,7 +4,7 @@ import (
 
 	"RAAS/internal/dto"
 	"RAAS/internal/models"
-	"RAAS/internal/handlers"
+	"RAAS/internal/handlers/repository"
 
 	"context"
 	"log"
@@ -62,7 +62,7 @@ func (h *WorkExperienceHandler) CreateWorkExperience(c *gin.Context) {
 	}
 
 	// Use AppendToWorkExperience to add the new experience
-	if err := handlers.AppendToWorkExperience(&seeker, workExperience); err != nil {
+	if err := repository.AppendToWorkExperience(&seeker, workExperience); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process work experience"})
 		log.Printf("Failed to process work experience for auth_user_id: %s, Error: %v", userID, err)
 		return
@@ -137,7 +137,7 @@ func (h *WorkExperienceHandler) GetWorkExperience(c *gin.Context) {
     }
 
     // Convert bson.M to the expected dto.WorkExperienceRequest type
-    workExperiences, err := handlers.GetWorkExperience(&seeker)
+    workExperiences, err := repository.GetWorkExperience(&seeker)
     if err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": "Error processing work experiences"})
         log.Printf("Error processing work experiences for auth_user_id: %s, Error: %v", userID, err)

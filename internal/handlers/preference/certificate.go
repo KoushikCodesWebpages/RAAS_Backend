@@ -3,9 +3,9 @@ package dataentry
 import (
 	"RAAS/core/config"
 	"RAAS/internal/dto"
-	"RAAS/internal/handlers"
 	"RAAS/internal/handlers/features"
 	"RAAS/internal/models"
+	"RAAS/internal/handlers/repository"
 
 	"context"
 	"log"
@@ -72,7 +72,7 @@ func (h *CertificateHandler) CreateCertificate(c *gin.Context) {
 	}
 
 	// Append the new certificate
-	if err := handlers.AppendToCertificates(&seeker, input, fileURL); err != nil {
+	if err := repository.AppendToCertificates(&seeker, input, fileURL); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process certificate"})
 		log.Printf("Failed to process certificate for auth_user_id: %s, Error: %v", userID, err)
 		return
@@ -141,7 +141,7 @@ func (h *CertificateHandler) GetCertificates(c *gin.Context) {
 		return
 	}
 
-	certificates, err := handlers.GetCertificates(&seeker)
+	certificates, err := repository.GetCertificates(&seeker)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error processing certificates"})
 		log.Printf("Error processing certificates for auth_user_id: %s, Error: %v", userID, err)

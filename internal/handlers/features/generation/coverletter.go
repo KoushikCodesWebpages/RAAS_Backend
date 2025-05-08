@@ -2,8 +2,8 @@ package features
 
 import (
 	"RAAS/core/config"
-	"RAAS/internal/handlers"
 	"RAAS/internal/models"
+	"RAAS/internal/handlers/repository"
 
 
 	"bytes"
@@ -79,12 +79,12 @@ func (h *CoverLetterHandler) PostCoverLetter(c *gin.Context) {
 	}
 
 	// Gather details from seeker
-	personalInfo, _ := handlers.GetPersonalInfo(&seeker)
-	professionalSummary, _ := handlers.GetProfessionalSummary(&seeker)
-	workExperience, _ := handlers.GetWorkExperience(&seeker)
-	education, _ := handlers.GetEducation(&seeker)
-	certificates, _ := handlers.GetCertificates(&seeker)
-	languages, _ := handlers.GetLanguages(&seeker)
+	personalInfo, _ := repository.GetPersonalInfo(&seeker)
+	professionalSummary, _ := repository.GetProfessionalSummary(&seeker)
+	workExperience, _ := repository.GetWorkExperience(&seeker)
+	education, _ := repository.GetEducation(&seeker)
+	certificates, _ := repository.GetCertificates(&seeker)
+	languages, _ := repository.GetLanguages(&seeker)
 
 	// Construct the API payload for cover letter generation
 	apiRequestData := map[string]interface{}{

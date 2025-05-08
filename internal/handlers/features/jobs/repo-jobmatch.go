@@ -1,4 +1,4 @@
-package repo
+package features
 // import (
 // 	"RAAS/models"
 // 	"gorm.io/gorm"
