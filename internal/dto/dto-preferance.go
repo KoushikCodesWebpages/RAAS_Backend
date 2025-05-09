@@ -122,15 +122,16 @@ type CertificateResponse struct {
 
 type LanguageRequest struct {
 	LanguageName     string `json:"language" binding:"required" bson:"language"`
-	CertificateFile  string `json:"certificate_file" bson:"certificate_file"`
+	CertificateFile  string `json:"certificate_file,omitempty" bson:"certificate_file,omitempty"` // Optional
 	ProficiencyLevel string `json:"proficiency" binding:"required" bson:"proficiency"`
 }
+
 
 type LanguageResponse struct {
 	ID               primitive.ObjectID `json:"id" bson:"_id,omitempty"`
 	AuthUserID       string              `json:"auth_user_id" bson:"auth_user_id"`
 	LanguageName     string              `json:"language" bson:"language"`
-	CertificateFile  string              `json:"certificate_file" bson:"certificate_file"`
+	CertificateFile  string              `json:"certificate_file" bson:"certificate_file,omitempty"`
 	ProficiencyLevel string              `json:"proficiency" bson:"proficiency"`
 }
 

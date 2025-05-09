@@ -59,7 +59,7 @@ func (h *SavedJobsHandler) GetSavedJobs(c *gin.Context) {
 	db := c.MustGet("db").(*mongo.Database)
 	userID := c.MustGet("userID").(string)
 
-	savedJobIDs, err := fetchSavedJobIDs(c, db.Collection("saved_jobs"), userID)
+	savedJobIDs, err := repository.FetchSavedJobIDs(c, db.Collection("saved_jobs"), userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error fetching saved jobs"})
 		return
@@ -136,20 +136,4 @@ func (h *SavedJobsHandler) GetSavedJobs(c *gin.Context) {
 }
 
 
-// Helper function to fetch saved job IDs
-func fetchSavedJobIDs(c *gin.Context, col *mongo.Collection, userID string) ([]string, error) {
-	var jobIDs []string
-	cursor, err := col.Find(c, bson.M{"auth_user_id": userID})
-	if err != nil {
-		return nil, err
-	}
-	defer cursor.Close(c)
 
-	for cursor.Next(c) {
-		var saved models.SavedJob
-		if err := cursor.Decode(&saved); err == nil {
-			jobIDs = append(jobIDs, saved.JobID)
-		}
-	}
-	return jobIDs, nil
-}

@@ -4,6 +4,8 @@ import (
 	"context"
 	"RAAS/internal/models"
 	"go.mongodb.org/mongo-driver/mongo"
+
+	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 
@@ -21,6 +23,22 @@ func GetSeekerData(db *mongo.Database, userID string) (models.Seeker, []string, 
 		skills = extractSkills(seeker.ProfessionalSummary) // Use your existing skill extraction logic
 	}
 	return seeker, skills, nil
+}
+
+
+// Extract preferred titles from seeker
+func CollectPreferredTitles(seeker models.Seeker) []string {
+	var titles []string
+	if seeker.PrimaryTitle != "" {
+		titles = append(titles, seeker.PrimaryTitle)
+	}
+	if seeker.SecondaryTitle != nil && *seeker.SecondaryTitle != "" {
+		titles = append(titles, *seeker.SecondaryTitle)
+	}
+	if seeker.TertiaryTitle != nil && *seeker.TertiaryTitle != "" {
+		titles = append(titles, *seeker.TertiaryTitle)
+	}
+	return titles
 }
 
 // Fetch job by job ID
@@ -45,5 +63,23 @@ func extractSkills(professionalSummary bson.M) []string {
 		return skills
 	}
 	return nil
+}
+
+// Helper function to fetch saved job IDs
+func FetchSavedJobIDs(c *gin.Context, col *mongo.Collection, userID string) ([]string, error) {
+	var jobIDs []string
+	cursor, err := col.Find(c, bson.M{"auth_user_id": userID})
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(c)
+
+	for cursor.Next(c) {
+		var saved models.SavedJob
+		if err := cursor.Decode(&saved); err == nil {
+			jobIDs = append(jobIDs, saved.JobID)
+		}
+	}
+	return jobIDs, nil
 }
 

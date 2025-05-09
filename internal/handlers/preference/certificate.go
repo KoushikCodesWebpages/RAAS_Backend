@@ -22,7 +22,6 @@ func NewCertificateHandler() *CertificateHandler {
 	return &CertificateHandler{}
 }
 
-// CreateCertificate handles the creation or update of a single certificate entry
 func (h *CertificateHandler) CreateCertificate(c *gin.Context) {
 	userID := c.MustGet("userID").(string)
 	db := c.MustGet("db").(*mongo.Database)
@@ -36,7 +35,7 @@ func (h *CertificateHandler) CreateCertificate(c *gin.Context) {
 		return
 	}
 
-	// Upload file if present
+	// Optional file upload
 	var fileURL string
 	mediaUploadHandler := repository.NewMediaUploadHandler(repository.GetBlobServiceClient())
 
@@ -52,7 +51,9 @@ func (h *CertificateHandler) CreateCertificate(c *gin.Context) {
 			return
 		}
 	} else {
-		log.Printf("[WARN] No file uploaded for certificate: %v", err)
+		// File is optional — just log and continue
+		fileURL = ""
+		log.Printf("[INFO] No certificate file uploaded for user %s. Proceeding without it.", userID)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -114,6 +115,7 @@ func (h *CertificateHandler) CreateCertificate(c *gin.Context) {
 	})
 }
 
+	
 // GetCertificates handles the retrieval of a user's certificates
 func (h *CertificateHandler) GetCertificates(c *gin.Context) {
 	userID := c.MustGet("userID").(string)

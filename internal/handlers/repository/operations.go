@@ -7,6 +7,7 @@ import (
 	"errors"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"github.com/google/uuid"
 
 )
@@ -25,6 +26,7 @@ func FindSeekerByUserID(collection *mongo.Collection, userID uuid.UUID) (*models
 	}
 	return &seeker, nil
 }
+
 
 func IsFieldFilled(personalInfo bson.M) bool {
 	// Check if the bson.M map is empty
@@ -53,12 +55,27 @@ func dereferenceString(str *string) string {
 
 
 // Helper function to get optional fields
-func getOptionalField(info bson.M, field string) *string {
+func GetOptionalField(info bson.M, field string) *string {
 	if val, ok := info[field]; ok && val != nil {
 		v := val.(string)
 		return &v
 	}
 	return nil
+}
+
+func GetNextSequence(db *mongo.Database, name string) (uint, error) {
+	var result struct {
+		SequenceValue uint `bson:"sequence_value"`
+	}
+
+	err := db.Collection("counters").FindOneAndUpdate(
+		context.TODO(),
+		bson.M{"_id": name},
+		bson.M{"$inc": bson.M{"sequence_value": 1}},
+		options.FindOneAndUpdate().SetUpsert(true).SetReturnDocument(options.After),
+	).Decode(&result)
+
+	return result.SequenceValue, err
 }
 
 
