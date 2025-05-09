@@ -4,7 +4,7 @@ import (
 	"RAAS/core/config"
 	"RAAS/internal/handlers/repository"
 	"RAAS/internal/models"
-
+	
 
 	"bytes"
 	"encoding/json"
@@ -74,7 +74,7 @@ func (h *ResumeHandler) PostResume(c *gin.Context) {
 	educationObjs, _ := repository.GetEducation(&seeker)
 	certificateObjs, _ := repository.GetCertificates(&seeker)
 	languageObjs, _ := repository.GetLanguages(&seeker)
-
+	
 	// Simplify education
 	education := []string{}
 	for _, e := range educationObjs {
@@ -87,7 +87,7 @@ func (h *ResumeHandler) PostResume(c *gin.Context) {
 	// Simplify certifications
 	certifications := []string{}
 	for _, cert := range certificateObjs {
-		name, _ := cert["name"].(string)
+		name, _ := cert["certificate_name"].(string)
 		certifications = append(certifications, name)
 	}
 
@@ -141,7 +141,7 @@ func (h *ResumeHandler) PostResume(c *gin.Context) {
 	}
 
 	// Update the user's daily generatable CV count
-	if _, err := seekerCollection.UpdateOne(c, bson.M{"auth_user_id": userID}, updateData); err != nil {
+	if _, err = seekerCollection.UpdateOne(c, bson.M{"auth_user_id": userID}, updateData); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error updating daily CV count"})
 		return
 	}
@@ -163,6 +163,7 @@ func (h *ResumeHandler) PostResume(c *gin.Context) {
 	// Send the resume back to the user
 	c.Header("Content-Disposition", "attachment; filename=resume.docx")
 	c.Data(http.StatusOK, "application/vnd.openxmlformats-officedocument.wordprocessingml.document", docxContent)
+
 }
 
 // Helper function to send POST request to the external resume generation API
