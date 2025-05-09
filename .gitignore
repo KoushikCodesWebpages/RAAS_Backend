@@ -4,3 +4,4 @@ tmp/*
 !tmp/.gitkeep
 setup.sh
 Dockerfile
+prod.sh
