@@ -4,12 +4,10 @@ import (
 	"RAAS/internal/dto"
 	"RAAS/internal/handlers/repository"
 	"RAAS/internal/models"
-
 	"context"
 	"log"
 	"net/http"
 	"time"
-	// "fmt"
 
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
@@ -47,6 +45,7 @@ func (h *SeekerProfileHandler) GetSeekerProfile(c *gin.Context) {
 		return
 	}
 
+	// Extract language names
 	var languageNames []string
 	for _, language := range seeker.Languages {
 		// Ensure 'language' is a map (bson.M), and access the "language" key
@@ -56,36 +55,32 @@ func (h *SeekerProfileHandler) GetSeekerProfile(c *gin.Context) {
 			log.Printf("[WARN] Invalid or missing 'language' field in languages array")
 		}
 	}
-	
 
 
-	preferredTitles := repository.CollectPreferredTitles(seeker)
-	if len(preferredTitles) == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "No preferred job titles set for user."})
-		return
-	}
 
-	// Count job titles
-	count, err := repository.CountJobsByTitles(db, preferredTitles)
+	workExperiencesBson, err := repository.GetWorkExperience(&seeker)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error counting job titles"})
-		return
+		log.Fatalf("Error retrieving work experiences: %v", err)
 	}
 
-	// totalMonths, err := repository.GetExperienceInMonths(seeker.WorkExperiences)
-	// if err != nil {
-	// 	log.Fatalf("Error calculating experience: %v", err)
-	// }
+	workExperiences, err := repository.ConvertBsonMToWorkExperienceRequest(workExperiencesBson)
+	if err != nil {
+		log.Fatalf("Error converting work experiences: %v", err)
+	}
 
-	// log.Printf("Total work experience in months: %d", totalMonths)
-
-	// Map seeker to Seeker	ProfileDTO
+	totalMonths, err := repository.GetExperienceInMonths(workExperiences)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error calculating total work experience"})
+		log.Printf("Error calculating total work experience for userID %s: %v", userID, err)
+		return
+	}
+	// Map seeker to SeekerProfileDTO
 	profile := dto.SeekerProfileDTO{
 		AuthUserID:                  seeker.AuthUserID,
 		FirstName:                   repository.DereferenceString(repository.GetOptionalField(seeker.PersonalInfo, "first_name")),
 		SecondName:                  repository.GetOptionalField(seeker.PersonalInfo, "second_name"),
 		Skills:                      repository.ExtractSkills(seeker.ProfessionalSummary),
-		TotalExperienceInMonths:     0,
+		TotalExperienceInMonths:     totalMonths, // Set the correct total experience here
 		Certificates:                repository.ExtractCertificates(seeker.Certificates),
 		PreferredJobTitle:           seeker.PrimaryTitle,
 		SubscriptionTier:            seeker.SubscriptionTier,
@@ -93,11 +88,11 @@ func (h *SeekerProfileHandler) GetSeekerProfile(c *gin.Context) {
 		DailyGeneratableCV:          seeker.DailyGeneratableCV,
 		DailyGeneratableCoverletter: seeker.DailyGeneratableCoverletter,
 		TotalApplications:           seeker.TotalApplications,
-		TotalJobsAvailable:          int(count), // For now, as you said
+		TotalJobsAvailable:          0, // For now, as you said
 		ProfileCompletion:           repository.CalculateProfileCompletion(seeker),
-		Languages:                  languageNames, 
+		Languages:                   languageNames,
 	}
 
+	// Send the profile as a response
 	c.JSON(http.StatusOK, profile)
 }
-

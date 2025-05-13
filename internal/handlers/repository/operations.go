@@ -2,8 +2,11 @@ package repository
 
 import (
 	"RAAS/internal/models"
+	// "RAAS/utils"
 	// "RAAS/internal/dto"
 	// "fmt"
+	// "log"
+	// "time"
 	"context"
 	"errors"
 	"go.mongodb.org/mongo-driver/bson"
@@ -80,6 +83,7 @@ func GetNextSequence(db *mongo.Database, name string) (uint, error) {
 }
 
 
+
 // Helper function to calculate profile completion
 func CalculateProfileCompletion(seeker models.Seeker) int {
 	completion := 0
@@ -126,3 +130,4 @@ func CalculateProfileCompletion(seeker models.Seeker) int {
 
 	return completion
 }
+

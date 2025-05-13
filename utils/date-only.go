@@ -1,10 +1,9 @@
 package utils
 
 import (
-	"time"
-	"strings"
 	"encoding/json"
-
+	"strings"
+	"time"
 )
 
 // DateOnly is a custom type to format date as YYYY-MM-DD
@@ -14,10 +13,10 @@ type DateOnly struct {
 
 const dateFormat = "2006-01-02"
 
+// UnmarshalJSON converts a JSON string to DateOnly
 func (d *DateOnly) UnmarshalJSON(b []byte) error {
 	s := strings.Trim(string(b), "\"")
 	if s == "null" || s == "" {
-		// Empty string means zero time
 		d.Time = time.Time{}
 		return nil
 	}
@@ -29,6 +28,7 @@ func (d *DateOnly) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
+// MarshalJSON converts DateOnly to JSON string
 func (d DateOnly) MarshalJSON() ([]byte, error) {
 	if d.Time.IsZero() {
 		return []byte("null"), nil
@@ -36,16 +36,17 @@ func (d DateOnly) MarshalJSON() ([]byte, error) {
 	return json.Marshal(d.Time.Format(dateFormat))
 }
 
-// You can also add a String() method if needed
+// String returns DateOnly as YYYY-MM-DD
 func (d DateOnly) String() string {
 	return d.Time.Format(dateFormat)
 }
 
-func ToDateOnly(t time.Time) DateOnly {
-	return DateOnly{Time: time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())}
+// ToDateOnly converts time.Time to DateOnly
+func ToDateOnly(t time.Time) *DateOnly {
+	return &DateOnly{Time: time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())}
 }
 
-// ToTime converts a DateOnly value back to a time.Time (with a time of 00:00:00).
+// ToTime converts DateOnly back to time.Time
 func ToTime(d DateOnly) time.Time {
-	return d.Time // DateOnly is a wrapper around time.Time, so this is simple
+	return d.Time
 }

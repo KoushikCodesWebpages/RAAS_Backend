@@ -125,81 +125,94 @@ func FetchSavedJobIDs(c *gin.Context, col *mongo.Collection, userID string) ([]s
 	return jobIDs, nil
 }
 
-// ConvertBsonMToWorkExperience converts bson.M to WorkExperienceResponse
-func ConvertBsonMToWorkExperience(data bson.M) (dto.WorkExperienceResponse, error) {
-	var workExp dto.WorkExperienceResponse
+func ConvertBsonMToWorkExperienceRequest(workExperiencesBson []bson.M) ([]dto.WorkExperienceRequest, error) {
+	var workExperiences []dto.WorkExperienceRequest
 
-	// Convert start_date from time.Time to utils.DateOnly
-	startDate, ok := data["start_date"].(time.Time)
-	if !ok {
-		log.Printf("[ERROR] Invalid or missing start_date: %+v", data["start_date"])
-		return workExp, fmt.Errorf("invalid or missing start_date")
-	}
+	for _, weBson := range workExperiencesBson {
+		var we dto.WorkExperienceRequest
 
-	// Convert startDate (time.Time) to DateOnly (utils.DateOnly)
-	workExp.StartDate = utils.ToDateOnly(startDate)
-
-	// Handle optional end_date (convert if present)
-	if endDate, ok := data["end_date"].(time.Time); ok {
-		endDateOnly := utils.ToDateOnly(endDate)
-		workExp.EndDate = &endDateOnly
-	}
-
-	return workExp, nil
-}
-
-
-func GetExperienceInMonths(workExperiences []bson.M) (int, error) {
-	var totalMonths int
-
-	for i, exp := range workExperiences {
-		// Convert bson.M to WorkExperienceResponse
-		workExp, err := ConvertBsonMToWorkExperience(exp)
-		if err != nil {
-			return 0, fmt.Errorf("error converting bson.M to WorkExperience: %w", err)
+		// Start Date
+		startDateRaw, ok := weBson["start_date"].(bson.M)
+		if !ok {
+			return nil, fmt.Errorf("missing or invalid start_date")
 		}
-
-		// Log the entire work experience entry
-		log.Printf("[DEBUG] Work experience #%d: %+v", i+1, workExp)
-
-		// Convert workExp.StartDate (utils.DateOnly) to time.Time for calculation
-		startTime := utils.ToTime(workExp.StartDate)
-		if startTime.IsZero() {
-			log.Printf("[WARN] Missing or invalid start_date for experience #%d", i+1)
-			// Optionally, return error or skip this entry based on your business logic
-			continue
+		startDateTime, ok := startDateRaw["time"].(primitive.DateTime)
+		if !ok {
+			return nil, fmt.Errorf("missing or invalid start_date time")
 		}
+		we.StartDate = utils.DateOnly{Time: startDateTime.Time()}
 
-		// Default end time to current time if not provided
-		endTime := time.Now()
-
-		// Extract and validate the end date, if present
-		if workExp.EndDate != nil {
-			endTime = utils.ToTime(*workExp.EndDate)
-			if endTime.IsZero() {
-				log.Printf("[WARN] Invalid end_date for experience #%d; defaulting to current time", i+1)
+		// End Date (optional)
+		if endDateRaw, exists := weBson["end_date"]; exists && endDateRaw != nil {
+			if endDateMap, ok := endDateRaw.(bson.M); ok {
+				if endDateTimeRaw, ok := endDateMap["time"].(primitive.DateTime); ok {
+					we.EndDate = utils.ToDateOnly(endDateTimeRaw.Time())
+				}
 			}
 		}
 
-		// Calculate the duration in months
-		years := endTime.Year() - startTime.Year()
-		months := int(endTime.Month()) - int(startTime.Month())
-		durationInMonths := years*12 + months
+		we.CompanyName, _ = weBson["company_name"].(string)
+		we.EmploymentType, _ = weBson["employment_type"].(string)
+		we.JobTitle, _ = weBson["job_title"].(string)
+		we.KeyResponsibilities, _ = weBson["key_responsibilities"].(string)
 
-		// Ensure non-negative duration
-		if durationInMonths < 0 {
-			log.Printf("[WARN] Negative duration calculated for experience #%d; setting to 0", i+1)
-			durationInMonths = 0
-		}
-
-		log.Printf("[DEBUG] Experience #%d duration: %d months", i+1, durationInMonths)
-
-		totalMonths += durationInMonths
+		workExperiences = append(workExperiences, we)
 	}
 
-	log.Printf("[DEBUG] Total experience across all entries: %d months", totalMonths)
+	return workExperiences, nil
+}
+func GetExperienceInMonths(workExperiences []dto.WorkExperienceRequest) (int, error) {
+	totalMonths := 0
+
+	for _, we := range workExperiences {
+		startDate := we.StartDate.Time
+		var endDate time.Time
+
+		if we.EndDate != nil && !we.EndDate.Time.IsZero() {
+			endDate = we.EndDate.Time
+		} else {
+			endDate = time.Now()
+		}
+
+		years, months, _ := CalculateWorkExperience(startDate, endDate)
+		totalMonths += years*12 + months
+	}
+
 	return totalMonths, nil
 }
+
+func CalculateWorkExperience(startDate, endDate time.Time) (years, months, days int) {
+	if endDate.Before(startDate) {
+		return 0, 0, 0
+	}
+
+	years = endDate.Year() - startDate.Year()
+	months = int(endDate.Month() - startDate.Month())
+	days = endDate.Day() - startDate.Day()
+
+	if days < 0 {
+		endDate = endDate.AddDate(0, -1, 0)
+		days += daysIn(endDate)
+		months--
+	}
+
+	if months < 0 {
+		months += 12
+		years--
+	}
+
+	return
+}
+
+func daysIn(t time.Time) int {
+	return time.Date(t.Year(), t.Month()+1, 0, 0, 0, 0, 0, t.Location()).Day()
+}
+
+// FormatExperience formats years, months to string
+func FormatExperience(years, months, days int) string {
+	return fmt.Sprintf("%d years, %d months, %d days", years, months, days)
+}
+
 
 
 
