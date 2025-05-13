@@ -2,7 +2,8 @@ package repository
 
 import (
 	"RAAS/internal/models"
-
+	// "RAAS/internal/dto"
+	// "fmt"
 	"context"
 	"errors"
 	"go.mongodb.org/mongo-driver/bson"
@@ -46,7 +47,7 @@ func GenerateSalaryRange() models.SalaryRange {
 	return models.SalaryRange{Min: min, Max: max}
 }
 
-func dereferenceString(str *string) string {
+func DereferenceString(str *string) string {
 	if str != nil {
 		return *str
 	}
@@ -79,3 +80,49 @@ func GetNextSequence(db *mongo.Database, name string) (uint, error) {
 }
 
 
+// Helper function to calculate profile completion
+func CalculateProfileCompletion(seeker models.Seeker) int {
+	completion := 0
+
+	// Personal Info
+	if seeker.PersonalInfo != nil {
+		if seeker.PersonalInfo["first_name"] != nil {
+			completion += 10
+		}
+		if seeker.PersonalInfo["second_name"] != nil {
+			completion += 10
+		}
+	}
+
+	// Skills
+	if skills := ExtractSkills(seeker.ProfessionalSummary); len(skills) > 0 {
+		completion += 20
+	}
+
+	// Work Experience
+	if len(seeker.WorkExperiences) > 0 {
+		completion += 20
+	}
+
+	// Certificates
+	if len(seeker.Certificates) > 0 {
+		completion += 20
+	}
+
+	// Preferred Job Title
+	if seeker.PrimaryTitle != "" {
+		completion += 20
+	}
+
+	// Subscription Tier
+	if seeker.SubscriptionTier != "" {
+		completion += 10
+	}
+
+	// Ensure completion is capped at 100
+	if completion > 100 {
+		completion = 100
+	}
+
+	return completion
+}

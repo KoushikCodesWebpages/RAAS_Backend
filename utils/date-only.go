@@ -40,3 +40,12 @@ func (d DateOnly) MarshalJSON() ([]byte, error) {
 func (d DateOnly) String() string {
 	return d.Time.Format(dateFormat)
 }
+
+func ToDateOnly(t time.Time) DateOnly {
+	return DateOnly{Time: time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())}
+}
+
+// ToTime converts a DateOnly value back to a time.Time (with a time of 00:00:00).
+func ToTime(d DateOnly) time.Time {
+	return d.Time // DateOnly is a wrapper around time.Time, so this is simple
+}
