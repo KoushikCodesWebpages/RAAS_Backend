@@ -209,3 +209,16 @@ func (r *UserRepo) AuthenticateUser(ctx context.Context, email, password string)
 
 	return &user, nil
 }
+
+func (r *UserRepo) FindUserByEmail(ctx context.Context, email string) (*models.AuthUser, error) {
+	var user models.AuthUser
+
+	err := r.DB.Collection("auth_users").FindOne(ctx, bson.M{"email": email}).Decode(&user)
+	if err == mongo.ErrNoDocuments {
+		return nil, errors.New("user not found")
+	} else if err != nil {
+		return nil, err
+	}
+
+	return &user, nil
+}

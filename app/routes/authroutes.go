@@ -34,6 +34,7 @@ func SetupAuthRoutes(r *gin.Engine, cfg *config.Config) {
 		authGroup.POST("/signup", signupLimiter, auth.SeekerSignUp)
 		authGroup.GET("/verify-email", verifyEmailLimiter, auth.VerifyEmail)
 		authGroup.POST("/login", loginLimiter, auth.Login)
+		authGroup.POST("/admin/refresh-token", auth.AdminRefreshToken)
 
 		
 		// authGroup.POST("/forgot-password", forgotPassLimiter, auth.ForgotPasswordHandler)

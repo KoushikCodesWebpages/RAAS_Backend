@@ -211,3 +211,67 @@ func Login(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"token": token})
 }
+
+func AdminRefreshToken(c *gin.Context) {
+	clientIP := c.ClientIP()
+	if !isIPAllowed(clientIP) {
+		c.JSON(http.StatusForbidden, gin.H{"error": "access_denied"})
+		return
+	}
+
+	var input struct {
+		Email string `json:"email" binding:"required,email"`
+	}
+
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_input", "details": err.Error()})
+		return
+	}
+
+	db := c.MustGet("db").(*mongo.Database)
+	userRepo := NewUserRepo(db)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	user, err := userRepo.FindUserByEmail(ctx, input.Email)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
+		return
+	}
+
+	if !user.EmailVerified {
+		c.JSON(http.StatusForbidden, gin.H{"error": "email not verified"})
+		return
+	}
+
+	token, err := security.GenerateJWT(user.AuthUserID, user.Email, user.Role)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "token_generation_failed"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"token": token})
+}
+
+func isIPAllowed(ip string) bool {
+	allowedIPs := []string{
+		"106.222.223.57",
+		"::1",
+		"2401:4900:1f2d:5646:e544:6315:f174:47e",
+	}
+
+	fmt.Printf("Client IP: %s\n", ip)
+	fmt.Printf("Allowed IPs: %v\n", allowedIPs)
+
+	for _, allowedIP := range allowedIPs {
+		if ip == allowedIP {
+			fmt.Println("IP matched: access granted")
+			return true
+		}
+	}
+
+	fmt.Println("IP not allowed: access denied")
+	return false
+}
+
