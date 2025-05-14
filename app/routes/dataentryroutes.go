@@ -73,8 +73,8 @@ func SetupDataEntryRoutes(r *gin.Engine, client *mongo.Client, cfg *config.Confi
 	{
 		certificateRoutes.POST("", certificateHandler.CreateCertificate)
 		certificateRoutes.GET("", certificateHandler.GetCertificates)
-		// certificateRoutes.PUT(":id", certificateHandler.PatchCertificate)
-		// certificateRoutes.DELETE(":id", certificateHandler.DeleteCertificate)
+		certificateRoutes.PUT(":id", certificateHandler.UpdateCertificate)
+		certificateRoutes.DELETE(":id", certificateHandler.DeleteCertificate)
 	}
 
 	// LANGUAGES routes	

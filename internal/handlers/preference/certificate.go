@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"time"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
@@ -115,7 +116,6 @@ func (h *CertificateHandler) CreateCertificate(c *gin.Context) {
 	})
 }
 
-	
 // GetCertificates handles the retrieval of a user's certificates
 func (h *CertificateHandler) GetCertificates(c *gin.Context) {
 	userID := c.MustGet("userID").(string)
@@ -154,102 +154,146 @@ func (h *CertificateHandler) GetCertificates(c *gin.Context) {
 	})
 }
 
-// func (h *CertificateHandler) PatchCertificate(c *gin.Context) {
-// 	userID := c.MustGet("userID").(uuid.UUID)
-// 	id := c.Param("id")
+// UpdateCertificate handles updating an existing certificate entry
+func (h *CertificateHandler) UpdateCertificate(c *gin.Context) {
+	userID := c.MustGet("userID").(string)
+	db := c.MustGet("db").(*mongo.Database)
+	seekersCollection := db.Collection("seekers")
 
-// 	var updateFields map[string]interface{}
-// 	if err := c.ShouldBindJSON(&updateFields); err != nil {
-// 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
-// 		return
-// 	}
+	id := c.Param("id")
+	index, err := strconv.Atoi(id)
+	if err != nil || index <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid certificate index. Must be a positive integer."})
+		return
+	}
 
-// 	var seeker models.Seeker
-// 	if err := h.DB.First(&seeker, "auth_user_id = ?", userID).Error; err != nil {
-// 		c.JSON(http.StatusNotFound, gin.H{"error": "Seeker not found"})
-// 		return
-// 	}
+	var input dto.CertificateRequest
+	if err := c.ShouldBind(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
+		log.Printf("Error binding input: %v", err)
+		return
+	}
 
-// 	var certs []map[string]interface{}
-// 	if err := json.Unmarshal(seeker.Certificates, &certs); err != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse certificates"})
-// 		return
-// 	}
+	var fileURL string
+	mediaUploadHandler := repository.NewMediaUploadHandler(repository.GetBlobServiceClient())
 
-// 	index, err := strconv.Atoi(id)
-// 	if err != nil || index <= 0 || index > len(certs) {
-// 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid certificate index"})
-// 		return
-// 	}
+	// Optional file upload
+	_, header, err := c.Request.FormFile("file")
+	if err == nil && header != nil {
+		if !mediaUploadHandler.ValidateFileType(header) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid file type"})
+			return
+		}
+		fileURL, err = mediaUploadHandler.UploadMedia(c, config.Cfg.Cloud.AzureCertificatesContainer)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to upload file", "details": err.Error()})
+			return
+		}
+	}
 
-// 	entry := certs[index-1]
-// 	for key, value := range updateFields {
-// 		if _, exists := entry[key]; exists {
-// 			entry[key] = value
-// 		} else {
-// 			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Invalid field: %s", key)})
-// 			return
-// 		}
-// 	}
-// 	certs[index-1] = entry
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
-// 	updatedJSON, err := json.Marshal(certs)
-// 	if err != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to marshal updated certificates"})
-// 		return
-// 	}
+	var seeker models.Seeker
+	if err := seekersCollection.FindOne(ctx, bson.M{"auth_user_id": userID}).Decode(&seeker); err != nil {
+		if err == mongo.ErrNoDocuments {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Seeker not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error retrieving seeker"})
+		return
+	}
 
-// 	seeker.Certificates = updatedJSON
-// 	if err := h.DB.Save(&seeker).Error; err != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update seeker certificates"})
-// 		return
-// 	}
+	if index > len(seeker.Certificates) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Certificate index out of range"})
+		return
+	}
 
-// 	num := entry["certificateNumber"].(string)
-// 	c.JSON(http.StatusOK, dto.CertificateResponse{
-// 		ID:                uint(index),
-// 		AuthUserID:        userID,
-// 		CertificateName:   entry["certificateName"].(string),
-// 		CertificateNumber: &num,
-// 		CertificateFile:   entry["certificateFile"].(string),
-// 	})
-// }
+	// Prepare the updated certificate entry
+	updatedCertificate := bson.M{
+		"certificate_name": input.CertificateName,
+	}
 
-// func (h *CertificateHandler) DeleteCertificate(c *gin.Context) {
-// 	userID := c.MustGet("userID").(uuid.UUID)
-// 	id := c.Param("id")
+	if input.CertificateNumber != nil {
+		updatedCertificate["certificate_number"] = *input.CertificateNumber
+	}
 
-// 	var seeker models.Seeker
-// 	if err := h.DB.First(&seeker, "auth_user_id = ?", userID).Error; err != nil {
-// 		c.JSON(http.StatusNotFound, gin.H{"error": "Seeker not found"})
-// 		return
-// 	}
+	// Update fileURL only if a new file was uploaded
+	if fileURL != "" {
+		updatedCertificate["certificate_file"] = fileURL
+	} else {
+		// Preserve existing file URL if no new file uploaded
+		existing := seeker.Certificates[index-1]
+		if existingFileURL, ok := existing["certificate_file"].(string); ok {
+			updatedCertificate["certificate_file"] = existingFileURL
+		}
+	}
 
-// 	var certs []map[string]interface{}
-// 	if err := json.Unmarshal(seeker.Certificates, &certs); err != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse certificates"})
-// 		return
-// 	}
+	// Update the certificate entry in the seeker's list
+	seeker.Certificates[index-1] = updatedCertificate
 
-// 	index, err := strconv.Atoi(id)
-// 	if err != nil || index <= 0 || index > len(certs) {
-// 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid certificate index"})
-// 		return
-// 	}
+	// Save back to DB
+	update := bson.M{
+		"$set": bson.M{
+			"certificates": seeker.Certificates,
+		},
+	}
 
-// 	certs = append(certs[:index-1], certs[index:]...)
+	_, err = seekersCollection.UpdateOne(ctx, bson.M{"auth_user_id": userID}, update)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update certificate"})
+		return
+	}
 
-// 	updatedJSON, err := json.Marshal(certs)
-// 	if err != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to marshal updated certificates"})
-// 		return
-// 	}
+	c.JSON(http.StatusOK, gin.H{"message": "Certificate updated successfully"})
+}
 
-// 	seeker.Certificates = updatedJSON
-// 	if err := h.DB.Save(&seeker).Error; err != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update seeker"})
-// 		return
-// 	}
+// DeleteCertificate handles deleting a certificate entry
+func (h *CertificateHandler) DeleteCertificate(c *gin.Context) {
+	userID := c.MustGet("userID").(string)
+	db := c.MustGet("db").(*mongo.Database)
+	seekersCollection := db.Collection("seekers")
 
-// 	c.JSON(http.StatusOK, gin.H{"message": "Certificate deleted successfully"})
-// }
+	id := c.Param("id")
+	index, err := strconv.Atoi(id)
+	if err != nil || index <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid certificate index"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	var seeker models.Seeker
+	if err := seekersCollection.FindOne(ctx, bson.M{"auth_user_id": userID}).Decode(&seeker); err != nil {
+		if err == mongo.ErrNoDocuments {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Seeker not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error retrieving seeker"})
+		return
+	}
+
+	if index > len(seeker.Certificates) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Certificate index out of range"})
+		return
+	}
+
+	// Remove the certificate entry at index-1
+	seeker.Certificates = append(seeker.Certificates[:index-1], seeker.Certificates[index:]...)
+
+	// Save updated certificates to DB
+	update := bson.M{
+		"$set": bson.M{
+			"certificates": seeker.Certificates,
+		},
+	}
+
+	_, err = seekersCollection.UpdateOne(ctx, bson.M{"auth_user_id": userID}, update)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete certificate"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Certificate deleted successfully"})
+}
