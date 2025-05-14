@@ -10,6 +10,7 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -153,106 +154,150 @@ func (h *LanguageHandler) GetLanguages(c *gin.Context) {
 	})
 }
 
+// UpdateLanguage handles the update of a language entry with file upload
+func (h *LanguageHandler) UpdateLanguage(c *gin.Context) {
+	userID := c.MustGet("userID").(string)
+	db := c.MustGet("db").(*mongo.Database)
+	seekersCollection := db.Collection("seekers")
 
-// func (h *LanguageHandler) PatchLanguage(c *gin.Context) {
-// 	userID := c.MustGet("userID").(uuid.UUID)
-// 	id := c.Param("id")
+	// Get the language index from the URL parameter
+	id := c.Param("id")
+	index, err := strconv.Atoi(id)
+	if err != nil || index <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid language index. Must be a positive integer."})
+		return
+	}
 
-// 	var updateFields map[string]interface{}
-// 	if err := c.ShouldBindJSON(&updateFields); err != nil {
-// 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
-// 		return
-// 	}
+	// Bind the input data for the language
+	var input dto.LanguageRequest
+	if err := c.ShouldBind(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
+		log.Printf("Error binding input: %v", err)
+		return
+	}
 
-// 	var seeker models.Seeker
-// 	if err := h.DB.First(&seeker, "auth_user_id = ?", userID).Error; err != nil {
-// 		c.JSON(http.StatusNotFound, gin.H{"error": "Seeker not found"})
-// 		return
-// 	}
+	// Handle file upload (if present)
+	var fileURL string
+	mediaUploadHandler := repository.NewMediaUploadHandler(repository.GetBlobServiceClient())
 
-// 	var languages []map[string]interface{}
-// 	if err := json.Unmarshal(seeker.Languages, &languages); err != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse languages"})
-// 		return
-// 	}
+	// Check if a file was uploaded
+	_, header, err := c.Request.FormFile("file")
+	if err == nil && header != nil {
+		if !mediaUploadHandler.ValidateFileType(header) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid file type"})
+			return
+		}
+		fileURL, err = mediaUploadHandler.UploadMedia(c, config.Cfg.Cloud.AzureLanguagesContainer)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to upload file", "details": err.Error()})
+			return
+		}
+	} else {
+		log.Printf("[WARN] No file uploaded for language: %v", err)
+	}
 
-// 	index, err := strconv.Atoi(id)
-// 	if err != nil || index <= 0 || index > len(languages) {
-// 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid language index"})
-// 		return
-// 	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
-// 	entry := languages[index-1]
-// 	for key, value := range updateFields {
-// 		if _, exists := entry[key]; exists {
-// 			entry[key] = value
-// 		} else {
-// 			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Invalid field: %s", key)})
-// 			return
-// 		}
-// 	}
-// 	languages[index-1] = entry
+	var seeker models.Seeker
+	if err := seekersCollection.FindOne(ctx, bson.M{"auth_user_id": userID}).Decode(&seeker); err != nil {
+		if err == mongo.ErrNoDocuments {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Seeker not found"})
+			log.Printf("Seeker not found for auth_user_id: %s", userID)
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error retrieving seeker"})
+			log.Printf("Error retrieving seeker for auth_user_id: %s, Error: %v", userID, err)
+		}
+		return
+	}
 
-// 	updatedJSON, err := json.Marshal(languages)
-// 	if err != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to marshal updated languages"})
-// 		return
-// 	}
+	// Check if the index is valid in the current list of languages
+	if index > len(seeker.Languages) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Language index out of range"})
+		return
+	}
 
-// 	seeker.Languages = updatedJSON
-// 	if err := h.DB.Save(&seeker).Error; err != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update seeker"})
-// 		return
-// 	}
+	// Prepare the updated language
+	updatedLanguage := bson.M{
+		"language":      input.LanguageName,
+		"proficiency":   input.ProficiencyLevel,
+		"certificate_file": fileURL, // Assuming fileURL is for the certificate
+	}
 
-// 	response := dto.LanguageResponse{
-// 		ID:              uint(index),
-// 		AuthUserID:      userID,
-// 		LanguageName:        entry["language"].(string),
-// 		ProficiencyLevel:     entry["proficiency"].(string),
-// 		CertificateFile: entry["certificateFile"].(string),
-// 	}
+	// Update the language entry at the specified index
+	seeker.Languages[index-1] = updatedLanguage
 
-// 	c.JSON(http.StatusOK, response)
-// }
+	// Update the seeker document in the database
+	update := bson.M{
+		"$set": bson.M{
+			"languages": seeker.Languages,
+		},
+	}
 
+	updateResult, err := seekersCollection.UpdateOne(ctx, bson.M{"auth_user_id": userID}, update)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save updated language"})
+		log.Printf("Failed to update language for auth_user_id: %s, Error: %v", userID, err)
+		return
+	}
 
-// func (h *LanguageHandler) DeleteLanguage(c *gin.Context) {
-// 	userID := c.MustGet("userID").(uuid.UUID)
-// 	id := c.Param("id")
+	if updateResult.MatchedCount == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "No matching seeker found to update"})
+		log.Printf("No matching seeker found for auth_user_id: %s", userID)
+		return
+	}
 
-// 	var seeker models.Seeker
-// 	if err := h.DB.First(&seeker, "auth_user_id = ?", userID).Error; err != nil {
-// 		c.JSON(http.StatusNotFound, gin.H{"error": "Seeker not found"})
-// 		return
-// 	}
+	// Return a success response
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Language updated successfully",
+	})
+}
 
-// 	var languages []map[string]interface{}
-// 	if err := json.Unmarshal(seeker.Languages, &languages); err != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse languages"})
-// 		return
-// 	}
+// DeleteLanguage handles deleting an existing language entry
+func (h *LanguageHandler) DeleteLanguage(c *gin.Context) {
+	userID := c.MustGet("userID").(string)
+	db := c.MustGet("db").(*mongo.Database)
+	seekersCollection := db.Collection("seekers")
 
-// 	index, err := strconv.Atoi(id)
-// 	if err != nil || index <= 0 || index > len(languages) {
-// 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid language index"})
-// 		return
-// 	}
+	id := c.Param("id")
 
-// 	// Remove the language at the specified index
-// 	languages = append(languages[:index-1], languages[index:]...)
+	index, err := strconv.Atoi(id)
+	if err != nil || index <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid language index"})
+		return
+	}
 
-// 	updatedJSON, err := json.Marshal(languages)
-// 	if err != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to marshal updated languages"})
-// 		return
-// 	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
-// 	seeker.Languages = updatedJSON
-// 	if err := h.DB.Save(&seeker).Error; err != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update seeker"})
-// 		return
-// 	}
+	var seeker models.Seeker
+	if err := seekersCollection.FindOne(ctx, bson.M{"auth_user_id": userID}).Decode(&seeker); err != nil {
+		if err == mongo.ErrNoDocuments {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Seeker not found"})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve seeker"})
+		}
+		return
+	}
 
-// 	c.JSON(http.StatusOK, gin.H{"message": "Language deleted successfully"})
-// }
+	if index > len(seeker.Languages) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Language index out of range"})
+		return
+	}
+
+	// Remove the language entry at index-1
+	seeker.Languages = append(seeker.Languages[:index-1], seeker.Languages[index:]...)
+
+	update := bson.M{
+		"$set": bson.M{
+			"languages": seeker.Languages,
+		},
+	}
+
+	if _, err := seekersCollection.UpdateOne(ctx, bson.M{"auth_user_id": userID}, update); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete language entry"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Language deleted successfully"})
+}

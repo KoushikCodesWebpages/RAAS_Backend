@@ -84,8 +84,8 @@ func SetupDataEntryRoutes(r *gin.Engine, client *mongo.Client, cfg *config.Confi
 	{
 		languageRoutes.POST("", languageHandler.CreateLanguage)
 		languageRoutes.GET("", languageHandler.GetLanguages)
-		// languageRoutes.PUT(":id", languageHandler.PatchLanguage)
-		// languageRoutes.DELETE(":id", languageHandler.DeleteLanguage)
+		languageRoutes.PUT("/:id", languageHandler.UpdateLanguage)
+		languageRoutes.DELETE("/:id", languageHandler.DeleteLanguage)
 	}
 
 	// JOB TITLES routes
