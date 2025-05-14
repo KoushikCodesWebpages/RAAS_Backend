@@ -22,6 +22,7 @@ type ResumeHandler struct{}
 func NewResumeHandler() *ResumeHandler {
 	return &ResumeHandler{}
 }
+
 func (h *ResumeHandler) PostResume(c *gin.Context) {
 	db := c.MustGet("db").(*mongo.Database)
 	jobCollection := db.Collection("jobs")
@@ -129,7 +130,8 @@ func (h *ResumeHandler) PostResume(c *gin.Context) {
 	}
 
 	// Generate the resume (docxContent)
-	docxContent, err := h.generateResume(resumeRequest)
+	// Generate the resume (pdfContent)
+	pdfContent, err := h.GenerateResume(resumeRequest)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Resume generation failed: %v", err)})
 		return
@@ -141,7 +143,7 @@ func (h *ResumeHandler) PostResume(c *gin.Context) {
 	}
 
 	// Update the user's daily generatable CV count
-	if _, err = seekerCollection.UpdateOne(c, bson.M{"auth_user_id": userID}, updateData); err != nil {
+	if _, err := seekerCollection.UpdateOne(c, bson.M{"auth_user_id": userID}, updateData); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error updating daily CV count"})
 		return
 	}
@@ -160,14 +162,20 @@ func (h *ResumeHandler) PostResume(c *gin.Context) {
 		return
 	}
 
+    // // Return the resume request data as JSON
+    // c.JSON(http.StatusOK, gin.H{
+    //     "message": "Resume request data generated successfully",
+    //     "resume_request": resumeRequest,
+    // })
+
 	// Send the resume back to the user
-	c.Header("Content-Disposition", "attachment; filename=resume.docx")
-	c.Data(http.StatusOK, "application/vnd.openxmlformats-officedocument.wordprocessingml.document", docxContent)
+	c.Header("Content-Disposition", "attachment; filename=resume.pdf")
+	c.Data(http.StatusOK, "application/pdf", pdfContent)
 
 }
 
 // Helper function to send POST request to the external resume generation API
-func (h *ResumeHandler) generateResume(apiRequestData map[string]interface{}) ([]byte, error) {
+func (h *ResumeHandler) GenerateResume(apiRequestData map[string]interface{}) ([]byte, error) {
 	// Load environment variables
 	apiURL := config.Cfg.Cloud.CV_Url
 	apiKey := config.Cfg.Cloud.GEN_API_KEY
@@ -202,14 +210,14 @@ func (h *ResumeHandler) generateResume(apiRequestData map[string]interface{}) ([
 		return nil, fmt.Errorf("error response from API: %v", string(body))
 	}
 
-	// Read the DOCX content from the response
-	docxFileContent, err := io.ReadAll(resp.Body)
+	// Read the PDF content from the response
+	pdfFileContent, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("error reading DOCX content: %v", err)
+		return nil, fmt.Errorf("error reading PDF content: %v", err)
 	}
 
-	// Return the DOCX file content
-	return docxFileContent, nil
+	// Return the PDF file content
+	return pdfFileContent, nil
 }
 
 
