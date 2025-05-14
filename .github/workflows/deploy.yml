@@ -36,5 +36,5 @@ jobs:
             echo "Running new Docker container..."
             docker run -d \
               --name raas_backend_container \
-              -p 8000:8000 \
+              -p 5000:5000 \
               ghcr.io/koushikcodeswebpages/raas_backend:latest
