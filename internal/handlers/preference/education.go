@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"time"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
@@ -148,124 +149,111 @@ func (h *EducationHandler) GetEducation(c *gin.Context) {
     })
 }
 
+func (h *EducationHandler) UpdateEducation(c *gin.Context) {
+	userID := c.MustGet("userID").(string)
+	db := c.MustGet("db").(*mongo.Database)
+	seekersCollection := db.Collection("seekers")
 
-// func (h *EducationHandler) PatchEducation(c *gin.Context) {
-// 	userID := c.MustGet("userID").(uuid.UUID)
-// 	id := c.Param("id")
+	id := c.Param("id")
 
-// 	var updateFields map[string]interface{}
-// 	if err := c.ShouldBindJSON(&updateFields); err != nil {
-// 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
-// 		return
-// 	}
+	var input dto.EducationRequest
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
+		return
+	}
 
-// 	var seeker models.Seeker
-// 	if err := h.DB.First(&seeker, "auth_user_id = ?", userID).Error; err != nil {
-// 		c.JSON(http.StatusNotFound, gin.H{"error": "Seeker not found"})
-// 		return
-// 	}
+	index, err := strconv.Atoi(id)
+	if err != nil || index <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid education index"})
+		return
+	}
 
-// 	var educations []map[string]interface{}
-// 	if err := json.Unmarshal(seeker.Educations, &educations); err != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse educations"})
-// 		return
-// 	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
-// 	index, err := strconv.Atoi(id)
-// 	if err != nil || index <= 0 || index > len(educations) {
-// 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid education index"})
-// 		return
-// 	}
+	var seeker models.Seeker
+	if err := seekersCollection.FindOne(ctx, bson.M{"auth_user_id": userID}).Decode(&seeker); err != nil {
+		if err == mongo.ErrNoDocuments {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Seeker not found"})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve seeker"})
+		}
+		return
+	}
 
-// 	// Apply updates
-// 	entry := educations[index-1]
-// 	for key, value := range updateFields {
-// 		if _, exists := entry[key]; exists {
-// 			entry[key] = value
-// 		} else {
-// 			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Invalid field: %s", key)})
-// 			return
-// 		}
-// 	}
-// 	educations[index-1] = entry
+	if index > len(seeker.Education) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Education index out of range"})
+		return
+	}
 
-// 	updatedJSON, err := json.Marshal(educations)
-// 	if err != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to marshal updated educations"})
-// 		return
-// 	}
+	// Replace the education at index-1
+	seeker.Education[index-1] = bson.M{
+		"degree":        input.Degree,
+		"institution":   input.Institution,
+		"field_of_study": input.FieldOfStudy,
+		"start_date":    input.StartDate,
+		"end_date":      input.EndDate,
+		"achievements":  input.Achievements,
+	}
 
-// 	seeker.Educations = updatedJSON
-// 	if err := h.DB.Save(&seeker).Error; err != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update seeker"})
-// 		return
-// 	}
+	update := bson.M{
+		"$set": bson.M{
+			"education": seeker.Education,
+		},
+	}
 
-// 	// Parse StartDate and EndDate (ensure both are valid)
-// 	startDate, err := time.Parse("2006-01-02", entry["startDate"].(string))
-// 	if err != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid start date format"})
-// 		return
-// 	}
+	if _, err := seekersCollection.UpdateOne(ctx, bson.M{"auth_user_id": userID}, update); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update education"})
+		return
+	}
 
-// 	// EndDate is required, so parse it directly without nil checks
-// 	endDate, err := time.Parse("2006-01-02", entry["endDate"].(string))
-// 	if err != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid end date format"})
-// 		return
-// 	}
+	c.JSON(http.StatusOK, gin.H{"message": "Education updated successfully"})
+}
 
-// 	// Create and return response with updated data
-// 	response := dto.EducationResponse{
-// 		ID:             uint(index),
-// 		AuthUserID:     userID,
-// 		Degree:         entry["degree"].(string),
-// 		Institution:    entry["institution"].(string),
-// 		FieldOfStudy:   entry["fieldOfStudy"].(string),
-// 		StartDate:      startDate,
-// 		EndDate:        endDate,
-// 		Achievements:   entry["achievements"].(string),
-// 	}
+func (h *EducationHandler) DeleteEducation(c *gin.Context) {
+	userID := c.MustGet("userID").(string)
+	db := c.MustGet("db").(*mongo.Database)
+	seekersCollection := db.Collection("seekers")
 
-// 	c.JSON(http.StatusOK, response)
-// }
+	id := c.Param("id")
 
-// func (h *EducationHandler) DeleteEducation(c *gin.Context) {
-// 	userID := c.MustGet("userID").(uuid.UUID)
-// 	id := c.Param("id")
+	index, err := strconv.Atoi(id)
+	if err != nil || index <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid education index"})
+		return
+	}
 
-// 	var seeker models.Seeker
-// 	if err := h.DB.First(&seeker, "auth_user_id = ?", userID).Error; err != nil {
-// 		c.JSON(http.StatusNotFound, gin.H{"error": "Seeker not found"})
-// 		return
-// 	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
-// 	var educations []map[string]interface{}
-// 	if err := json.Unmarshal(seeker.Educations, &educations); err != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse educations"})
-// 		return
-// 	}
+	var seeker models.Seeker
+	if err := seekersCollection.FindOne(ctx, bson.M{"auth_user_id": userID}).Decode(&seeker); err != nil {
+		if err == mongo.ErrNoDocuments {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Seeker not found"})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve seeker"})
+		}
+		return
+	}
 
-// 	index, err := strconv.Atoi(id)
-// 	if err != nil || index <= 0 || index > len(educations) {
-// 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid education index"})
-// 		return
-// 	}
+	if index > len(seeker.Education) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Education index out of range"})
+		return
+	}
 
-// 	// Remove the education at the specified index (index - 1 since it's 1-based in API)
-// 	educations = append(educations[:index-1], educations[index:]...)
+	// Remove the education entry at index-1
+	seeker.Education = append(seeker.Education[:index-1], seeker.Education[index:]...)
 
-// 	updatedJSON, err := json.Marshal(educations)
-// 	if err != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to marshal updated educations"})
-// 		return
-// 	}
+	update := bson.M{
+		"$set": bson.M{
+			"education": seeker.Education,
+		},
+	}
 
-// 	seeker.Educations = updatedJSON
-// 	if err := h.DB.Save(&seeker).Error; err != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update seeker"})
-// 		return
-// 	}
+	if _, err := seekersCollection.UpdateOne(ctx, bson.M{"auth_user_id": userID}, update); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete education entry"})
+		return
+	}
 
-// 	c.JSON(http.StatusOK, gin.H{"message": "Education deleted successfully"})
-// }
+	c.JSON(http.StatusOK, gin.H{"message": "Education deleted successfully"})
+}

@@ -61,7 +61,8 @@ func SetupDataEntryRoutes(r *gin.Engine, client *mongo.Client, cfg *config.Confi
 	{
 		educationRoutes.POST("", educationHandler.CreateEducation)
 		educationRoutes.GET("", educationHandler.GetEducation)
-		// educationRoutes.PUT("", educationHandler.UpdateEducation)
+		educationRoutes.PUT("/:id", educationHandler.UpdateEducation) // <-- PUT
+		educationRoutes.DELETE("/:id", educationHandler.DeleteEducation) // <-- DELETE
 	}
 
 
