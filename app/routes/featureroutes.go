@@ -21,6 +21,10 @@ func SetupFeatureRoutes(r *gin.Engine, client *mongo.Client, cfg *config.Config)
 
 	// === USER ===
 
+	seekerHandler := user.NewSeekerHandler()
+	r.Group("/seeker", auth).
+	GET("",seekerHandler.GetSeekerProfile)
+
 	seekerProfileHandler := user.NewSeekerProfileHandler()
 	r.Group("/profile", auth).
 		GET("", seekerProfileHandler.GetSeekerProfile)
