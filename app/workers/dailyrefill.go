@@ -92,7 +92,6 @@ func RunDailyWorker(ctx context.Context, seekersColl, timelinesColl *mongo.Colle
 		// Daily selectable jobs refill
 		if seeker.DailySelectableJobsCount < limits.SelectableJobsLimit {
 			updateFields["daily_selectable_jobs_count"] = limits.SelectableJobsLimit
-			log.Printf("Refilling selectable jobs for seeker %s: %d -> %d", seeker.AuthUserID, seeker.DailySelectableJobsCount, limits.SelectableJobsLimit)
 		}
 
 		// Weekly CV & Coverletter refill
@@ -101,11 +100,11 @@ func RunDailyWorker(ctx context.Context, seekersColl, timelinesColl *mongo.Colle
 		if now.After(lastWeeklyReset) && now.Sub(lastWeeklyReset) < 24*time.Hour {
 			if seeker.DailyGeneratableCV < limits.GeneratableCVLimit {
 				updateFields["daily_generatable_cv"] = limits.GeneratableCVLimit
-				log.Printf("Refilling CVs for seeker %s: %d -> %d", seeker.AuthUserID, seeker.DailyGeneratableCV, limits.GeneratableCVLimit)
+				
 			}
 			if seeker.DailyGeneratableCoverletter < limits.GeneratableCoverletterLimit {
 				updateFields["daily_generatable_coverletter"] = limits.GeneratableCoverletterLimit
-				log.Printf("Refilling Coverletters for seeker %s: %d -> %d", seeker.AuthUserID, seeker.DailyGeneratableCoverletter, limits.GeneratableCoverletterLimit)
+	
 			}
 		}
 
@@ -150,12 +149,11 @@ func StartDailyWorker(db *mongo.Database) {
 
 
 func RunDailyWorkerOnce(seekersColl, timelinesColl *mongo.Collection) {
-	log.Println("[DailyWorker] Running refill job...")
 
 	err := RunDailyWorker(context.Background(), seekersColl, timelinesColl)
 	if err != nil {
 		log.Printf("[DailyWorker] Error: %v", err)
 	} else {
-		log.Println("[DailyWorker] Completed successfully")
+		// log.Println("[DailyWorker] Completed successfully")
 	}
 }
