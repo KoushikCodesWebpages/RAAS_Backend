@@ -27,14 +27,17 @@ jobs:
             echo "Removing existing container (if any)..."
             docker rm raas_backend_container || true
 
+            echo "Pruning unused Docker images..."
+            docker image prune -af
+
             echo "Logging into GitHub Container Registry..."
             echo "${{ secrets.PAT_TOKEN }}" | docker login ghcr.io -u ${{ secrets.GIT_USERNAME}} --password-stdin
 
-            echo "Pulling latest Docker image..."
-            docker pull ghcr.io/koushikcodeswebpages/raas_backend:latest
+            # echo "Pulling latest Docker image..."
+            # docker pull ghcr.io/koushikcodeswebpages/raas_backend:latest
 
-            echo "Running new Docker container..."
-            docker run -d \
-              --name raas_backend_container \
-              -p 5000:5000 \
-              ghcr.io/koushikcodeswebpages/raas_backend:latest
+            # echo "Running new Docker container..."
+            # docker run -d \
+            #   --name raas_backend_container \
+            #   -p 5000:5000 \
+            #   ghcr.io/koushikcodeswebpages/raas_backend:latest
