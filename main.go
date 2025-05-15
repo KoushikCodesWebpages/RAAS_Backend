@@ -4,7 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"RAAS/core/config"
 	"RAAS/app/routes"
-	// "RAAS/workers"
+	"RAAS/app/workers"
 	"RAAS/internal/models" 
 
 
@@ -30,10 +30,11 @@ func main() {
 	}
 
 	// Initialize MongoDB client and database using models.InitDB
-	client, _ := models.InitDB(config.Cfg) // Get both client and database
+	client, db := models.InitDB(config.Cfg) // Get both client and database
 
 	// ✅ Start the match score worker properly
 	// startMatchScoreWorker(client)
+	go workers.StartDailyWorker(client.Database(db.Name()))
 
 	// Set up the Gin router
 	r := gin.Default()
@@ -80,3 +81,5 @@ func main() {
 // 	}
 // 	go worker.Run()
 // }
+
+// ✅ Run DailyWorker every day (can be adjusted)
