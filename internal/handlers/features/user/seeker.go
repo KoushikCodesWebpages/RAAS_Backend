@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"RAAS/internal/handlers/repository"
 	"RAAS/internal/models"
 
 	"github.com/gin-gonic/gin"
@@ -40,8 +41,10 @@ func (h *SeekerHandler) GetSeekerProfile(c *gin.Context) {
 		return
 	}
 
+	profileCompletion := repository.CalculateProfileCompletion(seeker)
 	// Return the entire seeker document as JSON
 	c.JSON(http.StatusOK, gin.H{
 		"seeker": seeker,
+		"profile_completion": profileCompletion,
 	})
 }
