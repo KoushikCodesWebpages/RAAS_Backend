@@ -105,37 +105,44 @@ func (h *SelectedJobsHandler) PostSelectedJob(c *gin.Context) {
 func (h *SelectedJobsHandler) GetSelectedJobs(c *gin.Context) {
 	// Get the database from the context
 	db := c.MustGet("db").(*mongo.Database)
-	selectedJobsCollection := db.Collection("selected_job_applications") // Collection where selected jobs are stored
+	selectedJobsCollection := db.Collection("selected_job_applications")
 
 	// Retrieve the user ID from the context
 	userID := c.MustGet("userID").(string)
 
-	// Define the filter to fetch selected jobs for the authenticated user
-	filter := bson.M{"auth_user_id": userID}
+	// Calculate today's date range in UTC
+	now := time.Now().UTC()
+	startOfDay := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
+	endOfDay := startOfDay.Add(24 * time.Hour)
+
+	// Filter for the authenticated user and jobs selected today
+	filter := bson.M{
+		"auth_user_id":  userID,
+		"selected_date": bson.M{"$gte": startOfDay, "$lt": endOfDay},
+	}
 
 	// Access pagination values from context set by middleware
 	pagination := c.MustGet("pagination").(gin.H)
 	offsetInt := pagination["offset"].(int)
 	limitInt := pagination["limit"].(int)
 
-	// Define the pagination options
-	findOptions := options.Find().SetSkip(int64(offsetInt)).SetLimit(int64(limitInt))
+	// Define the pagination and sort options
+	findOptions := options.Find().
+		SetSkip(int64(offsetInt)).
+		SetLimit(int64(limitInt)).
+		SetSort(bson.D{{Key: "selected_date", Value: -1}}) // Sort by most recent
 
-	// Query the database to retrieve selected jobs for the authenticated user
+	// Query the database
 	cursor, err := selectedJobsCollection.Find(c, filter, findOptions)
 	if err != nil {
 		fmt.Println("Error fetching selected jobs:", err)
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Error fetching selected jobs",
-		})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error fetching selected jobs"})
 		return
 	}
 	defer cursor.Close(c)
 
-	// Slice to hold the response data
 	var selectedJobs []dto.SelectedJobResponse
 
-	// Iterate through the cursor and decode the documents
 	for cursor.Next(c) {
 		var selectedJob models.SelectedJobApplication
 		if err := cursor.Decode(&selectedJob); err != nil {
@@ -143,52 +150,43 @@ func (h *SelectedJobsHandler) GetSelectedJobs(c *gin.Context) {
 			continue
 		}
 
-		// Convert SelectedJobApplication to SelectedJobResponse DTO
 		selectedJobResponse := dto.SelectedJobResponse{
-			AuthUserID:            selectedJob.AuthUserID,
-			Source:                selectedJob.Source,
-			JobID:                 selectedJob.JobID,
-			Title:                 selectedJob.Title,
-			Company:               selectedJob.Company,
-			Location:              selectedJob.Location,
-			PostedDate:            selectedJob.PostedDate,
-			Processed:             selectedJob.Processed,
-			JobType:               selectedJob.JobType,
-			Skills:                selectedJob.Skills,
-			UserSkills:            selectedJob.UserSkills,
-			ExpectedSalary:        convertSalaryRange(selectedJob.ExpectedSalary),
-			MatchScore:            selectedJob.MatchScore,
-			Description:           selectedJob.Description,
-			Selected:              selectedJob.Selected,
-			CvGenerated:           selectedJob.CvGenerated,
-			CoverLetterGenerated:  selectedJob.CoverLetterGenerated,
-			ViewLink:              selectedJob.ViewLink,
-			SelectedDate:          selectedJob.SelectedDate.Format(time.RFC3339), // Formatting SelectedDate to string
+			AuthUserID:           selectedJob.AuthUserID,
+			Source:               selectedJob.Source,
+			JobID:                selectedJob.JobID,
+			Title:                selectedJob.Title,
+			Company:              selectedJob.Company,
+			Location:             selectedJob.Location,
+			PostedDate:           selectedJob.PostedDate,
+			Processed:            selectedJob.Processed,
+			JobType:              selectedJob.JobType,
+			Skills:               selectedJob.Skills,
+			UserSkills:           selectedJob.UserSkills,
+			ExpectedSalary:       convertSalaryRange(selectedJob.ExpectedSalary),
+			MatchScore:           selectedJob.MatchScore,
+			Description:          selectedJob.Description,
+			Selected:             selectedJob.Selected,
+			CvGenerated:          selectedJob.CvGenerated,
+			CoverLetterGenerated: selectedJob.CoverLetterGenerated,
+			ViewLink:             selectedJob.ViewLink,
+			SelectedDate:         selectedJob.SelectedDate.Format(time.RFC3339),
 		}
 
-		// Append the DTO to the response slice
 		selectedJobs = append(selectedJobs, selectedJobResponse)
 	}
 
-	// If no selected jobs were found
 	if len(selectedJobs) == 0 {
-		c.JSON(http.StatusNoContent, gin.H{
-			"message": "No selected jobs found",
-		})
+		c.JSON(http.StatusNoContent, gin.H{"message": "No selected jobs found for today"})
 		return
 	}
 
-	// Count total documents for pagination (to calculate total pages)
 	totalCount, err := selectedJobsCollection.CountDocuments(c, filter)
 	if err != nil {
 		fmt.Println("Error counting selected jobs:", err)
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Error counting selected jobs",
-		})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error counting selected jobs"})
 		return
 	}
 
-	// Create next and prev page URLs for pagination
 	nextPage := ""
 	if int64(offsetInt+limitInt) < totalCount {
 		nextPage = fmt.Sprintf("/api/selected-jobs?offset=%d&limit=%d", offsetInt+limitInt, limitInt)
@@ -199,15 +197,14 @@ func (h *SelectedJobsHandler) GetSelectedJobs(c *gin.Context) {
 		prevPage = fmt.Sprintf("/api/selected-jobs?offset=%d&limit=%d", offsetInt-limitInt, limitInt)
 	}
 
-	// Send JSON response with selected jobs and pagination info
 	c.JSON(http.StatusOK, gin.H{
 		"selected_jobs": selectedJobs,
 		"pagination": gin.H{
-			"total":     totalCount,
-			"next":      nextPage,
-			"prev":      prevPage,
-			"current":   (offsetInt / limitInt) + 1,
-			"per_page":  limitInt,
+			"total":    totalCount,
+			"next":     nextPage,
+			"prev":     prevPage,
+			"current":  (offsetInt / limitInt) + 1,
+			"per_page": limitInt,
 		},
 	})
 }
