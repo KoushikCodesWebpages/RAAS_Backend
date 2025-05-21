@@ -257,8 +257,10 @@ func AdminRefreshToken(c *gin.Context) {
 func isIPAllowed(ip string) bool {
 	allowedIPs := []string{
 		"106.222.223.57",
+		"106.222.220.147",
 		"::1",
 		"2401:4900:1f2d:5646:e544:6315:f174:47e",
+		"2401:4900:1f2d:166e:6430:1a60:de37:48bd",
 	}
 
 	fmt.Printf("Client IP: %s\n", ip)
