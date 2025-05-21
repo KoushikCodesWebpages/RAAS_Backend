@@ -258,9 +258,11 @@ func isIPAllowed(ip string) bool {
 	allowedIPs := []string{
 		"106.222.223.57",
 		"106.222.220.147",
+		"168.231.109.75",
 		"::1",
 		"2401:4900:1f2d:5646:e544:6315:f174:47e",
 		"2401:4900:1f2d:166e:6430:1a60:de37:48bd",
+		"2a02:4780:41:4a1b::1",
 	}
 
 	fmt.Printf("Client IP: %s\n", ip)
