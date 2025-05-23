@@ -39,6 +39,11 @@ func SetupFeatureRoutes(r *gin.Engine, client *mongo.Client, cfg *config.Config)
 		POST("", selectedJobsHandler.PostSelectedJob).
 		GET("", selectedJobsHandler.GetSelectedJobs)
 
+	myApplicationsHandler := user.NewMyApplicationsHandler()
+	r.Group("/api/my-applications", auth, paginate).
+		GET("", myApplicationsHandler.GetMyApplications)
+
+
 	// === JOBS ===
 
 	r.Group("/api/jobs", auth, paginate).
