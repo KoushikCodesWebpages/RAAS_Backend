@@ -35,13 +35,13 @@ func SetupRoutes(r *gin.Engine, client *mongo.Client, cfg *config.Config) {
 
 
 	//STATIC
-	r.Static("/assets", "./public/dist/assets")
-	r.GET("/", func(c *gin.Context) {
-		c.File("./public/dist/index.html")
-	})
-	r.NoRoute(func(c *gin.Context) {
-		c.File("./app/templates/noroutes.html")
-	})
+	// r.Static("/assets", "./public/dist/assets")
+	// r.GET("/", func(c *gin.Context) {
+	// 	c.File("./public/dist/index.html")
+	// })
+	// r.NoRoute(func(c *gin.Context) {
+	// 	c.File("./app/templates/noroutes.html")
+	// })
 	
 	
 
@@ -51,6 +51,6 @@ func SetupRoutes(r *gin.Engine, client *mongo.Client, cfg *config.Config) {
 	SetupFeatureRoutes(r, client, cfg)
 
 	// EXPOSED
-	r.POST("/api/reset-db", user.ResetDBHandler)
-	r.POST("/api/print-all-collections", user.PrintAllCollectionsHandler)
+	r.POST("/jse/b1/api/reset-db", user.ResetDBHandler)
+	r.POST("/jse/b1/api/print-all-collections", user.PrintAllCollectionsHandler)
 }

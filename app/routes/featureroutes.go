@@ -22,45 +22,45 @@ func SetupFeatureRoutes(r *gin.Engine, client *mongo.Client, cfg *config.Config)
 	// === USER ===
 
 	seekerHandler := user.NewSeekerHandler()
-	r.Group("/seeker", auth).
+	r.Group("/jse/b1/seeker", auth).
 	GET("",seekerHandler.GetSeekerProfile)
 
 	seekerProfileHandler := user.NewSeekerProfileHandler()
-	r.Group("/profile", auth).
+	r.Group("/jse/b1/profile", auth).
 		GET("", seekerProfileHandler.GetSeekerProfile)
 
 	savedJobsHandler := user.NewSavedJobsHandler()
-	r.Group("/saved-jobs", auth, paginate).
+	r.Group("/jse/b1/saved-jobs", auth, paginate).
 		POST("", savedJobsHandler.SaveJob).
 		GET("", savedJobsHandler.GetSavedJobs)
 
 	selectedJobsHandler := user.NewSelectedJobsHandler()
-	r.Group("/api/selected-jobs", auth, paginate).
+	r.Group("/jse/b1/api/selected-jobs", auth, paginate).
 		POST("", selectedJobsHandler.PostSelectedJob).
 		GET("", selectedJobsHandler.GetSelectedJobs)
 
 	myApplicationsHandler := user.NewMyApplicationsHandler()
-	r.Group("/api/my-applications", auth, paginate).
+	r.Group("/jse/b1/api/my-applications", auth, paginate).
 		GET("", myApplicationsHandler.GetMyApplications)
 
 
 	// === JOBS ===
 
-	r.Group("/api/jobs", auth, paginate).
+	r.Group("/jse/b1/api/jobs", auth, paginate).
 		GET("", jobs.JobRetrievalHandler)
 
 	linkProviderHandler := jobs.NewLinkProviderHandler()
-	r.Group("/provide-link", auth).
+	r.Group("/jse/b1/provide-link", auth).
 		POST("", linkProviderHandler.PostAndGetLink)
 
 	// === GENERATION ===
 
 	coverLetterHandler := generation.NewCoverLetterHandler()
-	r.Group("/generate-cover-letter", auth).
+	r.Group("/jse/b1/generate-cover-letter", auth).
 		POST("", coverLetterHandler.PostCoverLetter)
 
 	resumeHandler := generation.NewResumeHandler()
-	r.Group("/generate-resume", auth).
+	r.Group("/jse/b1/generate-resume", auth).
 		POST("", resumeHandler.PostResume)
 
 		

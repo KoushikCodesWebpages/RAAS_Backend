@@ -15,7 +15,7 @@ import (
 func SetupDataEntryRoutes(r *gin.Engine, client *mongo.Client, cfg *config.Config) {
 	r.Use(middleware.InjectDB(client))
 	// TIMELINE
-	timeline := r.Group("/user/entry-progress/check")
+	timeline := r.Group("/jse/b1/user/entry-progress/check")
 	timeline.Use(middleware.AuthMiddleware()) // Middleware to authenticate JWT
 
 	// Define the route for getting the next entry step
@@ -23,7 +23,7 @@ func SetupDataEntryRoutes(r *gin.Engine, client *mongo.Client, cfg *config.Confi
 
 	// PERSONAL INFO routes
 	personalInfoHandler := preference.NewPersonalInfoHandler()
-	personalInfoRoutes := r.Group("/personal-info")
+	personalInfoRoutes := r.Group("/jse/b1/personal-info")
 	personalInfoRoutes.Use(middleware.AuthMiddleware())
 	{
 		personalInfoRoutes.POST("", personalInfoHandler.CreatePersonalInfo)
@@ -34,7 +34,7 @@ func SetupDataEntryRoutes(r *gin.Engine, client *mongo.Client, cfg *config.Confi
 
 	// PROFESSIONAL SUMMARY routes
 	professionalSummaryHandler := preference.NewProfessionalSummaryHandler()
-	professionalSummaryRoutes := r.Group("/professional-summary")
+	professionalSummaryRoutes := r.Group("/jse/b1/professional-summary")
 	professionalSummaryRoutes.Use(middleware.AuthMiddleware())
 	{
 		professionalSummaryRoutes.POST("", professionalSummaryHandler.CreateProfessionalSummary)
@@ -44,7 +44,7 @@ func SetupDataEntryRoutes(r *gin.Engine, client *mongo.Client, cfg *config.Confi
 
 
 	workExperienceHandler := preference.NewWorkExperienceHandler()
-	workExperienceRoutes := r.Group("/work-experience")
+	workExperienceRoutes := r.Group("/jse/b1/work-experience")
 	workExperienceRoutes.Use(middleware.AuthMiddleware())
 	{
 		workExperienceRoutes.POST("", workExperienceHandler.CreateWorkExperience)
@@ -56,7 +56,7 @@ func SetupDataEntryRoutes(r *gin.Engine, client *mongo.Client, cfg *config.Confi
 
 
 	educationHandler := preference.NewEducationHandler()
-	educationRoutes := r.Group("/education")
+	educationRoutes := r.Group("/jse/b1/education")
 	educationRoutes.Use(middleware.AuthMiddleware())
 	{
 		educationRoutes.POST("", educationHandler.CreateEducation)
@@ -68,7 +68,7 @@ func SetupDataEntryRoutes(r *gin.Engine, client *mongo.Client, cfg *config.Confi
 
 	// CERTIFICATES routes
 	certificateHandler := preference.NewCertificateHandler()
-	certificateRoutes := r.Group("/certificates")
+	certificateRoutes := r.Group("/jse/b1/certificates")
 	certificateRoutes.Use(middleware.AuthMiddleware())
 	{
 		certificateRoutes.POST("", certificateHandler.CreateCertificate)
@@ -79,7 +79,7 @@ func SetupDataEntryRoutes(r *gin.Engine, client *mongo.Client, cfg *config.Confi
 
 	// LANGUAGES routes	
 	languageHandler := preference.NewLanguageHandler()
-	languageRoutes := r.Group("/languages")
+	languageRoutes := r.Group("/jse/b1/languages")
 	languageRoutes.Use(middleware.AuthMiddleware())
 	{
 		languageRoutes.POST("", languageHandler.CreateLanguage)
@@ -90,7 +90,7 @@ func SetupDataEntryRoutes(r *gin.Engine, client *mongo.Client, cfg *config.Confi
 
 	// JOB TITLES routes
 	jobTitleHandler := preference.NewJobTitleHandler()
-	jobTitleRoutes := r.Group("/jobtitles")
+	jobTitleRoutes := r.Group("/jse/b1/jobtitles")
 	jobTitleRoutes.Use(middleware.AuthMiddleware())
 	{
 		jobTitleRoutes.POST("", jobTitleHandler.CreateJobTitleOnce)
