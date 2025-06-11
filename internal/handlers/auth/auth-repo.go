@@ -153,7 +153,7 @@ func (r *UserRepo) CreateSeeker(input dto.SeekerSignUpInput, hashedPassword stri
 	}
 
 	// Prepare verification email
-	verificationLink := fmt.Sprintf("%s/auth/verify-email?token=%s", config.Cfg.Project.FrontendBaseUrl, token)
+	verificationLink := fmt.Sprintf("%s/b1/auth/verify-email?token=%s", config.Cfg.Project.FrontendBaseUrl, token)
 	emailBody := fmt.Sprintf(`
 			<html>
 			<body style="font-family: Arial, sans-serif; background-color: #f9f9f9; margin: 0; padding: 0;">
