@@ -24,7 +24,7 @@ func SetupAuthRoutes(r *gin.Engine, cfg *config.Config) {
 	// googleLoginLimiter := middleware.RateLimiterMiddleware(10, time.Minute)
 	// googleCallbackLimiter := middleware.RateLimiterMiddleware(20, time.Minute)
 
-	authGroup := r.Group("/jse/b1/auth")
+	authGroup := r.Group("/b1/auth")
 	{
 		// Google OAuth (rate-limited)
 		// authGroup.GET("/google/login", googleLoginLimiter, auth.GoogleLoginHandler)

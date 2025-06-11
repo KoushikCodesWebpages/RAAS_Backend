@@ -51,6 +51,6 @@ func SetupRoutes(r *gin.Engine, client *mongo.Client, cfg *config.Config) {
 	SetupFeatureRoutes(r, client, cfg)
 
 	// EXPOSED
-	r.POST("/jse/b1/api/reset-db", user.ResetDBHandler)
-	r.POST("/jse/b1/api/print-all-collections", user.PrintAllCollectionsHandler)
+	r.POST("/b1/api/reset-db", user.ResetDBHandler)
+	r.POST("/b1/api/print-all-collections", user.PrintAllCollectionsHandler)
 }
