@@ -49,7 +49,9 @@ func SetupRoutes(r *gin.Engine, client *mongo.Client, cfg *config.Config) {
 	SetupAuthRoutes(r, cfg)
 	SetupDataEntryRoutes(r, client, cfg)
 	SetupFeatureRoutes(r, client, cfg)
-
+	r.GET("/ping", func(c *gin.Context) {
+	c.JSON(200, gin.H{"message": "pong"})
+    })
 	// EXPOSED
 	r.POST("/b1/api/reset-db", user.ResetDBHandler)
 	r.POST("/b1/api/print-all-collections", user.PrintAllCollectionsHandler)
