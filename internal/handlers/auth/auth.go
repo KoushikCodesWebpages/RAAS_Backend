@@ -56,7 +56,7 @@ func SeekerSignUp(c *gin.Context) {
 			}
 
 			// Resend verification email
-			verificationLink := fmt.Sprintf("%s/auth/verify-email?token=%s", config.Cfg.Project.FrontendBaseUrl, user.VerificationToken)
+			verificationLink := fmt.Sprintf("%s/b1/auth/verify-email?token=%s", config.Cfg.Project.FrontendBaseUrl, user.VerificationToken)
 			emailBody := fmt.Sprintf(`
 			<html>
 			<body style="font-family: Arial, sans-serif; background-color: #f9f9f9; margin: 0; padding: 0;">
@@ -176,7 +176,7 @@ func VerifyEmail(c *gin.Context) {
 			<div class="card">
 				<h1>✅ Email Verified</h1>
 				<p>Your email has been successfully verified.</p>
-				<a href="/user/login">Go to Login</a>
+				<a href="arshan.digital">Go to Login</a>
 			</div>
 		</body>
 		</html>
