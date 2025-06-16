@@ -116,7 +116,7 @@ func (h *CoverLetterHandler) PostCoverLetter(c *gin.Context) {
 	}
 
 	// Call the external API to generate the cover letter (DOCX)
-	docxContent, err := h.generateCoverLetter(apiRequestData)
+	pdfContent, err := h.generateCoverLetter(apiRequestData)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Cover letter generation failed: %v", err)})
 		return
@@ -147,8 +147,8 @@ func (h *CoverLetterHandler) PostCoverLetter(c *gin.Context) {
 	}
 
 	// Set headers and return the .docx file to the user
-	c.Header("Content-Disposition", "attachment; filename=cover_letter.docx")
-	c.Data(http.StatusOK, "application/vnd.openxmlformats-officedocument.wordprocessingml.document", docxContent)
+	c.Header("Content-Disposition", "attachment; filename=resume.pdf")
+	c.Data(http.StatusOK, "application/pdf", pdfContent)
 }
 
 // Helper function to send POST request to the external cover letter generation API
